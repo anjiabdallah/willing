@@ -12,7 +12,7 @@ const dialect = new PostgresDialect({
     password: config.POSTGRES_PASSWORD,
     port: config.POSTGRES_PORT,
     max: 10,
-  })
+  }),
 });
 
 export default new Kysely<Database>({

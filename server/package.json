@@ -8,13 +8,17 @@
   "main": "index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
-    "migrate": "tsc && node dist/db/migrate.js"
+    "migrate": "tsc && node dist/db/migrate.js",
+    "lint": "eslint . --fix"
   },
   "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.7.1",
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
     "@types/pg": "^8.16.0",
-    "typescript": "^5.9.3"
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

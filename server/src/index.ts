@@ -12,27 +12,27 @@ app.use(api);
 
 // Not found handler
 app.use((req, res, next) => {
-    res.status(404);
-    const error = new Error(`Not Found - ${req.originalUrl}`);
-    next(error);
-})
+  res.status(404);
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  next(error);
+});
 
 // Error handler
-app.use(((err, req, res, next) => {
-    if (res.statusCode === 200) {
-        res.status(500);
-    }
+app.use(((err, req, res, _next) => {
+  if (res.statusCode === 200) {
+    res.status(500);
+  }
 
-    res.json({
-        message: err.message,
-        stack: config.NODE_ENV === 'production' ? '' : err.stack,
-    });
+  res.json({
+    message: err.message,
+    stack: config.NODE_ENV === 'production' ? '' : err.stack,
+  });
 }) as ErrorRequestHandler);
 
 app.listen(config.SERVER_PORT, (error?: Error) => {
-    if (error) {
-        console.error("Failed to start server");
-    } else {
-        console.log("Listening on port " + config.SERVER_PORT);
-    }
+  if (error) {
+    console.error('Failed to start server');
+  } else {
+    console.log('Listening on port ' + config.SERVER_PORT);
+  }
 });

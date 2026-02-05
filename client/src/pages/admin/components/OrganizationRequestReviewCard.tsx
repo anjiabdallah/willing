@@ -78,7 +78,7 @@ function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }:
         <div className="card-actions justify-end mt-2">
           <span className="join flex-grow">
             <input
-              className="input join-item"
+              className="input flex-grow join-item"
               placeholder="Reason"
               onChange={handleReasonChange}
             />

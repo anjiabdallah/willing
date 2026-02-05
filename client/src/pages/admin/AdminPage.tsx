@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useContext, useEffect } from 'react';
+import { useCallback, useContext, useEffect } from 'react';
 import AdminContext, { AdminProvider } from './AdminContext';
 
 function AdminPageInner() {
@@ -17,8 +17,14 @@ function AdminPageInner() {
     }
   }, [location.pathname, navigate, refreshAdmin]);
 
+  const handleLogout = useCallback(() => {
+    (document.activeElement as HTMLElement)?.blur();
+    logout();
+    navigate('/admin/login');
+  }, [logout, navigate]);
+
   return (
-    <main>
+    <main className="h-screen flex flex-col">
       <div className="navbar bg-base-100 shadow-md">
         <div className="navbar-start">
           <a className="btn btn-ghost text-xl" href="/">
@@ -33,7 +39,7 @@ function AdminPageInner() {
             </div>
             <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
               <li>
-                <button onClick={() => { (document.activeElement as HTMLElement)?.blur(); logout(); navigate('/admin/login'); }}>
+                <button onClick={handleLogout}>
                   Logout
                 </button>
               </li>

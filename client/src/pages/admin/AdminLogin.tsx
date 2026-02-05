@@ -46,7 +46,7 @@ function AdminLogin() {
   }, [email, password, navigate, context]);
 
   return (
-    <div className="hero bg-base-200 min-h-screen">
+    <div className="flex-grow hero bg-base-200">
       <div className="hero-content flex-col lg:flex-row-reverse gap-8">
         <div className="text-center lg:text-left">
           <h1 className="text-5xl font-bold">Admin Login</h1>

@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useState, type ChangeEvent, type SubmitEvent } from 'react';
 import requestServer from '../../requestServer';
 import type { AdminAccountWithoutPassword } from '../../../../server/src/db/types';
-import { useNavigate, useOutletContext } from 'react-router';
+import { useNavigate } from 'react-router';
 import AdminContext from './AdminContext';
 
 function AdminLogin() {
@@ -51,8 +51,7 @@ function AdminLogin() {
         <div className="text-center lg:text-left">
           <h1 className="text-5xl font-bold">Admin Login</h1>
           <p className="py-6">
-            Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-            quasi. In deleniti eaque aut repudiandae et a id nisi.
+            Authorized access only. This portal is restricted to system administrators for platform oversight and maintenance. Please log in to proceed to your secure dashboard.
           </p>
         </div>
         <div className="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">

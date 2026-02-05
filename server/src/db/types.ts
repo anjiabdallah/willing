@@ -1,5 +1,6 @@
 import {
   Generated,
+  Selectable,
 } from 'kysely';
 
 export interface Database {
@@ -29,6 +30,7 @@ export interface OrganizationRequestTable {
   longitude: string;
   location_name: string;
 }
+export type OrganizationRequest = Selectable<OrganizationRequestTable>;
 
 export interface OrganizationAccountTable {
   id: Generated<number>;

@@ -38,12 +38,26 @@ adminRouter.post('/login', async (req, res) => {
     role: 'admin',
   }, config.JWT_SECRET);
 
+  // @ts-expect-error: Do not return the password
+  delete account.password;
+
   res.json({
     token,
+    account,
   });
 });
 
 adminRouter.use(authorizeOnly('admin'));
+
+adminRouter.get('/me', async (req, res) => {
+  const admin = await database
+    .selectFrom('admin_account')
+    .selectAll()
+    .where('id', '=', req.userJWT!.id)
+    .executeTakeFirstOrThrow();
+
+  res.json({ admin });
+});
 
 adminRouter.get('/getOrganizationRequests', async (req, res) => {
   const organizationRequests = await database

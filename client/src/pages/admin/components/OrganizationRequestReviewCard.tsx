@@ -47,7 +47,7 @@ function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }:
   }, [request, refreshOrganizationRequests]);
 
   return (
-    <div className="card bg-base-100 shadow-lg border border-base-200">
+    <div className="card bg-base-100 shadow-sm border border-base-200">
       <div className="card-body">
         <h2 className="card-title text-primary">{request.name}</h2>
         <div className="text-sm opacity-70 flex items-center gap-1 mb-2">

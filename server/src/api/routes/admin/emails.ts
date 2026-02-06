@@ -15,3 +15,9 @@ export async function sendOrganizationRejectionEmail(
   console.log('UNIMPLEMENTED - Send an email to the organization that the request was rejected');
   console.log('    Reason:', reason);
 }
+
+export async function sendAdminOrganizationRequestEmail(
+  organizationRequest: OrganizationRequest,
+) {
+  console.log('UNIMPLEMENTED - Send an email to the admin that there is a new organization request');
+}

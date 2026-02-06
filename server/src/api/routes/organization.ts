@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import zod from 'zod';
 import database from '../../db/index.js';
+import { sendAdminOrganizationRequestEmail } from './admin/emails.js';
 
 const orgRouter = Router();
 
@@ -17,7 +18,7 @@ const orgRequestSchema = zod.object({
 orgRouter.post('/request', async (req, res) => {
   const body = orgRequestSchema.parse(req.body);
 
-  await database
+  const organization = await database
     .insertInto('organization_request')
     .values({
       name: body.name,
@@ -30,9 +31,15 @@ orgRouter.post('/request', async (req, res) => {
       latitude: '0',
       longitude: '0',
     })
-    .execute();
+    .returningAll().executeTakeFirst();
 
-  res.status(201).json({ success: true });
+  if (!organization)
+    throw new Error('Failed to create organization request');
+
+  else {
+    sendAdminOrganizationRequestEmail(organization);
+    res.status(201).json({ success: true });
+  }
 });
 
 export default orgRouter;

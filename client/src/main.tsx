@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/admin/AdminPage';
 import OrgReqPage from './pages/OrgReqPage';
-import VolunteerCreate from './pages/volunteers/VolunteerCreate';
-import VolunteerPage from './pages/volunteers/VolunteerPage';
+import VolunteerCreate from './pages/volunteer/VolunteerCreate';
+import VolunteerPage from './pages/volunteer/VolunteerPage';
 
 import './index.css';
 import { BrowserRouter, Route, Routes } from 'react-router';
@@ -13,7 +13,7 @@ import AdminHome from './pages/admin/AdminHome';
 import AdminLogin from './pages/admin/AdminLogin';
 
 import './index.css';
-import VolunteerHome from './pages/volunteers/VolunteerHome';
+import VolunteerHome from './pages/volunteer/VolunteerHome';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

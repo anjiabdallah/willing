@@ -9,10 +9,6 @@ function UserLoginPage() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
-
-  /*function submission(e: React.FormEvent) {
-    e.preventDefault();*/
-
   const submission = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 

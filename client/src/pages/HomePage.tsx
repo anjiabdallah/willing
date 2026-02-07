@@ -17,8 +17,8 @@ function HomePage() {
 
       <main className="flex-grow flex flex-col items-center justify-center max-w-5xl mx-auto py-12 px-4">
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-extrabold mb-4">Where help finds a home.</h1>
-          <p className="text-xl opacity-70">Join Willing to connect with local opportunities or manage your organization's impact.</p>
+          <h1 className="text-6xl font-extrabold mb-4">Connecting volunteers to their vision of a better community</h1>
+          <p className="text-xl opacity-70">Join Willing to discover local volunteering opportunities or expand your organization’s impact</p>
         </div>
 
         <div className="flex flex-col md:flex-row w-full gap-4">
@@ -33,7 +33,7 @@ function HomePage() {
           <div className="divider md:divider-horizontal font-bold opacity-50">OR</div>
 
           <div className="card bg-base-200 rounded-box grid h-64 grow place-items-center p-8 text-center border-2 border-transparent hover:border-secondary transition-all">
-            <h2 className="text-2xl font-bold mb-2">I need help</h2>
+            <h2 className="text-2xl font-bold mb-2">I want help</h2>
             <p className="mb-6 opacity-80">Request to register your organization and find volunteers.</p>
             <Link to="/organization/request" className="btn btn-secondary btn-wide">
               Request Organization Account
@@ -43,7 +43,7 @@ function HomePage() {
 
         <div className="mt-12 text-center">
           <p className="opacity-60">Already have an account?</p>
-          <Link to="/login" className="link link-primary font-semibold">Sign in here</Link>
+          <Link to="/login" className="link link-primary font-semibold">Log in</Link>
         </div>
       </main>
 

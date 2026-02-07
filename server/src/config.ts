@@ -18,17 +18,12 @@ const schema = zod.object({
   }),
 
   JWT_SECRET: zod.string().nonempty(),
-<<<<<<< HEAD
-  CLIENT_URL: zod.url(),
 
   SMTP_USER: zod.string().nonempty(),
   SMTP_PASS: zod.string().nonempty(),
   MAIL_FROM: zod.string().nonempty(),
   SMTP_HOST: zod.string().nonempty(),
   SMTP_PORT: zod.string().regex(/^[0-9]+$/).nonempty().transform(s => Number(s)),
-
-=======
->>>>>>> 70685d713a1c7aa533ec6ade6f9a1e85c6e6310a
 });
 
 const config = schema.parse(process.env);

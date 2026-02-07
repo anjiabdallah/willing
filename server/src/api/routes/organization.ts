@@ -33,11 +33,14 @@ orgRouter.post('/request', async (req, res) => {
     })
     .returningAll().executeTakeFirst();
 
-  if (!organization)
+  if (!organization) {
     throw new Error('Failed to create organization request');
-
-  else {
-    sendAdminOrganizationRequestEmail(organization);
+  } else {
+    try {
+      sendAdminOrganizationRequestEmail(organization);
+    } catch (error) {
+      console.error('Failed to send organization request email to admin', error);
+    }
     res.status(201).json({ success: true });
   }
 });

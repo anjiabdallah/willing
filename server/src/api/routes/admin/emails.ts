@@ -1,4 +1,5 @@
 import config from '../../../config.js';
+import db from '../../../db/index.js';
 import { OrganizationRequest } from '../../../db/types.js';
 import { sendEmail } from '../../../SMTP/mailer.js';
 
@@ -11,7 +12,7 @@ export async function sendOrganizationAcceptanceEmail(
   const subject = 'Your organization request was accepted';
 
   const text
-    = +`Hello ${organizationRequest.name},\n\n`
+    = `Hello ${organizationRequest.name},\n\n`
       + `Your organization request has been accepted.\n\n`
       + `Temporary credentials:\n`
       + `Email/Username: ${to}\n`
@@ -42,7 +43,7 @@ export async function sendOrganizationRejectionEmail(
       + `Your organization request has been rejected.\n\n`
       + reasonBlock
       + `If you believe this was a mistake, you can submit a new request with updated information.\n`
-      + 'For any extra questions, please contact us at ' + config.ADMIN_EMAIL + '.\n\n'
+      + 'For any extra questions, please contact us at willing.aub@gmail.com.\n\n'
       + `Willing Team\n`
       + `Automated message. Do not reply.`;
 
@@ -52,8 +53,6 @@ export async function sendOrganizationRejectionEmail(
 export async function sendAdminOrganizationRequestEmail(
   organizationRequest: OrganizationRequest,
 ) {
-  const to = config.ADMIN_EMAIL;
-
   const subject = 'New organization request submitted!';
 
   const text
@@ -63,7 +62,11 @@ export async function sendAdminOrganizationRequestEmail(
       + `Phone: ${organizationRequest.phone_number ?? '—'}\n`
       + `Website: ${organizationRequest.url ?? '—'}\n`
       + `Location: ${organizationRequest.location_name}\n\n`
-      + `Review it in the admin dashboard: ${config.ADMIN_URL}\n`;
-
-  await sendEmail({ to, subject, text });
+      + `Review it in the admin dashboard: ${config.CLIENT_URL + '/admin'}\n`;
+  const emails = (await db.selectFrom('admin_account').select(['email']).execute()).map(row => row.email);
+  await sendEmail({
+    to: emails.join(', '),
+    subject,
+    text,
+  });
 }

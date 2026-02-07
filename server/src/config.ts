@@ -19,15 +19,13 @@ const schema = zod.object({
 
   JWT_SECRET: zod.string().nonempty(),
   CLIENT_URL: zod.url(),
-  ADMIN_URL: zod.url(),
 
-  SMTP_HOST: zod.string().nonempty(),
-  SMTP_PORT: zod.string().regex(/^[0-9]+$/).nonempty().transform(s => Number(s)),
-  SMTP_SECURE: zod.enum(['true', 'false']).default('false'),
   SMTP_USER: zod.string().nonempty(),
   SMTP_PASS: zod.string().nonempty(),
   MAIL_FROM: zod.string().nonempty(),
-  ADMIN_EMAIL: zod.email(),
+  SMTP_HOST: zod.string().nonempty(),
+  SMTP_PORT: zod.string().regex(/^[0-9]+$/).nonempty().transform(s => Number(s)),
+
 });
 
 const config = schema.parse(process.env);

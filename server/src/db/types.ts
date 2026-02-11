@@ -32,8 +32,8 @@ export interface OrganizationRequestTable {
   email: string;
   phone_number: string;
   url: string;
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   location_name: string;
 }
 export type OrganizationRequest = Selectable<OrganizationRequestTable>;

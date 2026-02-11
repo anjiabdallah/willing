@@ -19,11 +19,33 @@ const schema = zod.object({
 
   JWT_SECRET: zod.string().nonempty(),
 
-  SMTP_HOST: zod.string().nonempty(),
-  SMTP_PORT: zod.string().regex(/^[0-9]+$/).nonempty().transform(s => Number(s)),
-  SMTP_USER: zod.string().nonempty(),
-  SMTP_PASS: zod.string().nonempty(),
-  MAIL_FROM: zod.string().nonempty(),
+  SMTP_HOST: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
+  SMTP_PORT: zod
+    .preprocess(v => (v === '' ? undefined : v), zod.string().regex(/^[0-9]+$/).optional())
+    .transform(s => (s === undefined ? undefined : Number(s))),
+  SMTP_USER: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
+  SMTP_PASS: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
+  MAIL_FROM: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
+}).superRefine((values, ctx) => {
+  if (values.NODE_ENV === 'development') return;
+
+  const required = [
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASS',
+    'MAIL_FROM',
+  ] as const;
+
+  for (const key of required) {
+    if (values[key] === undefined) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required when NODE_ENV is not development`,
+      });
+    }
+  }
 });
 
 const config = schema.parse(process.env);

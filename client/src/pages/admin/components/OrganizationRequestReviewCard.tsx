@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import requestServer from '../../../requestServer';
+import LocationPicker from '../../../components/LocationPicker';
 
 import type { OrganizationRequest } from '../../../../../server/src/db/types';
 
@@ -59,6 +60,8 @@ function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }:
           </svg>
           {request.location_name}
         </div>
+
+        <LocationPicker position={[request.latitude, request.longitude]} setPosition={() => {}} readOnly={true} />
 
         <div className="space-y-1 my-4 text-sm">
           <p className="flex justify-between">

@@ -11,7 +11,6 @@ type OrgForm = {
 };
 
 export default function OrganizationRequestPage() {
-  const [darkTheme, setDarkTheme] = useState(false);
   const [form, setForm] = useState<OrgForm>({
     name: '',
     email: '',
@@ -47,10 +46,6 @@ export default function OrganizationRequestPage() {
 
     alert('Organization request submitted successfully');
   }, [form, position]);
-
-  useEffect(() => {
-    setDarkTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
-  }, []);
 
   return (
     <div className="flex-grow hero bg-base-200">
@@ -118,7 +113,6 @@ export default function OrganizationRequestPage() {
                 <LocationPicker
                   position={position}
                   setPosition={setPosition}
-                  darkTheme={darkTheme}
                 />
               </div>
 

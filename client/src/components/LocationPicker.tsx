@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { DomEvent, divIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -18,7 +18,6 @@ const customIcon = divIcon({
 interface LocationPickerProps {
   position: [number, number];
   setPosition: (pos: [number, number]) => void;
-  darkTheme: boolean;
   readOnly?: boolean;
 }
 
@@ -56,7 +55,12 @@ function MapEvents({ setPosition, readOnly }: { setPosition: (p: [number, number
   return null;
 }
 
-export default function LocationPicker({ position, setPosition, darkTheme, readOnly = false }: LocationPickerProps) {
+export default function LocationPicker({ position, setPosition, readOnly = false }: LocationPickerProps) {
+  const [darkTheme, setDarkTheme] = useState(false);
+
+  useEffect(() => {
+    setDarkTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }, []);
   return (
     <div className="h-96 border border-base-content/20 rounded-lg overflow-hidden relative shadow-inner">
       <MapContainer

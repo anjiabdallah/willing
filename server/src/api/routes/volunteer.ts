@@ -59,7 +59,7 @@ volunteerRouter.post('/create', async (req, res) => {
     throw new Error('Failed to create volunteer');
   }
 
-  const token = new jose.SignJWT({ id: newVolunteer.id, role: 'volunteer' })
+  const token = await new jose.SignJWT({ id: newVolunteer.id, role: 'volunteer' })
     .setIssuedAt()
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')

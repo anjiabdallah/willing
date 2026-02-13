@@ -32,7 +32,7 @@ adminRouter.post('/login', async (req, res) => {
     res.status(403);
     throw new Error('Invalid login');
   }
-  const token = new jose.SignJWT({
+  const token = await new jose.SignJWT({
     id: account.id,
     role: 'admin',
   })

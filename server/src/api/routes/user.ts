@@ -48,7 +48,7 @@ userRouter.post('/login', async (req, res) => {
     throw new Error('Invalid login');
   }
 
-  const token = new jose.SignJWT({
+  const token = await new jose.SignJWT({
     id: (organizationAccount || volunteerAccount)?.id,
     role: organizationAccount ? 'organization' : 'volunteer',
   }).setIssuedAt()

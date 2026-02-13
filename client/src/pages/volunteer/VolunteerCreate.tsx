@@ -84,23 +84,28 @@ export default function VolunteerCreate() {
 
         <div className="card bg-base-100 w-full max-w-lg shadow-2xl">
           <form className="card-body" onSubmit={handleSubmit}>
-            <label className="label">First Name</label>
-            <input
-              className="input w-full"
-              value={firstName}
-              placeholder="First name"
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setFirstName(e.target.value)}
-            />
-
-            <label className="label">Last Name</label>
-            <input
-              className="input w-full"
-              value={lastName}
-              placeholder="Last name"
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setLastName(e.target.value)}
-            />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="label">First Name</label>
+                <input
+                  className="input w-full"
+                  value={firstName}
+                  placeholder="First name"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="label">Last Name</label>
+                <input
+                  className="input w-full"
+                  value={lastName}
+                  placeholder="Last name"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setLastName(e.target.value)}
+                />
+              </div>
+            </div>
 
             <label className="label">Email</label>
             <input
@@ -132,26 +137,31 @@ export default function VolunteerCreate() {
                 setConfirmPassword(e.target.value)}
             />
 
-            <label className="label">Date of Birth</label>
-            <input
-              type="date"
-              className="input w-full"
-              value={dateOfBirth}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setDateOfBirth(e.target.value)}
-            />
-
-            <label className="label">Gender</label>
-            <select
-              className="select w-full"
-              value={gender}
-              onChange={e =>
-                setGender(e.target.value as 'male' | 'female' | 'other')}
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="label">Date of Birth</label>
+                <input
+                  type="date"
+                  className="input w-full"
+                  value={dateOfBirth}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setDateOfBirth(e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="label">Gender</label>
+                <select
+                  className="select w-full"
+                  value={gender}
+                  onChange={e =>
+                    setGender(e.target.value as 'male' | 'female' | 'other')}
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
 
             <button
               className="btn btn-primary mt-4"

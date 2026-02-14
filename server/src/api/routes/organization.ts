@@ -1,7 +1,8 @@
 import { Router } from 'express';
+
 import database from '../../db/index.js';
-import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
 import { newOrganizationRequestSchema, OrganizationPostingSchema } from '../../db/tables.js';
+import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
 import { authorizeOnly, setUserJWT } from '../authorization.js';
 
 const organizationRouter = Router();
@@ -81,7 +82,7 @@ organizationRouter.post('/posting', async (req, res) => {
       end_timestamp: body.end_timestamp ?? undefined,
       minimum_age: body.minimum_age ?? undefined,
       is_open: body.is_open ?? true,
-    }) 
+    })
     .returningAll().executeTakeFirst();
 
   if (!posting) {

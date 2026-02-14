@@ -1,6 +1,6 @@
+import { DomEvent, divIcon } from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
-import { DomEvent, divIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const customIcon = divIcon({

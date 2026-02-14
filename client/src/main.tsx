@@ -6,6 +6,7 @@ import AdminHome from './pages/admin/AdminHome';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminPage from './pages/admin/AdminPage';
 import HomePage from './pages/HomePage';
+import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
 import OrganizationPage from './pages/organization/OrganizationPage';
 import OrganizationRequest from './pages/organization/OrganizationRequest';
@@ -15,9 +16,8 @@ import VolunteerHome from './pages/volunteer/VolunteerHome';
 import VolunteerPage from './pages/volunteer/VolunteerPage';
 import VolunteerProfile from './pages/volunteer/VolunteerProfile';
 
-import './index.css';
-
 import 'leaflet/dist/leaflet.css';
+import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -38,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="create" element={<VolunteerCreate />} />
           <Route path="profile" element={<VolunteerProfile />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

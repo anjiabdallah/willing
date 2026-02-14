@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import Navbar from '../components/Navbar';
 import requestServer from '../requestServer';
 
 function UserLoginPage() {
@@ -36,16 +37,8 @@ function UserLoginPage() {
   };
 
   return (
-
     <main className="h-screen flex flex-col">
-      <div className="navbar bg-base-100 shadow-md">
-        <div className="navbar-start">
-          <a className="btn btn-ghost text-xl" href="/">
-            <img src="/willing.svg" className="h-6" />
-            Willing
-          </a>
-        </div>
-      </div>
+      <Navbar />
 
       <div className="flex-grow hero bg-base-200">
         <div className="hero-content flex-col lg:flex-row-reverse gap-8">

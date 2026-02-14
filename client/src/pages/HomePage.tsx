@@ -1,6 +1,7 @@
+import * as jose from 'jose';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import * as jose from 'jose';
+
 import type { Role, UserJWT } from '../../../server/src/types';
 
 function HomePage() {
@@ -35,7 +36,7 @@ function HomePage() {
 
       <main className="flex-grow flex flex-col items-center justify-center max-w-5xl mx-auto py-12 px-4">
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-extrabold mb-4">Connecting volunteers to their vision of a better community</h1>
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">Connecting volunteers to their vision of a better community</h1>
           <p className="text-xl opacity-70">Join Willing to discover local volunteering opportunities or expand your organization’s impact</p>
         </div>
 

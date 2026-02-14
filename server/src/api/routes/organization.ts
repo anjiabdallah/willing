@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import database from '../../db/index.js';
-import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
+import { sendAdminOrganizationRequestEmail } from './admin/emails.js';
 import { newOrganizationRequestSchema } from '../../db/tables.js';
 
 const orgRouter = Router();
@@ -46,10 +46,8 @@ orgRouter.post('/request', async (req, res) => {
       phone_number: body.phone_number,
       url: body.url,
       location_name: body.location_name,
-
-      // FORCE 0,0 for now
-      latitude: 0,
-      longitude: 0,
+      latitude: body.latitude,
+      longitude: body.longitude,
     })
     .returningAll().executeTakeFirst();
 

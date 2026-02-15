@@ -1,4 +1,5 @@
 import * as jose from 'jose';
+import { User, ChevronDown, LogOut } from 'lucide-react';
 import { useCallback, useContext, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
@@ -39,11 +40,16 @@ function VolunteerPageInner() {
       <Navbar right={(
         <div className="dropdown dropdown-bottom dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost m-1">
+            <User size={18} />
             {volunteer ? `${volunteer.first_name} ${volunteer.last_name}` : ''}
+            <ChevronDown size={14} className="opacity-50" />
           </div>
           <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
             <li>
-              <button onClick={handleLogout}>Logout</button>
+              <button onClick={handleLogout}>
+                <LogOut size={16} />
+                Logout
+              </button>
             </li>
           </ul>
         </div>

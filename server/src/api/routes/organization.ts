@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import database from '../../db/index.js';
-import { newOrganizationRequestSchema, OrganizationPostingSchema } from '../../db/tables.js';
+import { newOrganizationRequestSchema, organizationPostingSchema } from '../../db/tables.js';
 import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
 import { authorizeOnly, setUserJWT } from '../authorization.js';
 
@@ -66,7 +66,7 @@ organizationRouter.post('/request', async (req, res) => {
 organizationRouter.use(authorizeOnly('organization'));
 
 organizationRouter.post('/posting', async (req, res) => {
-  const body = OrganizationPostingSchema.omit({ id: true, organization_id: true }).parse(req.body);
+  const body = organizationPostingSchema.omit({ id: true, organization_id: true }).parse(req.body);
   const orgId = req.userJWT!.id;
 
   const posting = await database
@@ -86,10 +86,10 @@ organizationRouter.post('/posting', async (req, res) => {
     .returningAll().executeTakeFirst();
 
   if (!posting) {
-    return res.status(500).json({ error: 'Failed to create posting' });
+    throw new Error('Failed to create posting');
   }
 
-  res.status(201).json(posting);
+  res.json(posting);
 });
 
 organizationRouter.get('/posting', async (req, res) => {

@@ -17,7 +17,6 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(setUserJWT);
 app.use(api);
 
 // Not found handler

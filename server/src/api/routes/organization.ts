@@ -3,7 +3,7 @@ import { Router } from 'express';
 import database from '../../db/index.js';
 import { newOrganizationRequestSchema, organizationPostingSchema } from '../../db/tables.js';
 import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
-import { authorizeOnly, setUserJWT } from '../authorization.js';
+import { authorizeOnly } from '../authorization.js';
 
 const organizationRouter = Router();
 

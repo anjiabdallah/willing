@@ -1,7 +1,8 @@
 import { Router } from 'express';
+
 import database from '../../db/index.js';
+import { newOrganizationRequestSchema, organizationPostingSchema } from '../../db/tables.js';
 import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
-import { newOrganizationRequestSchema } from '../../db/tables.js';
 import { authorizeOnly } from '../authorization.js';
 
 const organizationRouter = Router();
@@ -63,6 +64,46 @@ organizationRouter.post('/request', async (req, res) => {
 });
 
 organizationRouter.use(authorizeOnly('organization'));
+
+organizationRouter.post('/posting', async (req, res) => {
+  const body = organizationPostingSchema.omit({ id: true, organization_id: true }).parse(req.body);
+  const orgId = req.userJWT!.id;
+
+  const posting = await database
+    .insertInto('organization_posting')
+    .values({
+      organization_id: orgId,
+      title: body.title,
+      description: body.description,
+      latitude: body.latitude ?? undefined,
+      longitude: body.longitude ?? undefined,
+      max_volunteers: body.max_volunteers ?? undefined,
+      start_timestamp: body.start_timestamp,
+      end_timestamp: body.end_timestamp ?? undefined,
+      minimum_age: body.minimum_age ?? undefined,
+      is_open: body.is_open ?? true,
+    })
+    .returningAll().executeTakeFirst();
+
+  if (!posting) {
+    throw new Error('Failed to create posting');
+  }
+
+  res.json(posting);
+});
+
+organizationRouter.get('/posting', async (req, res) => {
+  const orgId = req.userJWT!.id;
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_id', '=', orgId)
+    .orderBy('start_timestamp', 'asc')
+    .execute();
+
+  res.json({ posting });
+});
 
 organizationRouter.get('/me', async (req, res) => {
   const organization = await database

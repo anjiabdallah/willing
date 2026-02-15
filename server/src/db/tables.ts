@@ -13,7 +13,6 @@ export interface Database {
   organization_posting: OrganizationPostingTable;
   posting_skill: PostingSkillTable;
   volunteer_skill: VolunteerSkillTable;
-  posting_location_name: PostingLocationNameTable;
 }
 
 export const volunteerAccountSchema = zod.object({
@@ -148,6 +147,7 @@ export const OrganizationPostingSchema = zod.object({
   end_timestamp: zod.date({ message: 'End time must be a valid date' }).optional(),
   minimum_age: zod.number().optional(),
   is_open: zod.boolean().default(true),
+  location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
 });
 
 export type OrganizationPosting = zod.infer<typeof OrganizationPostingSchema>;
@@ -178,8 +178,3 @@ export type PostingLocationNameTable = {
   id: number;
   name: string;
 };
-
-export const PostingLocationNameSchema = zod.object({
-  id: zod.number(),
-  name: zod.string().min(1, 'Location name is required'),
-});

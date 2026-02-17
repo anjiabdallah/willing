@@ -2,6 +2,8 @@
 
 A platform dedicated to bridging the gap between passionate volunteers and organizations in need. Built for community impact.
 
+![Homepage](./images/homepage.png)
+
 ## Setup
 
 ### Server

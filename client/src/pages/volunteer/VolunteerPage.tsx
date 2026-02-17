@@ -1,68 +1,43 @@
-import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useCallback, useContext, useEffect } from 'react';
-import * as jose from 'jose';
-import VolunteerContext, { VolunteerProvider } from './VolunteerContext';
-import type { UserJWT } from '../../../../server/src/types';
+import { User, ChevronDown, LogOut } from 'lucide-react';
+import { useCallback, useContext } from 'react';
+import { Outlet } from 'react-router';
 
-function VolunteerPageInner() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { volunteer, logout, refreshVolunteer } = useContext(VolunteerContext);
+import AuthContext from '../../auth/AuthContext';
+import { useVolunteer } from '../../auth/useUsers';
+import Navbar from '../../components/Navbar';
 
-  useEffect(() => {
-    if (location.pathname === '/volunteer/create') return;
+function VolunteerPage() {
+  const auth = useContext(AuthContext);
 
-    const jwt = localStorage.getItem('jwt');
-    if (!jwt) {
-      navigate('/login');
-    } else {
-      const { role } = jose.decodeJwt<UserJWT>(jwt);
-      if (role === 'volunteer') {
-        refreshVolunteer();
-      } else {
-        navigate('/' + role);
-      }
-    }
-  }, [location.pathname, navigate, refreshVolunteer]);
+  const volunteer = useVolunteer();
 
   const handleLogout = useCallback(() => {
     (document.activeElement as HTMLElement)?.blur();
-    logout();
-    navigate('/');
-  }, [logout, navigate]);
+    auth.logout();
+  }, [auth]);
 
   return (
     <main className="h-screen flex flex-col">
-      <div className="navbar bg-base-100 shadow-md">
-        <div className="navbar-start">
-          <a className="btn btn-ghost text-xl" href="/">
-            <img src="/willing.svg" className="h-6" />
-            Willing
-          </a>
-        </div>
-        <div className="navbar-end">
-          <div className="dropdown dropdown-bottom dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost m-1">
-              {volunteer ? `${volunteer.first_name} ${volunteer.last_name}` : ''}
-            </div>
-            <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-              <li>
-                <button onClick={handleLogout}>Logout</button>
-              </li>
-            </ul>
+      <Navbar right={volunteer && (
+        <div className="dropdown dropdown-bottom dropdown-end">
+          <div tabIndex={0} role="button" className="btn btn-ghost m-1">
+            <User size={18} />
+            {`${volunteer.first_name} ${volunteer.last_name}`}
+            <ChevronDown size={14} className="opacity-50" />
           </div>
+          <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <li>
+              <button onClick={handleLogout}>
+                <LogOut size={16} />
+                Logout
+              </button>
+            </li>
+          </ul>
         </div>
-      </div>
+      )}
+      />
       <Outlet />
     </main>
-  );
-}
-
-function VolunteerPage() {
-  return (
-    <VolunteerProvider>
-      <VolunteerPageInner />
-    </VolunteerProvider>
   );
 }
 

@@ -1,59 +1,41 @@
-import { useCallback, useContext, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
-import * as jose from 'jose';
-import OrganizationContext from './OrganizationContext';
-import type { UserJWT } from '../../../../server/src/types';
+import { Building2, LogOut, ChevronDown } from 'lucide-react';
+import { useCallback, useContext } from 'react';
+import { Outlet } from 'react-router';
+
+import AuthContext from '../../auth/AuthContext';
+import { useOrganization } from '../../auth/useUsers';
+import Navbar from '../../components/Navbar';
 
 function OrganizationPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { organization, logout, refreshOrganization } = useContext(OrganizationContext);
+  const auth = useContext(AuthContext);
 
-  useEffect(() => {
-    if (location.pathname === '/organization/request') return;
-    const jwt = localStorage.getItem('jwt');
-    if (!jwt) {
-      navigate('/organization/request');
-    } else {
-      const { role } = jose.decodeJwt<UserJWT>(jwt);
-      if (role === 'organization') {
-        refreshOrganization();
-      } else {
-        navigate('/' + role);
-      }
-    }
-  }, []);
+  const organization = useOrganization();
 
   const handleLogout = useCallback(() => {
     (document.activeElement as HTMLElement)?.blur();
-    logout();
-    navigate('/');
-  }, [logout, navigate]);
+    auth.logout();
+  }, [auth]);
 
   return (
     <main className="h-screen flex flex-col">
-      <div className="navbar bg-base-100 shadow-md">
-        <div className="navbar-start">
-          <a className="btn btn-ghost text-xl" href="/">
-            <img src="/willing.svg" className="h-6" />
-            Willing
-          </a>
-        </div>
-        <div className="navbar-end">
-          <div className="dropdown dropdown-bottom dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost m-1">
-              {organization ? organization.name : ''}
-            </div>
-            <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-              <li>
-                <button onClick={handleLogout}>
-                  Logout
-                </button>
-              </li>
-            </ul>
+      <Navbar right={organization && (
+        <div className="dropdown dropdown-bottom dropdown-end">
+          <div tabIndex={0} role="button" className="btn btn-ghost m-1">
+            <Building2 size={18} />
+            {organization.name}
+            <ChevronDown size={14} className="opacity-50" />
           </div>
+          <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <li>
+              <button onClick={handleLogout}>
+                <LogOut size={16} />
+                Logout
+              </button>
+            </li>
+          </ul>
         </div>
-      </div>
+      )}
+      />
       <Outlet />
     </main>
   );

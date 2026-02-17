@@ -1,16 +1,17 @@
 import { Router } from 'express';
+
 import database from '../../db/index.js';
-import { sendAdminOrganizationRequestEmail } from './admin/emails.js';
-import { newOrganizationRequestSchema } from '../../db/tables.js';
+import { newOrganizationRequestSchema, organizationPostingSchema } from '../../db/tables.js';
+import { sendAdminOrganizationRequestEmail } from '../../SMTP/emails.js';
+import { authorizeOnly } from '../authorization.js';
 
-const orgRouter = Router();
+const organizationRouter = Router();
 
-orgRouter.post('/request', async (req, res) => {
+organizationRouter.post('/request', async (req, res) => {
   const body = newOrganizationRequestSchema.parse(req.body);
 
   const email = body.email.toLowerCase().trim();
 
-  // check email in existing account
   const checkAccountRequest = await database
     .selectFrom('organization_account')
     .select('id')
@@ -24,7 +25,6 @@ orgRouter.post('/request', async (req, res) => {
     });
   }
 
-  // check email in pending requests
   const checkPendingRequest = await database
     .selectFrom('organization_request')
     .select('id')
@@ -46,10 +46,8 @@ orgRouter.post('/request', async (req, res) => {
       phone_number: body.phone_number,
       url: body.url,
       location_name: body.location_name,
-
-      // FORCE 0,0 for now
-      latitude: 0,
-      longitude: 0,
+      latitude: body.latitude,
+      longitude: body.longitude,
     })
     .returningAll().executeTakeFirst();
 
@@ -65,4 +63,60 @@ orgRouter.post('/request', async (req, res) => {
   }
 });
 
-export default orgRouter;
+organizationRouter.use(authorizeOnly('organization'));
+
+organizationRouter.post('/posting', async (req, res) => {
+  const body = organizationPostingSchema.omit({ id: true, organization_id: true }).parse(req.body);
+  const orgId = req.userJWT!.id;
+
+  const posting = await database
+    .insertInto('organization_posting')
+    .values({
+      organization_id: orgId,
+      title: body.title,
+      description: body.description,
+      latitude: body.latitude ?? undefined,
+      longitude: body.longitude ?? undefined,
+      max_volunteers: body.max_volunteers ?? undefined,
+      start_timestamp: body.start_timestamp,
+      end_timestamp: body.end_timestamp ?? undefined,
+      minimum_age: body.minimum_age ?? undefined,
+      is_open: body.is_open ?? true,
+      location_name: body.location_name,
+    })
+    .returningAll().executeTakeFirst();
+
+  if (!posting) {
+    throw new Error('Failed to create posting');
+  }
+
+  res.json(posting);
+});
+
+organizationRouter.get('/posting', async (req, res) => {
+  const orgId = req.userJWT!.id;
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_id', '=', orgId)
+    .orderBy('start_timestamp', 'asc')
+    .execute();
+
+  res.json({ posting });
+});
+
+organizationRouter.get('/me', async (req, res) => {
+  const organization = await database
+    .selectFrom('organization_account')
+    .selectAll()
+    .where('id', '=', req.userJWT!.id)
+    .executeTakeFirstOrThrow();
+
+  // @ts-expect-error: do not return the password
+  delete organization.password;
+
+  res.json({ organization });
+});
+
+export default organizationRouter;

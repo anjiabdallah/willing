@@ -1,16 +1,16 @@
-import { Router } from 'express';
-import database from '../../db/index.js';
 import bcrypt from 'bcrypt';
+import { Router } from 'express';
 import * as jose from 'jose';
-import { z } from 'zod';
+
 import config from '../../config.js';
+import database from '../../db/index.js';
+import { newVolunteerAccountSchema } from '../../db/tables.js';
 import { authorizeOnly } from '../authorization.js';
-import { volunteerAccountSchema } from '../../db/tables.js';
 
 const volunteerRouter = Router();
 
 volunteerRouter.post('/create', async (req, res) => {
-  const body = volunteerAccountSchema.parse(req.body);
+  const body = newVolunteerAccountSchema.parse(req.body);
 
   const existingVolunteer = await database
     .selectFrom('volunteer_account')
@@ -65,6 +65,7 @@ volunteerRouter.get('/me', async (req, res) => {
 
   // @ts-expect-error: do not return the password
   delete volunteer.password;
+
   res.json({ volunteer });
 });
 

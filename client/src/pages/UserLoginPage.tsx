@@ -1,50 +1,23 @@
-import React, { useState } from 'react';
-import requestServer from '../requestServer';
-import { useNavigate } from 'react-router';
+import { Mail, LockKeyhole, LogIn } from 'lucide-react';
+import React, { useState, useCallback, useContext } from 'react';
+
+import AuthContext from '../auth/AuthContext';
+import Navbar from '../components/Navbar';
 
 function UserLoginPage() {
-  const navigate = useNavigate();
-
+  const auth = useContext(AuthContext);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
-  const submission = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const submit = useCallback(async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    try {
-      const response = await requestServer<{
-        token: string;
-        role: 'organization' | 'volunteer';
-      }>('/user/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      localStorage.setItem('jwt', response.token);
-
-      if (response.role === 'organization') {
-        navigate('/organization');
-      } else
-        navigate('/volunteer');
-    } catch (error) {
-      alert('Login failed: ' + error);
-    }
-  };
+    await auth.loginUser(email, password);
+  }, [email, password, auth]);
 
   return (
-
     <main className="h-screen flex flex-col">
-      <div className="navbar bg-base-100 shadow-md">
-        <div className="navbar-start">
-          <a className="btn btn-ghost text-xl" href="/">
-            <img src="/willing.svg" className="h-6" />
-            Willing
-          </a>
-        </div>
-      </div>
+      <Navbar />
 
       <div className="flex-grow hero bg-base-200">
         <div className="hero-content flex-col lg:flex-row-reverse gap-8">
@@ -55,37 +28,43 @@ function UserLoginPage() {
             </p>
           </div>
 
-          <div className="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
+          <div className="card bg-base-100 w-full max-w-lg shrink-0 shadow-2xl">
             <form
               className="card-body"
-              onSubmit={submission}
+              onSubmit={submit}
             >
               <fieldset className="fieldset">
                 <label className="label">Email</label>
-                <input
-                  type="email"
-                  className="input w-full"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEmail(e.currentTarget.value)}
-                />
-
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 z-50" size={18} />
+                  <input
+                    type="email"
+                    className="input input-bordered w-full pl-10"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEmail(e.currentTarget.value)}
+                  />
+                </div>
                 <label className="label">Password</label>
-                <input
-                  type="password"
-                  className="input w-full"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPassword(e.currentTarget.value)}
-                />
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 z-50" size={18} />
+                  <input
+                    type="password"
+                    className="input input-bordered w-full pl-10"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setPassword(e.currentTarget.value)}
+                  />
+                </div>
 
                 <button
                   className="btn btn-primary mt-4"
                   type="submit"
                   disabled={!email || !password}
                 >
+                  <LogIn size={18} />
                   Login
                 </button>
               </fieldset>

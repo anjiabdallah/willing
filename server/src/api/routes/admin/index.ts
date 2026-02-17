@@ -1,17 +1,18 @@
-import { Router } from 'express';
-import zod from 'zod';
-import * as jose from 'jose';
 import bcrypt from 'bcrypt';
-import database from '../../../db/index.js';
-import { authorizeOnly } from '../../authorization.js';
+import { Router } from 'express';
+import * as jose from 'jose';
+import zod from 'zod';
+
 import config from '../../../config.js';
-import { LoginInfoSchema } from '../../../types.js';
-import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail } from './emails.js';
+import database from '../../../db/index.js';
+import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail } from '../../../SMTP/emails.js';
+import { loginInfoSchema } from '../../../types.js';
+import { authorizeOnly } from '../../authorization.js';
 
 const adminRouter = Router();
 
 adminRouter.post('/login', async (req, res) => {
-  const body = LoginInfoSchema.parse(req.body);
+  const body = loginInfoSchema.parse(req.body);
 
   const account = await database
     .selectFrom('admin_account')
@@ -44,7 +45,7 @@ adminRouter.post('/login', async (req, res) => {
 
   res.json({
     token,
-    account,
+    admin: account,
   });
 });
 
@@ -56,6 +57,9 @@ adminRouter.get('/me', async (req, res) => {
     .selectAll()
     .where('id', '=', req.userJWT!.id)
     .executeTakeFirstOrThrow();
+
+  // @ts-expect-error: Do not return the password
+  delete admin.password;
 
   res.json({ admin });
 });

@@ -82,6 +82,7 @@ organizationRouter.post('/posting', async (req, res) => {
       end_timestamp: body.end_timestamp ?? undefined,
       minimum_age: body.minimum_age ?? undefined,
       is_open: body.is_open ?? true,
+      location_name: body.location_name,
     })
     .returningAll().executeTakeFirst();
 

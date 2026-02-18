@@ -1,7 +1,5 @@
-import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import AuthContext from '../../auth/AuthContext';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
@@ -9,8 +7,6 @@ import type { OrganizationPosting } from '../../../../server/src/db/tables';
 
 function OrganizationHome() {
   const navigate = useNavigate();
-  const { restrictRoute } = useContext(AuthContext);
-  restrictRoute('organization', '/login');
 
   const { data: postings, loading, error } = useAsync(
     async () => {
@@ -67,32 +63,27 @@ function OrganizationHome() {
                   <div className="space-y-2 text-sm">
                     <p>
                       <strong>Location:</strong>
-                      {' '}
                       {posting.location_name}
                     </p>
                     <p>
                       <strong>Start:</strong>
-                      {' '}
                       {new Date(posting.start_timestamp).toLocaleDateString()}
                     </p>
                     {posting.end_timestamp && (
                       <p>
                         <strong>End:</strong>
-                        {' '}
                         {new Date(posting.end_timestamp).toLocaleDateString()}
                       </p>
                     )}
                     {posting.max_volunteers && (
                       <p>
                         <strong>Max Volunteers:</strong>
-                        {' '}
                         {posting.max_volunteers}
                       </p>
                     )}
                     {posting.minimum_age && (
                       <p>
                         <strong>Minimum Age:</strong>
-                        {' '}
                         {posting.minimum_age}
                       </p>
                     )}

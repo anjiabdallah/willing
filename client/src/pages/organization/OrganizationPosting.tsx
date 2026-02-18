@@ -210,7 +210,7 @@ export default function OrganizationPosting() {
                   }
                 }}
               />
-              <button type="button" className="btn btn-outline btn-sm self-center" onClick={addSkill}>
+              <button type="button" className="btn btn-outline self-center" onClick={addSkill}>
                 <Plus size={16} />
                 {' '}
                 Add
@@ -242,7 +242,7 @@ export default function OrganizationPosting() {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary mt-4 flex items-center gap-2" disabled={submitting}>
+          <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={submitting}>
             {submitting ? <span className="loading loading-spinner loading-sm" /> : <Send size={18} />}
             {submitting ? 'Creating...' : 'Create Posting'}
           </button>

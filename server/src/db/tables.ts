@@ -43,7 +43,7 @@ export const volunteerAccountSchema = zod.object({
     .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' }),
   gender: zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' '),
   description: zod.string().optional(),
-  privacy: zod.enum(['public', 'private']).optional(),
+  privacy: zod.enum(['public', 'private']),
 });
 export type VolunteerAccount = zod.infer<typeof volunteerAccountSchema>;
 

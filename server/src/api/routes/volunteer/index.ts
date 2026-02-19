@@ -23,15 +23,21 @@ type VolunteerProfileResponse = {
     description?: string;
   };
   skills: string[];
-  cv: string | null;
   privacy: string | null;
-  unavailableFields: ['cv'];
 };
 
 const volunteerProfileUpdateSchema = zod.object({
+  first_name: zod.string().trim().min(1, 'First name is required').optional(),
+  last_name: zod.string().trim().min(1, 'Last name is required').optional(),
+  email: zod.email('Invalid email').transform(val => val.toLowerCase().trim()).optional(),
+  date_of_birth: zod
+    .string()
+    .min(1, 'Date of birth is required')
+    .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
+    .optional(),
+  gender: zod.enum(['male', 'female', 'other']).optional(),
   description: zod.string().optional(),
   skills: zod.array(zod.string().trim().min(1, 'Skill cannot be empty')).optional(),
-  cv: zod.string().nullable().optional(),
   privacy: zod.enum(['public', 'private']).optional(),
 });
 
@@ -69,9 +75,7 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
       ...(volunteer.description !== undefined ? { description: volunteer.description } : {}),
     },
     skills: volunteerSkills.map(skill => skill.name),
-    cv: null,
     privacy: volunteer.privacy ?? null,
-    unavailableFields: ['cv'],
   };
 };
 
@@ -100,6 +104,7 @@ volunteerRouter.post('/create', async (req, res) => {
       password: hashedPassword,
       date_of_birth: body.date_of_birth,
       gender: body.gender,
+      privacy: 'public',
     })
     .returningAll()
     .executeTakeFirst();
@@ -144,12 +149,36 @@ volunteerRouter.put('/profile', async (req, res) => {
   const body = volunteerProfileUpdateSchema.parse(req.body);
   const volunteerId = req.userJWT!.id;
 
+  if (body.email !== undefined) {
+    const existingVolunteer = await database
+      .selectFrom('volunteer_account')
+      .select('id')
+      .where('email', '=', body.email)
+      .where('id', '!=', volunteerId)
+      .executeTakeFirst();
+
+    if (existingVolunteer) {
+      res.status(409);
+      throw new Error('Another account already uses this email');
+    }
+  }
+
   await database.transaction().execute(async (trx) => {
     const volunteerUpdate: {
+      first_name?: string;
+      last_name?: string;
+      email?: string;
+      date_of_birth?: string;
+      gender?: 'male' | 'female' | 'other';
       description?: string;
       privacy?: 'public' | 'private';
     } = {};
 
+    if (body.first_name !== undefined) volunteerUpdate.first_name = body.first_name;
+    if (body.last_name !== undefined) volunteerUpdate.last_name = body.last_name;
+    if (body.email !== undefined) volunteerUpdate.email = body.email;
+    if (body.date_of_birth !== undefined) volunteerUpdate.date_of_birth = body.date_of_birth;
+    if (body.gender !== undefined) volunteerUpdate.gender = body.gender;
     if (body.description !== undefined) volunteerUpdate.description = body.description;
     if (body.privacy !== undefined) volunteerUpdate.privacy = body.privacy;
 

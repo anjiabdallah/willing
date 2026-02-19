@@ -70,7 +70,7 @@ export default function OrganizationPosting() {
   return (
     <div className="flex-grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <h2 className="text-3xl font-extrabold tracking-tight mb-6">Create Organization Posting</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight mb-6">Create Posting</h2>
 
         <div className="card bg-base-100 w-full shadow-2xl">
           <form className="card-body space-y-4" onSubmit={submit}>
@@ -88,7 +88,7 @@ export default function OrganizationPosting() {
               label="Description"
               name="description"
               type="textarea"
-              placeholder="Describe the volunteer opportunity"
+              placeholder="Describe the opportunity"
             />
 
             <FormField

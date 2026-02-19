@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import * as jose from 'jose';
 
+import resetPassword from '../../auth/resetPassword.js';
 import config from '../../config.js';
 import database from '../../db/index.js';
 import { newVolunteerAccountSchema } from '../../db/tables.js';
@@ -68,5 +69,7 @@ volunteerRouter.get('/me', async (req, res) => {
 
   res.json({ volunteer });
 });
+
+volunteerRouter.post('/reset-password', resetPassword);
 
 export default volunteerRouter;

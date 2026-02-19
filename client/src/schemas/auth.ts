@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { newOrganizationRequestSchema, newVolunteerAccountSchema } from '../../../server/src/db/tables';
+import { newOrganizationRequestSchema, newVolunteerAccountSchema, newOrganizationPostingSchema } from '../../../server/src/db/tables';
 import { loginInfoSchema } from '../../../server/src/types';
 
 export const loginFormSchema = loginInfoSchema.extend({
@@ -29,3 +29,15 @@ export const organizationRequestFormSchema = newOrganizationRequestSchema
   });
 
 export type OrganizationRequestFormData = z.infer<typeof organizationRequestFormSchema>;
+
+export const organizationPostingFormSchema = newOrganizationPostingSchema
+  .omit({ organization_id: true })
+  .extend({
+    start_timestamp: z.string().min(1, 'Start time is required'),
+    end_timestamp: z.string().optional(),
+    max_volunteers: z.string().optional(),
+    minimum_age: z.string().optional(),
+    is_open: z.boolean(),
+  });
+
+export type OrganizationPostingFormData = z.infer<typeof organizationPostingFormSchema>;

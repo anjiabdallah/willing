@@ -4,7 +4,7 @@ import { setUserJWT } from './authorization.js';
 import adminRouter from './routes/admin/index.js';
 import organizationRouter from './routes/organization/index.js';
 import userRouter from './routes/user.js';
-import volunteerRouter from './routes/volunteer.js';
+import volunteerRouter from './routes/volunteer/index.js';
 
 const api = Router();
 api.use(setUserJWT);

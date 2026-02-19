@@ -3,11 +3,12 @@ import { Router } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
-import resetPassword from '../../auth/resetPassword.js';
-import config from '../../config.js';
-import database from '../../db/index.js';
-import { newVolunteerAccountSchema } from '../../db/tables.js';
-import { authorizeOnly } from '../authorization.js';
+import volunteerPostingRouter from './posting.js';
+import resetPassword from '../../../auth/resetPassword.js';
+import config from '../../../config.js';
+import database from '../../../db/index.js';
+import { newVolunteerAccountSchema } from '../../../db/tables.js';
+import { authorizeOnly } from '../../authorization.js';
 
 const volunteerRouter = Router();
 
@@ -187,5 +188,7 @@ volunteerRouter.put('/profile', async (req, res) => {
 });
 
 volunteerRouter.post('/reset-password', resetPassword);
+
+volunteerRouter.use('/posting', volunteerPostingRouter);
 
 export default volunteerRouter;

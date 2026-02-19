@@ -2,10 +2,12 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import * as jose from 'jose';
 
-import config from '../../config.js';
-import database from '../../db/index.js';
-import { newVolunteerAccountSchema } from '../../db/tables.js';
-import { authorizeOnly } from '../authorization.js';
+
+import volunteerPostingRouter from './posting.js';
+import config from '../../../config.js';
+import database from '../../../db/index.js';
+import { newVolunteerAccountSchema } from '../../../db/tables.js';
+import { authorizeOnly } from '../../authorization.js';
 
 const volunteerRouter = Router();
 
@@ -68,5 +70,8 @@ volunteerRouter.get('/me', async (req, res) => {
 
   res.json({ volunteer });
 });
+
+
+volunteerRouter.use('/posting', volunteerPostingRouter);
 
 export default volunteerRouter;

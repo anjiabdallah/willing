@@ -144,11 +144,13 @@ export const organizationPostingSchema = zod.object({
   latitude: zod
     .number()
     .min(-90, { message: 'Latitude must be >= -90' })
-    .max(90, { message: 'Latitude must be <= 90' }),
+    .max(90, { message: 'Latitude must be <= 90' })
+    .optional(),
   longitude: zod
     .number()
     .min(-180, { message: 'Longitude must be >= -180' })
-    .max(180, { message: 'Longitude must be <= 180' }),
+    .max(180, { message: 'Longitude must be <= 180' })
+    .optional(),
   max_volunteers: zod.number().optional(),
   start_timestamp: zod.preprocess(val => val ? new Date(val as string) : val, zod.date({ message: 'Start time is required and must be a valid date' })),
   end_timestamp: zod.preprocess(val => val ? new Date(val as string) : undefined, zod.date({ message: 'End time must be a valid date' })).optional(),

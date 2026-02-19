@@ -42,6 +42,10 @@ export default function OrganizationPosting() {
 
   const submit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {
+      if (!account?.id) {
+        throw new Error('Organization account not found. Please log in again.');
+      }
+
       const payload = {
         organization_id: account.id,
         title: data.title.trim(),
@@ -57,12 +61,15 @@ export default function OrganizationPosting() {
         skills: skills.length > 0 ? skills : undefined,
       };
 
-      await requestServer<{ success: boolean; posting: unknown }>('/organization/posting', {
+      console.log('Submitting posting payload:', payload);
+
+      const response = await requestServer<{ success: boolean; posting: unknown }>('/organization/posting', {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' },
       }, true);
 
+      console.log('Posting created successfully:', response);
       navigate('/organization');
     });
   });

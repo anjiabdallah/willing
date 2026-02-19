@@ -31,8 +31,10 @@ export const organizationRequestFormSchema = newOrganizationRequestSchema
 export type OrganizationRequestFormData = z.infer<typeof organizationRequestFormSchema>;
 
 export const organizationPostingFormSchema = newOrganizationPostingSchema
-  .omit({ organization_id: true })
+  .omit({ organization_id: true, latitude: true, longitude: true })
   .extend({
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
     start_timestamp: z.string().min(1, 'Start time is required'),
     end_timestamp: z.string().optional(),
     max_volunteers: z.string().optional(),

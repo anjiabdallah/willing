@@ -17,15 +17,6 @@ app.use(cors({
   credentials: true,
 }));
 
-// CSP Headers middleware
-app.use((req, res, next) => {
-  const cspValue = config.NODE_ENV === 'development'
-    ? 'default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; font-src \'self\' data:; img-src \'self\' data: https:; connect-src \'self\' ws: wss: localhost:*;'
-    : 'default-src \'self\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; font-src \'self\' data:; img-src \'self\' data: https:; connect-src \'self\'';
-  res.setHeader('Content-Security-Policy', cspValue);
-  next();
-});
-
 app.use(api);
 
 // Not found handler

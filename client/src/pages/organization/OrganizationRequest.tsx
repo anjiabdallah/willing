@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, Mail, Phone, Globe, MapPin, Send } from 'lucide-react';
+import { Building2, Mail, Phone, Globe, MapPin, Send, Home } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
@@ -10,6 +11,7 @@ import { executeAndShowError, FormField, FormRootError } from '../../utils/formU
 import requestServer from '../../utils/requestServer';
 
 export default function OrganizationRequestPage() {
+  const navigate = useNavigate();
   const form = useForm<OrganizationRequestFormData>({
     resolver: zodResolver(organizationRequestFormSchema),
     mode: 'onTouched',
@@ -23,6 +25,7 @@ export default function OrganizationRequestPage() {
     },
   });
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {
@@ -40,9 +43,30 @@ export default function OrganizationRequestPage() {
         },
       });
 
-      alert('Organization request submitted successfully');
+      setSubmitted(true);
     });
   });
+
+  if (submitted) {
+    return (
+      <div className="grow hero bg-base-200">
+        <div className="hero-content text-center">
+          <div className="card bg-base-100 shadow-2xl max-w-lg w-full">
+            <div className="card-body items-center">
+              <h2 className="card-title text-2xl">Request submitted</h2>
+              <p className="opacity-80">
+                Your organization request was sent successfully. Our team will review it and contact you.
+              </p>
+              <button className="btn btn-primary mt-3" onClick={() => navigate('/')}>
+                <Home size={18} />
+                Go back home
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grow hero bg-base-200">

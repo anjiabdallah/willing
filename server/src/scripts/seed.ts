@@ -100,6 +100,7 @@ async function seed() {
         gender: 'male',
         date_of_birth: '2001-01-01',
         description: 'Likes helping. Easy to remember.',
+        privacy: 'public',
       },
       {
         first_name: 'Vol',
@@ -109,6 +110,7 @@ async function seed() {
         gender: 'female',
         date_of_birth: '2002-02-02',
         description: 'Also likes helping.',
+        privacy: 'public',
       },
       {
         first_name: 'Vol',
@@ -118,6 +120,7 @@ async function seed() {
         gender: 'other',
         date_of_birth: '2003-03-03',
         description: 'Friendly volunteer.',
+        privacy: 'public',
       },
       {
         first_name: 'Vol',
@@ -127,6 +130,7 @@ async function seed() {
         gender: 'female',
         date_of_birth: '2004-04-04',
         description: 'Shows up on time (allegedly).',
+        privacy: 'public',
       },
     ])
     .returning(['id', 'email'])

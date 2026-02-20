@@ -7,38 +7,23 @@ import volunteerPostingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
 import database from '../../../db/index.js';
-import { newVolunteerAccountSchema } from '../../../db/tables.js';
+import { type VolunteerAccount, newVolunteerAccountSchema, volunteerAccountSchema } from '../../../db/tables.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerRouter = Router();
 
 type VolunteerProfileResponse = {
-  volunteer: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    date_of_birth: string;
-    gender: 'male' | 'female' | 'other';
-    description?: string;
-  };
+  volunteer: Pick<VolunteerAccount, 'id' | 'first_name' | 'last_name' | 'email' | 'date_of_birth' | 'gender' | 'description' | 'privacy'>;
   skills: string[];
-  privacy: string | null;
 };
 
-const volunteerProfileUpdateSchema = zod.object({
-  first_name: zod.string().trim().min(1, 'First name is required').optional(),
-  last_name: zod.string().trim().min(1, 'Last name is required').optional(),
-  email: zod.email('Invalid email').transform(val => val.toLowerCase().trim()).optional(),
-  date_of_birth: zod
-    .string()
-    .min(1, 'Date of birth is required')
-    .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
-    .optional(),
-  gender: zod.enum(['male', 'female', 'other']).optional(),
-  description: zod.string().optional(),
+const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
+  id: true,
+  password: true,
+}).partial();
+
+const volunteerProfileUpdateSchema = volunteerProfileUserUpdateSchema.extend({
   skills: zod.array(zod.string().trim().min(1, 'Skill cannot be empty')).optional(),
-  privacy: zod.enum(['public', 'private']).optional(),
 });
 
 const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfileResponse> => {
@@ -72,10 +57,10 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
       email: volunteer.email,
       date_of_birth: volunteer.date_of_birth,
       gender: volunteer.gender,
+      privacy: volunteer.privacy,
       ...(volunteer.description !== undefined ? { description: volunteer.description } : {}),
     },
     skills: volunteerSkills.map(skill => skill.name),
-    privacy: volunteer.privacy ?? null,
   };
 };
 
@@ -164,15 +149,7 @@ volunteerRouter.put('/profile', async (req, res) => {
   }
 
   await database.transaction().execute(async (trx) => {
-    const volunteerUpdate: {
-      first_name?: string;
-      last_name?: string;
-      email?: string;
-      date_of_birth?: string;
-      gender?: 'male' | 'female' | 'other';
-      description?: string;
-      privacy?: 'public' | 'private';
-    } = {};
+    const volunteerUpdate: Partial<Pick<VolunteerAccount, 'first_name' | 'last_name' | 'email' | 'date_of_birth' | 'gender' | 'description' | 'privacy'>> = {};
 
     if (body.first_name !== undefined) volunteerUpdate.first_name = body.first_name;
     if (body.last_name !== undefined) volunteerUpdate.last_name = body.last_name;

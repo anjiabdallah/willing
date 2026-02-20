@@ -14,20 +14,15 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import Loading from '../../components/Loading';
+import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
+import { volunteerAccountSchema } from '../../../../server/src/db/tables';
+
+const volunteerProfileUserSchema = volunteerAccountSchema.omit({ password: true });
 
 type VolunteerProfileResponse = {
-  volunteer: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    date_of_birth: string;
-    gender: 'male' | 'female' | 'other';
-    description?: string;
-  };
+  volunteer: z.infer<typeof volunteerProfileUserSchema>;
   skills: string[];
-  privacy: string | null;
 };
 
 const DESCRIPTION_MAX_LENGTH = 300;
@@ -38,18 +33,10 @@ const SKILL_BADGE_STYLES = [
   'badge-info',
 ] as const;
 
-const profileFormSchema = z.object({
-  first_name: z.string().trim().min(1, 'First name is required'),
-  last_name: z.string().trim().min(1, 'Last name is required'),
-  email: z.string().trim().email('Invalid email'),
-  date_of_birth: z
-    .string()
-    .min(1, 'Date of birth is required')
-    .refine(val => !Number.isNaN(Date.parse(val)), 'Invalid date of birth'),
-  gender: z.enum(['male', 'female', 'other']),
-  description: z.string().max(DESCRIPTION_MAX_LENGTH, `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`),
-  privacy: z.enum(['public', 'private']),
-});
+const profileFormSchema = volunteerAccountSchema.omit({ id: true, password: true })
+  .extend({
+    description: z.string().max(DESCRIPTION_MAX_LENGTH, `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`),
+  });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
 
@@ -100,7 +87,7 @@ function VolunteerProfile() {
         date_of_birth: getDateInputValue(response.volunteer.date_of_birth),
         gender: response.volunteer.gender,
         description: response.volunteer.description ?? '',
-        privacy: response.privacy === 'private' ? 'private' : 'public',
+        privacy: response.volunteer.privacy === 'private' ? 'private' : 'public',
       });
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : 'Failed to load profile');
@@ -228,7 +215,7 @@ function VolunteerProfile() {
         date_of_birth: getDateInputValue(response.volunteer.date_of_birth),
         gender: response.volunteer.gender,
         description: response.volunteer.description ?? '',
-        privacy: response.privacy === 'private' ? 'private' : 'public',
+        privacy: response.volunteer.privacy === 'private' ? 'private' : 'public',
       });
       setSaveMessage('Profile changes saved.');
       setIsEditMode(false);
@@ -248,7 +235,7 @@ function VolunteerProfile() {
       date_of_birth: getDateInputValue(profile.volunteer.date_of_birth),
       gender: profile.volunteer.gender,
       description: profile.volunteer.description ?? '',
-      privacy: profile.privacy === 'private' ? 'private' : 'public',
+      privacy: profile.volunteer.privacy === 'private' ? 'private' : 'public',
     });
     setSkills(profile.skills);
     setSkillInput('');
@@ -381,49 +368,30 @@ function VolunteerProfile() {
                 {isEditMode
                   ? (
                       <div className="space-y-3">
-                        <label className="form-control w-full">
-                          <span className="label-text text-sm opacity-70 mb-1">First Name</span>
-                          <input className="input input-bordered w-full" {...form.register('first_name')} disabled={saving} />
-                          <span className={`block min-h-5 text-xs mt-1 ${form.formState.errors.first_name ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.first_name?.message || 'placeholder'}
-                          </span>
-                        </label>
-
-                        <label className="form-control w-full">
-                          <span className="label-text text-sm opacity-70 mb-1">Last Name</span>
-                          <input className="input input-bordered w-full" {...form.register('last_name')} disabled={saving} />
-                          <span className={`block min-h-5 text-xs mt-1 ${form.formState.errors.last_name ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.last_name?.message || 'placeholder'}
-                          </span>
-                        </label>
-
-                        <label className="form-control w-full">
-                          <span className="label-text text-sm opacity-70 mb-1">Gender</span>
-                          <select className="select select-bordered w-full" {...form.register('gender')} disabled={saving}>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                          <span className={`block min-h-5 text-xs mt-1 ${form.formState.errors.gender ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.gender?.message || 'placeholder'}
-                          </span>
-                        </label>
-
-                        <label className="form-control w-full">
-                          <span className="label-text text-sm opacity-70 mb-1">Email</span>
-                          <input className="input input-bordered w-full" type="email" {...form.register('email')} disabled={saving} />
-                          <span className={`block min-h-5 text-xs mt-1 ${form.formState.errors.email ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.email?.message || 'placeholder'}
-                          </span>
-                        </label>
-
-                        <label className="form-control w-full">
-                          <span className="label-text text-sm opacity-70 mb-1">Date of Birth</span>
-                          <input className="input input-bordered w-full" type="date" {...form.register('date_of_birth')} disabled={saving} />
-                          <span className={`block min-h-5 text-xs mt-1 ${form.formState.errors.date_of_birth ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.date_of_birth?.message || 'placeholder'}
-                          </span>
-                        </label>
+                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                          <FormField form={form} name="first_name" label="First Name" />
+                        </div>
+                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                          <FormField form={form} name="last_name" label="Last Name" />
+                        </div>
+                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                          <FormField
+                            form={form}
+                            name="gender"
+                            label="Gender"
+                            selectOptions={[
+                              { label: 'Male', value: 'male' },
+                              { label: 'Female', value: 'female' },
+                              { label: 'Other', value: 'other' },
+                            ]}
+                          />
+                        </div>
+                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                          <FormField form={form} name="email" label="Email" type="email" Icon={Mail} />
+                        </div>
+                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                          <FormField form={form} name="date_of_birth" label="Date of Birth" type="date" Icon={Calendar} />
+                        </div>
                       </div>
                     )
                   : (

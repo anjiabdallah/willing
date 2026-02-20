@@ -24,6 +24,20 @@ export async function sendOrganizationAcceptanceEmail(
   await sendEmail({ to, subject, text });
 }
 
+export async function sendPasswordResetEmail(to: string, name: string, resetToken: string) {
+  const subject = 'Reset your Willing password';
+  const resetUrl = `${config.CLIENT_URL}/forgot-password?key=${encodeURIComponent(resetToken)}`;
+
+  const text
+    = `Hello ${name},\n\n`
+      + 'We received a request to reset your password.\n\n'
+      + `Reset link: ${resetUrl}\n\n`
+      + 'If you did not request a password reset, you can ignore this email.\n\n'
+      + 'Willing Team';
+
+  await sendEmail({ to, subject, text });
+}
+
 export async function sendOrganizationRejectionEmail(
   organizationRequest: OrganizationRequest,
   reason: string | null,

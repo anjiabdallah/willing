@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { newOrganizationRequestSchema, newVolunteerAccountSchema, newOrganizationPostingSchema } from '../../../server/src/db/tables';
+import {
+  newOrganizationRequestSchema,
+  newVolunteerAccountSchema,
+  newOrganizationPostingSchema,
+  passwordSchema,
+} from '../../../server/src/db/tables';
 import { loginInfoSchema } from '../../../server/src/types';
 
 export const loginFormSchema = loginInfoSchema.extend({
@@ -64,3 +69,19 @@ export const organizationPostingFormSchema = newOrganizationPostingSchema
   });
 
 export type OrganizationPostingFormData = z.infer<typeof organizationPostingFormSchema>;
+
+export const forgotPasswordRequestSchema = z.object({
+  email: z.email('Invalid email'),
+});
+
+export type ForgotPasswordRequestFormData = z.infer<typeof forgotPasswordRequestSchema>;
+
+export const forgotPasswordResetSchema = z.object({
+  password: passwordSchema,
+  confirmPassword: z.string().min(1, 'Confirm password is required'),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+export type ForgotPasswordResetFormData = z.infer<typeof forgotPasswordResetSchema>;

@@ -8,6 +8,7 @@ import AdminHome from './pages/admin/AdminHome';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminPage from './pages/admin/AdminPage';
 import AdminSettings from './pages/admin/AdminSettings';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
@@ -36,6 +37,14 @@ createRoot(document.getElementById('root')!).render(
             element={(
               <LoggedOutOnly>
                 <UserLoginPage />
+              </LoggedOutOnly>
+            )}
+          />
+          <Route
+            path="forgot-password"
+            element={(
+              <LoggedOutOnly>
+                <ForgotPasswordPage />
               </LoggedOutOnly>
             )}
           />

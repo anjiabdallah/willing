@@ -135,6 +135,20 @@ export type NewAdminAccount = zod.infer<typeof newAdminAccountSchema>;
 export const adminAccountUpdate = adminAccountSchema.omit({ password: true });
 export type AdminAccountWithoutPassword = zod.infer<typeof adminAccountUpdate>;
 
+// password_reset_token
+
+export const passwordResetTokenSchema = zod.object({
+  id: zod.number(),
+  user_id: zod.number(),
+  role: zod.enum(['organization', 'volunteer']),
+  token: zod.string().min(1),
+  expires_at: zod.date(),
+  created_at: zod.date(),
+});
+
+export type PasswordResetToken = zod.infer<typeof passwordResetTokenSchema>;
+export type PasswordResetTokenTable = WithGeneratedID<PasswordResetToken>;
+
 // organization_posting
 
 export const organizationPostingSchema = zod.object({
@@ -204,4 +218,5 @@ export interface Database {
   organization_posting: OrganizationPostingTable;
   posting_skill: PostingSkillTable;
   volunteer_skill: VolunteerSkillTable;
+  password_reset_token: PasswordResetTokenTable;
 }

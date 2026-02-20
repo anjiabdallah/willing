@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, LockKeyhole, LogIn } from 'lucide-react';
 import { useContext } from 'react';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext';
 import Loading from '../components/Loading';
@@ -56,6 +57,12 @@ function UserLoginPage() {
                 type="password"
                 Icon={LockKeyhole}
               />
+
+              <div className="text-right">
+                <Link to="/forgot-password" className="link link-hover text-sm">
+                  Forgot password?
+                </Link>
+              </div>
 
               <FormRootError form={form} />
 

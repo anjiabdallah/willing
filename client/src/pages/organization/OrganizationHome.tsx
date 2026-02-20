@@ -74,7 +74,6 @@ function OrganizationHome() {
                       <span>{posting.location_name}</span>
                     </p>
 
-                    {/* Timeline - Aligned like other elements */}
                     {posting.end_timestamp
                       ? (
                           <div className="flex gap-3 items-start">

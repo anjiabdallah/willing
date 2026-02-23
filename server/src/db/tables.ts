@@ -49,7 +49,7 @@ export type VolunteerAccount = zod.infer<typeof volunteerAccountSchema>;
 
 export type VolunteerAccountTable = WithGeneratedID<VolunteerAccount>;
 
-export const newVolunteerAccountSchema = volunteerAccountSchema.omit({ id: true });
+export const newVolunteerAccountSchema = volunteerAccountSchema.omit({ id: true, privacy: true, description: true });
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
 
 export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({ password: true });

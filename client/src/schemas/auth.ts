@@ -17,7 +17,6 @@ export type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export const volunteerSignupSchema = newVolunteerAccountSchema
   .extend({
-    email: z.string().min(1, 'Email is required').email('Invalid email'),
     confirmPassword: z.string().min(1, 'Confirm password is required'),
   })
   .refine(data => data.password === data.confirmPassword, {

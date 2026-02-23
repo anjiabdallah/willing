@@ -13,15 +13,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '../../../../server/src/db/tables';
 import Loading from '../../components/Loading';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
-import { volunteerAccountSchema } from '../../../../server/src/db/tables';
-
-const volunteerProfileUserSchema = volunteerAccountSchema.omit({ password: true });
 
 type VolunteerProfileResponse = {
-  volunteer: z.infer<typeof volunteerProfileUserSchema>;
+  volunteer: VolunteerAccountWithoutPassword;
   skills: string[];
 };
 

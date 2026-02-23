@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, CheckCircle, KeyRound, LockKeyhole, Mail, Send, Home, LogIn } from 'lucide-react';
+import { CheckCircle, LockKeyhole, Mail, Send, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';

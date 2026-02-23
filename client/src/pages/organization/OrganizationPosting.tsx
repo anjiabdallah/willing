@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Send, X, MapPin, Edit3, Users, ShieldCheck, Info, LockOpen, Lock } from 'lucide-react';
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
@@ -29,6 +29,7 @@ export default function OrganizationPosting() {
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
+  const isOpen = form.getValues('is_open');
 
   const addSkill = useCallback(() => {
     const trimmed = skillInput.trim();
@@ -199,7 +200,7 @@ export default function OrganizationPosting() {
                         type="button"
                         onClick={() => form.setValue('is_open', true)}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          form.watch('is_open')
+                          isOpen
                             ? 'bg-primary text-white shadow-lg'
                             : 'bg-base-300 text-base-content hover:bg-base-200'
                         }`}
@@ -212,7 +213,7 @@ export default function OrganizationPosting() {
                         type="button"
                         onClick={() => form.setValue('is_open', false)}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          !form.watch('is_open')
+                          !isOpen
                             ? 'bg-secondary text-white shadow-lg'
                             : 'bg-base-300 text-base-content hover:bg-base-200'
                         }`}
@@ -225,7 +226,7 @@ export default function OrganizationPosting() {
                     <div className="bg-base-200 rounded-lg p-2 flex gap-2">
                       <Info size={16} className="text-info flex-shrink-0 mt-0.5" />
                       <div className="text-xs">
-                        {form.watch('is_open')
+                        {isOpen
                           ? (
                               <p>
                                 <strong>Open: </strong>

@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
+import { sql } from 'kysely';
+
 import config from '../config.js';
 import database from '../db/index.js';
-import { sql } from 'kysely';
 
 const PASSWORD_PLAIN = 'Willing123';
 
@@ -271,8 +272,8 @@ seed().catch(async (err) => {
   console.error('❌ Seed failed:', err);
   try {
     await database.destroy();
-  } catch (err) {
-  // ignore
+  } catch (_error) {
+    // Ignore
   }
   process.exit(1);
 });

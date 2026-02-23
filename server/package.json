@@ -12,6 +12,8 @@
     "migrate": "tsc && node dist/db/migrate.js",
     "create-admin": "tsc && node dist/scripts/create-admin.js",
     "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "type:check": "tsc --noEmit",
     "seed": "tsc && node dist/scripts/seed.js"
   },
   "devDependencies": {

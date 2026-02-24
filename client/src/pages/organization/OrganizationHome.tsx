@@ -1,19 +1,16 @@
-import { Plus, MapPin, Calendar, Users, Cake, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, MapPin, Calendar, Users, Cake, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import SkillsList from '../../components/SkillsList';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
 import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
 
-const SKILL_COLORS = ['badge-primary', 'badge-secondary', 'badge-accent', 'badge-info'];
-
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
 
 function OrganizationHome() {
   const navigate = useNavigate();
-  const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
 
   const { data: postings, loading, error } = useAsync(
     async () => {
@@ -142,36 +139,9 @@ function OrganizationHome() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-semibold opacity-70">REQUIRED SKILLS</p>
-                        {posting.skills.length > 3 && (
-                          <div className="flex items-center gap-2">
-                            {!expandedSkills[posting.id] && (
-                              <span className="text-xs font-semibold text-primary">
-                                {posting.skills.length - 3}
-                              </span>
-                            )}
-                            <button
-                              onClick={() => setExpandedSkills(prev => ({
-                                ...prev,
-                                [posting.id]: !prev[posting.id],
-                              }))}
-                              className="text-primary hover:opacity-70 flex-shrink-0 cursor-pointer"
-                            >
-                              {expandedSkills[posting.id]
-                                ? <ChevronUp size={16} />
-                                : <ChevronDown size={16} />}
-                            </button>
-                          </div>
-                        )}
                       </div>
                       <div className="flex flex-wrap gap-2 items-center">
-                        {(expandedSkills[posting.id] ? posting.skills : posting.skills.slice(0, 3)).map((skill, index) => (
-                          <span key={skill.id} className={`badge gap-1 text-white font-medium ${SKILL_COLORS[index % SKILL_COLORS.length]} badge-sm`}>
-                            {skill.name}
-                          </span>
-                        ))}
-                        {!expandedSkills[posting.id] && posting.skills.length > 3 && (
-                          <span className="text-xs opacity-70 font-semibold">...</span>
-                        )}
+                        <SkillsList skills={posting.skills} />
                       </div>
                     </div>
                   )}

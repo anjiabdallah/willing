@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import SkillsList from '../../components/SkillsList';
 import requestServer from '../../utils/requestServer';
 
 interface postingType {
@@ -159,14 +160,7 @@ function VolunteerHome() {
                     )}
 
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {posting.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="badge badge-outline badge-sm"
-                        >
-                          {skill.name}
-                        </span>
-                      ))}
+                      <SkillsList skills={posting.skills} />
                     </div>
                   </div>
                 ))}

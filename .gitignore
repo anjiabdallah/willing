@@ -152,3 +152,5 @@ postgres-data/
 .DS_Store
 Thumbs.db
 
+#UPLOADS
+uploads/

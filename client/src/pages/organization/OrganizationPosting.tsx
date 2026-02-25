@@ -1,17 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Send, X, MapPin, Edit3, Users, ShieldCheck, Info, LockOpen, Lock } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock } from 'lucide-react';
+import { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
+import SkillsInput from '../../components/SkillsInput';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/auth';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 import { useOrganization } from '../../utils/useUsers';
-
-const SKILL_COLORS = ['badge-primary', 'badge-secondary', 'badge-accent', 'badge-info'];
 
 export default function OrganizationPosting() {
   const account = useOrganization();
@@ -27,21 +26,12 @@ export default function OrganizationPosting() {
   });
 
   const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState('');
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
-  const isOpen = form.getValues('is_open');
-
-  const addSkill = useCallback(() => {
-    const trimmed = skillInput.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills(prev => [...prev, trimmed]);
-      setSkillInput('');
-    }
-  }, [skillInput, skills]);
-
-  const removeSkill = useCallback((skill: string) => {
-    setSkills(prev => prev.filter(s => s !== skill));
-  }, []);
+  const isOpen = useWatch({
+    control: form.control,
+    name: 'is_open',
+    defaultValue: true,
+  });
 
   const submit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {
@@ -113,9 +103,6 @@ export default function OrganizationPosting() {
             />
 
             <div className="space-y-4">
-              <label className="label">
-                <span className="label-text font-medium">Pin Location on Map</span>
-              </label>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -155,97 +142,54 @@ export default function OrganizationPosting() {
                     />
                   </div>
 
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-medium">Skills (optional)</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        className="input input-bordered input-sm w-full pr-10"
-                        placeholder="e.g. First Aid"
-                        value={skillInput}
-                        onChange={e => setSkillInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addSkill();
-                          }
-                        }}
-                      />
-                      <button type="button" className="absolute right-2 top-1/2 transform -translate-y-1/2 text-base-content hover:text-primary transition-colors" onClick={addSkill}>
-                        <Plus size={18} />
-                      </button>
-                    </div>
-                    {skills.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {skills.map((skill, index) => (
-                          <span key={skill} className={`badge gap-1 text-white font-medium ${SKILL_COLORS[index % SKILL_COLORS.length]}`}>
-                            {skill}
-                            <button type="button" onClick={() => removeSkill(skill)} className="cursor-pointer hover:opacity-70">
-                              <X size={12} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <SkillsInput skills={skills} setSkills={setSkills} />
 
-                  <div>
-                    <label className="label mb-2">
+                  <fieldset className="fieldset">
+                    <label className="label">
                       <span className="label-text font-medium">Posting Type</span>
                     </label>
 
-                    <div className="flex gap-2 mb-2">
+                    <div className="join w-full">
                       <button
                         type="button"
-                        onClick={() => form.setValue('is_open', true)}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          isOpen
-                            ? 'bg-primary text-white shadow-lg'
-                            : 'bg-base-300 text-base-content hover:bg-base-200'
+                        className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
                         }`}
+                        onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
                       >
-                        <LockOpen size={16} />
-                        Open Posting
+                        <div className="flex items-center gap-2 font-bold">
+                          <LockOpen size={16} />
+                          <span>Open Posting</span>
+                        </div>
+                        <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
+                          Volunteers are accepted automatically.
+                        </p>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => form.setValue('is_open', false)}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          !isOpen
-                            ? 'bg-secondary text-white shadow-lg'
-                            : 'bg-base-300 text-base-content hover:bg-base-200'
+                        className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
                         }`}
+                        onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
                       >
-                        <Lock size={16} />
-                        Review-Based Posting
+                        <div className="flex items-center gap-2 font-bold">
+                          <Lock size={16} />
+                          <span>Review-Based</span>
+                        </div>
+                        <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
+                          Volunteers must be approved by the organization.
+                        </p>
                       </button>
                     </div>
-
-                    <div className="bg-base-200 rounded-lg p-2 flex gap-2">
-                      <Info size={16} className="text-info flex-shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        {isOpen
-                          ? (
-                              <p>
-                                <strong>Open: </strong>
-                                Volunteers are accepted automatically.
-                              </p>
-                            )
-                          : (
-                              <p>
-                                <strong>Review: </strong>
-                                Volunteers must be approved by the organization.
-                              </p>
-                            )}
-                      </div>
-                    </div>
-                  </div>
+                  </fieldset>
                 </div>
 
                 <div className="lg:col-span-1">
-                  <LocationPicker position={position} setPosition={setPosition} />
+                  <fieldset className="fieldset">
+                    <label className="label">
+                      <span className="label-text font-medium">Pin Location on Map</span>
+                    </label>
+                    <LocationPicker position={position} setPosition={setPosition} />
+                  </fieldset>
                 </div>
               </div>
             </div>

@@ -5,9 +5,7 @@ import {
   Lock,
   Mail,
   Mars,
-  Plus,
   Venus,
-  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -15,6 +13,8 @@ import { z } from 'zod';
 
 import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '../../../../server/src/db/tables';
 import Loading from '../../components/Loading';
+import SkillsInput from '../../components/SkillsInput';
+import SkillsList from '../../components/SkillsList';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 
@@ -24,12 +24,6 @@ type VolunteerProfileResponse = {
 };
 
 const DESCRIPTION_MAX_LENGTH = 300;
-const SKILL_BADGE_STYLES = [
-  'badge-primary',
-  'badge-secondary',
-  'badge-accent',
-  'badge-info',
-] as const;
 
 const profileFormSchema = volunteerAccountSchema.omit({ id: true, password: true })
   .extend({
@@ -47,7 +41,6 @@ const getDateInputValue = (value: string) => {
 function VolunteerProfile() {
   const [profile, setProfile] = useState<VolunteerProfileResponse | null>(null);
   const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -77,7 +70,6 @@ function VolunteerProfile() {
       const response = await requestServer<VolunteerProfileResponse>('/volunteer/profile', {}, true);
       setProfile(response);
       setSkills(response.skills);
-      setSkillInput('');
       form.reset({
         first_name: response.volunteer.first_name,
         last_name: response.volunteer.last_name,
@@ -156,26 +148,6 @@ function VolunteerProfile() {
     return 'badge-accent';
   }, [formValues.gender]);
 
-  const addSkill = useCallback(() => {
-    const trimmed = skillInput.trim();
-    if (!trimmed) return;
-
-    const exists = skills.some(skill => skill.toLowerCase() === trimmed.toLowerCase());
-    if (!exists) {
-      setSkills(prev => [...prev, trimmed]);
-      setSaveError(null);
-      setSaveMessage(null);
-    }
-
-    setSkillInput('');
-  }, [skillInput, skills]);
-
-  const removeSkill = useCallback((skillToRemove: string) => {
-    setSkills(prev => prev.filter(skill => skill !== skillToRemove));
-    setSaveError(null);
-    setSaveMessage(null);
-  }, []);
-
   const onSave = form.handleSubmit(async (data) => {
     if (!isEditMode || !profile) return;
 
@@ -205,7 +177,6 @@ function VolunteerProfile() {
 
       setProfile(response);
       setSkills(response.skills);
-      setSkillInput('');
       form.reset({
         first_name: response.volunteer.first_name,
         last_name: response.volunteer.last_name,
@@ -236,7 +207,6 @@ function VolunteerProfile() {
       privacy: profile.volunteer.privacy === 'private' ? 'private' : 'public',
     });
     setSkills(profile.skills);
-    setSkillInput('');
     setIsEditMode(false);
     setSaveError(null);
     setSaveMessage(null);
@@ -448,50 +418,18 @@ function VolunteerProfile() {
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Skills</h5>
-                <p className="text-sm opacity-70 mt-1">Add one skill at a time.</p>
+                <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
 
-                {isEditMode && (
-                  <div className="join mt-3 w-full">
-                    <input
-                      className="input input-bordered join-item w-full"
-                      value={skillInput}
-                      onChange={e => setSkillInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addSkill();
-                        }
-                      }}
-                      placeholder="Type a skill"
-                      disabled={saving}
-                    />
-                    <button className="btn btn-primary join-item" type="button" onClick={addSkill} disabled={saving || !skillInput.trim()}>
-                      <Plus size={16} />
-                      Add
-                    </button>
-                  </div>
-                )}
+                {
+                  isEditMode
+                    ? (
+                        <SkillsInput skills={skills} setSkills={setSkills} />
+                      )
+                    : (
+                        <SkillsList skills={skills} enableLimit={false} />
+                      )
+                }
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {skills.length > 0
-                    ? skills.map((skill, index) => (
-                        <span key={skill} className={`badge gap-1 ${SKILL_BADGE_STYLES[index % SKILL_BADGE_STYLES.length]}`}>
-                          {skill}
-                          {isEditMode && (
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs p-0 h-auto min-h-0"
-                              onClick={() => removeSkill(skill)}
-                              disabled={saving}
-                              aria-label={`Remove ${skill}`}
-                            >
-                              <X size={12} />
-                            </button>
-                          )}
-                        </span>
-                      ))
-                    : <span className="text-sm opacity-60">No skills added yet.</span>}
-                </div>
               </div>
             </div>
 
@@ -516,7 +454,7 @@ function VolunteerProfile() {
                       <div className="join">
                         <button
                           type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : 'btn-outline'}`}
+                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : ''}`}
                           onClick={() => form.setValue('privacy', 'public', { shouldDirty: true, shouldTouch: true })}
                           disabled={saving}
                         >
@@ -525,7 +463,7 @@ function VolunteerProfile() {
                         </button>
                         <button
                           type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : 'btn-outline'}`}
+                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : ''}`}
                           onClick={() => form.setValue('privacy', 'private', { shouldDirty: true, shouldTouch: true })}
                           disabled={saving}
                         >

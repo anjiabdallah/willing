@@ -180,7 +180,7 @@ volunteerRouter.put('/profile', async (req, res) => {
       if (normalizedSkills.length > 0) {
         await trx
           .insertInto('volunteer_skill')
-          .values(normalizedSkills.map((name) => ({
+          .values(normalizedSkills.map(name => ({
             volunteer_id: volunteerId,
             name,
           })))

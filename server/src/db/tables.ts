@@ -210,6 +210,31 @@ export type VolunteerSkill = zod.infer<typeof VolunteerSkillSchema>;
 
 export type VolunteerSkillTable = WithGeneratedID<VolunteerSkill>;
 
+// enrollment
+
+export const EnrollmentSchema = zod.object({
+  id: zod.number(),
+  volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
+  posting_id: zod.number().min(1, 'Posting ID is required'),
+  message: zod.string().optional(),
+});
+
+export type Enrollment = zod.infer<typeof EnrollmentSchema>;
+
+export type EnrollmentTable = WithGeneratedID<Enrollment>;
+
+// enrollment_application
+
+export const EnrollmentApplicationSchema = zod.object({
+  id: zod.number(),
+  volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
+  enrollment_id: zod.number().min(1, 'Enrollment ID is required'),
+  message: zod.string().optional(),
+});
+
+export type EnrollmentApplication = zod.infer<typeof EnrollmentApplicationSchema>;
+export type EnrollmentApplicationTable = WithGeneratedID<EnrollmentApplication>;
+
 export interface Database {
   volunteer_account: VolunteerAccountTable;
   organization_request: OrganizationRequestTable;
@@ -219,4 +244,6 @@ export interface Database {
   posting_skill: PostingSkillTable;
   volunteer_skill: VolunteerSkillTable;
   password_reset_token: PasswordResetTokenTable;
+  enrollment: EnrollmentTable;
+  enrollment_application: EnrollmentApplicationTable;
 }

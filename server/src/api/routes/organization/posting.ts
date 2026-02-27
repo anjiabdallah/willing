@@ -1,9 +1,14 @@
 import { Router } from 'express';
+import zod from 'zod';
 
 import database from '../../../db/index.js';
 import { newOrganizationPostingSchema, type NewOrganizationPosting, type PostingSkill } from '../../../db/tables.js';
 
 const postingRouter = Router();
+
+const postingIdParamsSchema = zod.object({
+  id: zod.coerce.number().int().positive('ID must be a positive number'),
+});
 
 postingRouter.post('/', async (req, res) => {
   const body: NewOrganizationPosting = newOrganizationPostingSchema.parse(req.body);
@@ -85,12 +90,7 @@ postingRouter.get('/', async (req, res) => {
 
 postingRouter.get('/:id', async (req, res) => {
   const orgId = req.userJWT!.id;
-  const postingId = Number(req.params.id);
-
-  if (isNaN(postingId)) {
-    res.status(400).json({ error: 'Invalid posting ID' });
-    return;
-  }
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
   const posting = await database
     .selectFrom('organization_posting')
@@ -115,12 +115,7 @@ postingRouter.get('/:id', async (req, res) => {
 
 postingRouter.get('/:id/enrollments', async (req, res) => {
   const orgId = req.userJWT!.id;
-  const postingId = Number(req.params.id);
-
-  if (isNaN(postingId)) {
-    res.status(400).json({ error: 'Invalid posting ID' });
-    return;
-  }
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
   const posting = await database
     .selectFrom('organization_posting')
@@ -177,12 +172,7 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
 
 postingRouter.put('/:id', async (req, res) => {
   const orgId = req.userJWT!.id;
-  const postingId = Number(req.params.id);
-
-  if (isNaN(postingId)) {
-    res.status(400).json({ error: 'Invalid posting ID' });
-    return;
-  }
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
   const posting = await database
     .selectFrom('organization_posting')
@@ -241,12 +231,7 @@ postingRouter.put('/:id', async (req, res) => {
 
 postingRouter.delete('/:id', async (req, res) => {
   const orgId = req.userJWT!.id;
-  const postingId = Number(req.params.id);
-
-  if (isNaN(postingId)) {
-    res.status(400).json({ error: 'Invalid posting ID' });
-    return;
-  }
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
   const posting = await database
     .selectFrom('organization_posting')
@@ -266,7 +251,7 @@ postingRouter.delete('/:id', async (req, res) => {
     await trx.deleteFrom('organization_posting').where('id', '=', postingId).execute();
   });
 
-  res.json({ success: true });
+  res.json();
 });
 
 export default postingRouter;

@@ -108,22 +108,14 @@ Before finishing code changes:
 
 1. Client type/build check:
    ```bash
-   cd client && npm run build
+   cd client && npm run type:check && npm run lint:check
    ```
 2. Server type check:
    ```bash
-   cd server && npx tsc -p tsconfig.json
+   cd server && npm run type:check && npm run lint:check
    ```
 3. If backend behavior changed, run server and validate endpoint flow manually.
 4. If DB-dependent checks fail due to DB down, state it explicitly and include the exact command needed.
-
-## Commit Message Style
-
-Use concise conventional-style messages, e.g.:
-
-- `feat(volunteer-profile): ...`
-- `fix(volunteer-api): ...`
-- `refactor(forms): ...`
 
 ## Notes for Agents
 

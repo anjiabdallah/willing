@@ -303,7 +303,7 @@ export default function OrganizationPostingDetail() {
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-6 sticky top-0 z-20 bg-base-200 -mx-6 px-6 py-4">
           <div className="flex items-center gap-3">
             <button
               className="btn btn-ghost btn-sm"
@@ -347,306 +347,334 @@ export default function OrganizationPostingDetail() {
           </div>
         </div>
 
-        {saveMessage && (
-          <div
-            role="alert"
-            className={`alert alert-success mb-4 transition-all duration-500 ${
-              isSaveMessageVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 -translate-y-1'
-            }`}
-          >
-            <span>{saveMessage}</span>
-          </div>
-        )}
+        <div className="mt-6">
+          {saveMessage && (
+            <div
+              role="alert"
+              className={`alert alert-success mb-4 transition-all duration-500 ${
+                isSaveMessageVisible
+                  ? 'opacity-100 translate-y-0'
+                  : 'opacity-0 -translate-y-1'
+              }`}
+            >
+              <span>{saveMessage}</span>
+            </div>
+          )}
 
-        {saveError && (
-          <div role="alert" className="alert alert-error mb-4">
-            <span>{saveError}</span>
-          </div>
-        )}
+          {saveError && (
+            <div role="alert" className="alert alert-error mb-4">
+              <span>{saveError}</span>
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column: Posting Details */}
-          <div className="space-y-6">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h4 className="text-xl font-bold mb-4">Posting Information</h4>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Posting Details */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="card bg-base-100 shadow-md sticky top-24 h-fit z-10">
+                <div className="card-body">
+                  <h4 className="text-xl font-bold mb-4">Posting Information</h4>
 
-                {isEditMode
-                  ? (
-                      <div className="space-y-4">
-                        <FormField
-                          form={form}
-                          label="Title"
-                          name="title"
-                          type="text"
-                          placeholder="Enter posting title"
-                          Icon={Edit3}
-                        />
-                        <FormField
-                          form={form}
-                          label="Description"
-                          name="description"
-                          type="textarea"
-                          placeholder="Describe the opportunity"
-                        />
-                        <FormField
-                          form={form}
-                          label="Location Name"
-                          name="location_name"
-                          type="text"
-                          placeholder="e.g. Downtown Community Center"
-                          Icon={MapPin}
-                        />
-                        <div className="grid grid-cols-2 gap-3">
+                  {isEditMode
+                    ? (
+                        <div className="space-y-4">
                           <FormField
                             form={form}
-                            label="Max Volunteers"
-                            name="max_volunteers"
-                            type="number"
-                            placeholder="Optional"
-                            Icon={Users}
+                            label="Title"
+                            name="title"
+                            type="text"
+                            placeholder="Enter posting title"
+                            Icon={Edit3}
                           />
                           <FormField
                             form={form}
-                            label="Min Age"
-                            name="minimum_age"
-                            type="number"
-                            placeholder="Optional"
-                            Icon={ShieldCheck}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <FormField
-                            form={form}
-                            label="Start Date"
-                            name="start_timestamp"
-                            type="datetime-local"
+                            label="Description"
+                            name="description"
+                            type="textarea"
+                            placeholder="Describe the opportunity"
                           />
                           <FormField
                             form={form}
-                            label="End Date"
-                            name="end_timestamp"
-                            type="datetime-local"
+                            label="Location Name"
+                            name="location_name"
+                            type="text"
+                            placeholder="e.g. Downtown Community Center"
+                            Icon={MapPin}
                           />
-                        </div>
-                      </div>
-                    )
-                  : (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-xs font-semibold opacity-70 uppercase">Title</label>
-                          <p className="text-lg font-semibold text-primary">{formValues.title}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold opacity-70 uppercase">Description</label>
-                          <p className="text-sm opacity-80 whitespace-pre-wrap">{formValues.description}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-primary" />
-                          <span className="text-sm">{formValues.location_name}</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-primary" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START</p>
-                              <span className="text-xs">{formattedStartDate}</span>
-                            </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              form={form}
+                              label="Max Volunteers"
+                              name="max_volunteers"
+                              type="number"
+                              placeholder="Optional"
+                              Icon={Users}
+                            />
+                            <FormField
+                              form={form}
+                              label="Min Age"
+                              name="minimum_age"
+                              type="number"
+                              placeholder="Optional"
+                              Icon={ShieldCheck}
+                            />
                           </div>
-                          {formValues.end_timestamp && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              form={form}
+                              label="Start Date"
+                              name="start_timestamp"
+                              type="datetime-local"
+                            />
+                            <FormField
+                              form={form}
+                              label="End Date"
+                              name="end_timestamp"
+                              type="datetime-local"
+                            />
+                          </div>
+                        </div>
+                      )
+                    : (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs font-semibold opacity-70 uppercase">Title</label>
+                            <p className="text-lg font-semibold text-primary">{formValues.title}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold opacity-70 uppercase">Description</label>
+                            <p className="text-sm opacity-80 whitespace-pre-wrap">{formValues.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin size={16} className="text-primary" />
+                            <span className="text-sm">{formValues.location_name}</span>
+                          </div>
+                          <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Calendar size={16} className="text-primary" />
                               <div>
-                                <p className="text-xs opacity-70 font-semibold">END</p>
-                                <span className="text-xs">{formattedEndDate}</span>
+                                <p className="text-xs opacity-70 font-semibold">START</p>
+                                <span className="text-xs">{formattedStartDate}</span>
                               </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          {formValues.max_volunteers
-                            ? (
-                                <div className="flex items-center gap-2">
-                                  <Users size={16} className="text-primary" />
-                                  <div>
-                                    <p className="text-xs opacity-70 font-semibold">MAX VOLUNTEERS</p>
-                                    <span className="text-sm">{formValues.max_volunteers}</span>
-                                  </div>
+                            {formValues.end_timestamp && (
+                              <div className="flex items-center gap-2">
+                                <Calendar size={16} className="text-primary" />
+                                <div>
+                                  <p className="text-xs opacity-70 font-semibold">END</p>
+                                  <span className="text-xs">{formattedEndDate}</span>
                                 </div>
-                              )
-                            : formValues.minimum_age ? <div /> : null}
-                          {formValues.minimum_age && (
-                            <div className="flex items-center gap-2">
-                              <Cake size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">MIN AGE</p>
-                                <span className="text-sm">
-                                  {formValues.minimum_age}
-                                  +
-                                </span>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            {formValues.max_volunteers
+                              ? (
+                                  <div className="flex items-center gap-2">
+                                    <Users size={16} className="text-primary" />
+                                    <div>
+                                      <p className="text-xs opacity-70 font-semibold">MAX VOLUNTEERS</p>
+                                      <span className="text-sm">{formValues.max_volunteers}</span>
+                                    </div>
+                                  </div>
+                                )
+                              : null}
+                            {formValues.minimum_age && (
+                              <div className="flex items-center gap-2">
+                                <Cake size={16} className="text-primary" />
+                                <div>
+                                  <p className="text-xs opacity-70 font-semibold">MIN AGE</p>
+                                  <span className="text-sm">
+                                    {formValues.minimum_age}
+                                    +
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                </div>
               </div>
-            </div>
 
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Required Skills</h5>
-                <p className="text-sm opacity-70 mt-1">Skills needed for this opportunity.</p>
-
-                {isEditMode
-                  ? (
-                      <SkillsInput skills={skills} setSkills={setSkills} />
-                    )
-                  : (
-                      <SkillsList skills={posting.skills} enableLimit={false} />
-                    )}
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Status</h5>
-                <p className="text-sm opacity-70 mb-2">Posting visibility.</p>
-                {isEditMode
-                  ? (
-                      <div className="join">
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${isOpen ? 'btn-primary' : ''}`}
-                          onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <LockOpen size={14} />
-                          Open
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${!isOpen ? 'btn-secondary' : ''}`}
-                          onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Lock size={14} />
-                          Review Based
-                        </button>
-                      </div>
-                    )
-                  : (
-                      <span className={`badge gap-2 ${isOpen ? 'badge-primary' : 'badge-secondary'}`}>
-                        {isOpen ? <LockOpen size={12} /> : <Lock size={12} />}
-                        {isOpen ? 'Open' : 'Review Based'}
-                      </span>
-                    )}
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Location</h5>
-                <p className="text-sm opacity-70 mb-2">
-                  {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
-                </p>
-                <LocationPicker
-                  position={position}
-                  setPosition={onMapPositionPick}
-                  readOnly={!isEditMode}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Enrolled Volunteers */}
-          <div className="space-y-6">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h4 className="text-xl font-bold mb-4">
-                  Enrolled Volunteers
-                  {' '}
-                  <span className="badge badge-primary">{enrollments.length}</span>
-                </h4>
-
-                {enrollments.length === 0
-                  ? (
-                      <div className="alert">
-                        <span className="text-sm">No volunteers have enrolled yet.</span>
-                      </div>
-                    )
-                  : (
-                      <div className="space-y-4">
-                        {enrollments.map((volunteer) => {
-                          const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
-                          const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
-                          const age = Math.floor(
-                            (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
-                          );
-
-                          const genderBadgeStyles = volunteer.gender === 'male'
-                            ? 'badge-info'
-                            : volunteer.gender === 'female'
-                              ? 'badge-secondary'
-                              : 'badge-accent';
-
-                          return (
-                            <div
-                              key={volunteer.enrollment_id}
-                              className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
+              <div className="card bg-base-100 shadow-md relative z-0">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Status</h5>
+                  <p className="text-sm opacity-70 mb-2">Posting visibility.</p>
+                  {isEditMode
+                    ? (
+                        <fieldset className="fieldset">
+                          <div className="join w-full">
+                            <button
+                              type="button"
+                              className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
+                              }`}
+                              onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
+                              disabled={saving}
                             >
-                              <div className="flex items-start gap-3">
-                                <div className="avatar">
-                                  <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
-                                    <span className="text-lg font-semibold">{initials}</span>
+                              <div className="flex items-center gap-2 font-bold">
+                                <LockOpen size={16} />
+                                <span>Open Posting</span>
+                              </div>
+                              <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
+                                Volunteers are accepted automatically.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
+                              }`}
+                              onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
+                              disabled={saving}
+                            >
+                              <div className="flex items-center gap-2 font-bold">
+                                <Lock size={16} />
+                                <span>Review-Based</span>
+                              </div>
+                              <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
+                                Volunteers must be approved by the organization.
+                              </p>
+                            </button>
+                          </div>
+                        </fieldset>
+                      )
+                    : (
+                        <span className={`badge gap-2 ${isOpen ? 'badge-primary' : 'badge-secondary'}`}>
+                          {isOpen ? <LockOpen size={12} /> : <Lock size={12} />}
+                          {isOpen ? 'Open' : 'Review Based'}
+                        </span>
+                      )}
+                </div>
+              </div>
+
+              <div className="card bg-base-100 shadow-md relative z-0">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Location</h5>
+                  <p className="text-sm opacity-70 mb-2">
+                    {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                  </p>
+                  <LocationPicker
+                    position={position}
+                    setPosition={onMapPositionPick}
+                    readOnly={!isEditMode}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Skills and Volunteers */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Required Skills</h5>
+                  <p className="text-sm opacity-70 mt-1">Skills needed for this opportunity.</p>
+
+                  {isEditMode
+                    ? (
+                        <SkillsInput skills={skills} setSkills={setSkills} />
+                      )
+                    : (
+                        <SkillsList skills={posting.skills} enableLimit={false} />
+                      )}
+                </div>
+              </div>
+
+              {!isOpen && (
+                <div className="card bg-base-100 shadow-md">
+                  <div className="card-body">
+                    <h4 className="text-xl font-bold mb-4">Enrollment Applications</h4>
+                    <div className="alert">
+                      <span className="text-sm">Enrollment applications feature coming soon.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h4 className="text-xl font-bold mb-4">
+                    Enrolled Volunteers
+                    {' '}
+                    <span className="badge badge-primary">{enrollments.length}</span>
+                  </h4>
+
+                  {enrollments.length === 0
+                    ? (
+                        <div className="alert">
+                          <span className="text-sm">No volunteers have enrolled yet.</span>
+                        </div>
+                      )
+                    : (
+                        <div className="space-y-4">
+                          {enrollments.map((volunteer) => {
+                            const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
+                            const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
+                            const age = Math.floor(
+                              (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+                            );
+
+                            const genderBadgeStyles = volunteer.gender === 'male'
+                              ? 'badge-info'
+                              : volunteer.gender === 'female'
+                                ? 'badge-secondary'
+                                : 'badge-accent';
+
+                            return (
+                              <div
+                                key={volunteer.enrollment_id}
+                                className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="avatar">
+                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                                      <span className="text-lg font-semibold">{initials}</span>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex-grow">
-                                  <h5 className="font-bold text-base">{volunteerName}</h5>
-                                  <div className="flex gap-2 mt-1">
-                                    <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                                      {volunteer.gender === 'male' && <Mars size={10} />}
-                                      {volunteer.gender === 'female' && <Venus size={10} />}
-                                      {volunteer.gender === 'other' && <span className="font-bold">*</span>}
-                                      {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
-                                    </span>
-                                    <span className="badge badge-sm">
-                                      {age}
-                                      {' '}
-                                      years old
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
-                                    <Mail size={12} />
-                                    {volunteer.email}
-                                  </div>
-                                  {volunteer.skills && volunteer.skills.length > 0 && (
-                                    <div className="mt-2">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        <SkillsList skills={volunteer.skills} />
+                                  <div className="flex-grow">
+                                    <h5 className="font-bold text-base">{volunteerName}</h5>
+                                    <div className="flex gap-2 mt-1">
+                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                                        {volunteer.gender === 'male' && <Mars size={10} />}
+                                        {volunteer.gender === 'female' && <Venus size={10} />}
+                                        {volunteer.gender === 'other' && <span className="font-bold">*</span>}
+                                        {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
+                                      </span>
+                                      <span className="badge badge-sm">
+                                        {age}
+                                        {' '}
+                                        years old
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
+                                      <Mail size={12} />
+                                      {volunteer.email}
+                                    </div>
+                                    {volunteer.skills && volunteer.skills.length > 0 && (
+                                      <div className="mt-2">
+                                        <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          <SkillsList skills={volunteer.skills} />
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
-                                  {volunteer.message && (
-                                    <div className="mt-2">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
-                                      <p className="text-xs opacity-80 italic">
-                                        "
-                                        {volunteer.message}
-                                        "
-                                      </p>
-                                    </div>
-                                  )}
+                                    )}
+                                    {volunteer.message && (
+                                      <div className="mt-2">
+                                        <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
+                                        <p className="text-xs opacity-80 italic">
+                                          "
+                                          {volunteer.message}
+                                          "
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                </div>
               </div>
             </div>
           </div>

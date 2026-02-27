@@ -1,4 +1,4 @@
-import { Plus, MapPin, Calendar, Users, Cake } from 'lucide-react';
+import { Plus, MapPin, Calendar, Users, Cake, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import SkillsList from '../../components/SkillsList';
@@ -62,8 +62,7 @@ function OrganizationHome() {
             {postings.map(posting => (
               <div
                 key={posting.id}
-                className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(`/organization/posting/${posting.id}`)}
+                className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow"
               >
                 <div className="card-body">
                   <h2 className="card-title text-primary text-lg mb-2">{posting.title}</h2>
@@ -149,6 +148,16 @@ function OrganizationHome() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="card-actions justify-center border-t border-base-200 pt-4">
+                  <button
+                    className="btn btn-ghost btn-sm w-full gap-2 hover:btn-primary group transition-all"
+                    onClick={() => navigate(`/organization/posting/${posting.id}`)}
+                  >
+                    <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:font-semibold">View Details</span>
+                  </button>
                 </div>
               </div>
             ))}

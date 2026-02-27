@@ -1,37 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import SkillsList from '../../components/SkillsList';
+import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 
-interface postingType {
-  id: number;
-  organization_id: number;
-  title: string;
-  description: string;
-  location_name: string;
-  start_timestamp: Date;
-  end_timestamp: Date | null;
-  is_open: boolean;
+import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
+
+type PostingWithOrganization = OrganizationPosting & {
   organization_name: string;
-  skills: { name: string }[];
-}
+  skills: PostingSkill[];
+};
 
-interface getPostingsResponse {
-  postings: postingType[];
-}
-
-interface Posting {
-  id: number;
-  title: string;
-  description: string;
-  location_name?: string;
-  start_timestamp: string;
-  end_timestamp?: string;
-  skills: { name: string }[];
+interface GetPostingsResponse {
+  postings: PostingWithOrganization[];
 }
 
 function VolunteerHome() {
-  const [postings, setPostings] = useState<Posting[]>([]);
+  const [postings, setPostings] = useState<PostingWithOrganization[]>([]);
   const [filters, setFilters] = useState({
     location: '',
     skill: '',
@@ -56,21 +40,9 @@ function VolunteerHome() {
 
     const url = '/volunteer/posting?' + query.toString();
 
-    const res = await requestServer<getPostingsResponse>(url, {}, true);
+    const res = await requestServer<GetPostingsResponse>(url, {}, true);
 
-    const formattedPostings: Posting[] = res.postings.map(p => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-      location_name: p.location_name,
-      start_timestamp: new Date(p.start_timestamp).toISOString(),
-      end_timestamp: p.end_timestamp
-        ? new Date(p.end_timestamp).toISOString()
-        : undefined,
-      skills: p.skills,
-    }));
-
-    setPostings(formattedPostings);
+    setPostings(res.postings);
   }, [filters]);
 
   useEffect(() => {
@@ -132,37 +104,7 @@ function VolunteerHome() {
           : (
               <div className="grid md:grid-cols-2 gap-6">
                 {postings.map(posting => (
-                  <div
-                    key={posting.id}
-                    className="bg-base-100 shadow-md rounded-lg p-4 border border-base-300"
-                  >
-                    <h4 className="text-xl font-bold mb-2">{posting.title}</h4>
-                    <p className="text-base mb-2">{posting.description}</p>
-
-                    <p className="text-sm text-gray-500 mb-1">
-                      Location:
-                      {' '}
-                      {posting.location_name || 'N/A'}
-                    </p>
-
-                    <p className="text-sm text-gray-500 mb-1">
-                      Start:
-                      {' '}
-                      {new Date(posting.start_timestamp).toLocaleString()}
-                    </p>
-
-                    {posting.end_timestamp && (
-                      <p className="text-sm text-gray-500 mb-1">
-                        End:
-                        {' '}
-                        {new Date(posting.end_timestamp).toLocaleString()}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <SkillsList skills={posting.skills} />
-                    </div>
-                  </div>
+                  <PostingCard posting={posting} />
                 ))}
               </div>
             )}

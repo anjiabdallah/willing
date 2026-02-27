@@ -1,4 +1,4 @@
-import { Plus, MapPin, Calendar, Users, Cake, Edit, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Calendar, Users, Cake, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import SkillsList from '../../components/SkillsList';
@@ -60,7 +60,10 @@ function OrganizationHome() {
         {!loading && postings && postings.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {postings.map(posting => (
-              <div key={posting.id} className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow">
+              <div
+                key={posting.id}
+                className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow"
+              >
                 <div className="card-body">
                   <h2 className="card-title text-primary text-lg mb-2">{posting.title}</h2>
                   <p className="text-sm opacity-80 mb-4 line-clamp-2">{posting.description}</p>
@@ -145,17 +148,16 @@ function OrganizationHome() {
                       </div>
                     </div>
                   )}
+                </div>
 
-                  <div className="card-actions pt-4 border-t border-base-200">
-                    <button className="btn btn-sm btn-outline flex-1 gap-1">
-                      <Edit size={14} />
-                      Edit
-                    </button>
-                    <button className="btn btn-sm btn-outline btn-error flex-1 gap-1">
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  </div>
+                <div className="card-actions justify-center border-t border-base-200 pt-4">
+                  <button
+                    className="btn btn-ghost btn-sm w-full gap-2 hover:btn-primary group transition-all"
+                    onClick={() => navigate(`/organization/posting/${posting.id}`)}
+                  >
+                    <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:font-semibold">View Details</span>
+                  </button>
                 </div>
               </div>
             ))}

@@ -14,6 +14,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
 import OrganizationPage from './pages/organization/OrganizationPage';
 import OrganizationPosting from './pages/organization/OrganizationPosting';
+import OrganizationPostingDetail from './pages/organization/OrganizationPostingDetail';
 import OrganizationRequest from './pages/organization/OrganizationRequest';
 import OrganizationSettings from './pages/organization/VolunteerSettings';
 import UserLoginPage from './pages/UserLoginPage';
@@ -88,6 +89,14 @@ createRoot(document.getElementById('root')!).render(
               element={(
                 <OrganizationOnly>
                   <OrganizationPosting />
+                </OrganizationOnly>
+              )}
+            />
+            <Route
+              path="posting/:id"
+              element={(
+                <OrganizationOnly>
+                  <OrganizationPostingDetail />
                 </OrganizationOnly>
               )}
             />

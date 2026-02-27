@@ -18,6 +18,7 @@ const schema = zod.object({
   }),
 
   JWT_SECRET: zod.string().nonempty(),
+  OPENAI_API_KEY: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
 
   SMTP_HOST: zod.preprocess(v => (v === '' ? undefined : v), zod.string().nonempty().optional()),
   SMTP_PORT: zod

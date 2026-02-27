@@ -92,6 +92,14 @@ Useful client scripts:
 3. Validate request bodies with Zod before DB operations.
 4. Keep DB operations typed via Kysely and shared table types.
 
+## Embeddings Scope (Current)
+
+1. Implement embeddings only for currently-backed DB fields and tables.
+2. Do not add new domain tables just to support embeddings (e.g. no ad-hoc `volunteer_experience` table) unless explicitly requested in a dedicated DB task.
+3. CV is currently a link-only concept; CV text extraction is deferred until CV storage is implemented.
+4. When CV extraction is implemented, use a PDF parsing library server-side to extract text from the linked PDF, then feed extracted text into embedding generation.
+5. Until experience entities are implemented in DB, do not generate or recompute experience-derived embeddings from synthetic or temporary tables.
+
 ## Migration Rules
 
 1. Never modify old migrations that have likely been applied.

@@ -57,3 +57,22 @@ export async function migrateToLatest() {
     throw new Error(`Migration failed: ${String(error)}`);
   }
 }
+
+const runAsScript = async () => {
+  try {
+    await migrateToLatest();
+  } finally {
+    await database.destroy();
+  }
+};
+
+if (process.argv[1]) {
+  const currentFile = fileURLToPath(import.meta.url);
+  const entryFile = path.resolve(process.argv[1]);
+  if (currentFile === entryFile) {
+    runAsScript().catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
+}

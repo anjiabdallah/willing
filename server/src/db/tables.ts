@@ -44,12 +44,20 @@ export const volunteerAccountSchema = zod.object({
   gender: zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' '),
   description: zod.string().optional(),
   privacy: zod.enum(['public', 'private']),
+  profile_vector: zod.string().optional(),
+  experience_vector: zod.string().optional(),
 });
 export type VolunteerAccount = zod.infer<typeof volunteerAccountSchema>;
 
 export type VolunteerAccountTable = WithGeneratedID<VolunteerAccount>;
 
-export const newVolunteerAccountSchema = volunteerAccountSchema.omit({ id: true, privacy: true, description: true });
+export const newVolunteerAccountSchema = volunteerAccountSchema.omit({
+  id: true,
+  privacy: true,
+  description: true,
+  profile_vector: true,
+  experience_vector: true,
+});
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
 
 export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({ password: true });
@@ -103,6 +111,7 @@ export const organizationAccountSchema = zod.object({
     .optional(),
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
   password: passwordSchema,
+  org_vector: zod.string().optional(),
 });
 
 export type OrganizationAccount = zod.infer<typeof organizationAccountSchema>;
@@ -172,6 +181,8 @@ export const organizationPostingSchema = zod.object({
   minimum_age: zod.number().optional(),
   is_open: zod.boolean().default(true),
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
+  opportunity_vector: zod.string().optional(),
+  posting_context_vector: zod.string().optional(),
 });
 
 export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
@@ -179,7 +190,7 @@ export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
 export type OrganizationPostingTable = WithGeneratedID<OrganizationPosting>;
 
 export const newOrganizationPostingSchema = organizationPostingSchema
-  .omit({ id: true })
+  .omit({ id: true, opportunity_vector: true, posting_context_vector: true })
   .extend({ skills: zod
     .array(zod.string().min(1, 'Skill name is required'))
     .optional(),

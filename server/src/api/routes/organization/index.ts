@@ -1,13 +1,24 @@
 import { Router } from 'express';
+import zod from 'zod';
 
 import postingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import database from '../../../db/index.js';
-import { newOrganizationRequestSchema } from '../../../db/tables.js';
+import { newOrganizationRequestSchema, organizationAccountSchema } from '../../../db/tables.js';
+import { recomputeOrganizationVector } from '../../../services/embeddingUpdateService.js';
 import { sendAdminOrganizationRequestEmail } from '../../../SMTP/emails.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const organizationRouter = Router();
+const organizationProfileUpdateSchema = organizationAccountSchema.omit({
+  id: true,
+  password: true,
+  org_vector: true,
+}).partial().extend({
+  email: zod.email('Invalid email').transform(val => val.toLowerCase().trim()).optional(),
+});
+
+const isSameNullableNumber = (left: number | undefined, right: number | undefined) => (left ?? null) === (right ?? null);
 
 organizationRouter.post('/request', async (req, res) => {
   const body = newOrganizationRequestSchema.parse(req.body);
@@ -69,6 +80,67 @@ organizationRouter.get('/me', async (req, res) => {
     .selectFrom('organization_account')
     .selectAll()
     .where('id', '=', req.userJWT!.id)
+    .executeTakeFirstOrThrow();
+
+  // @ts-expect-error: do not return the password
+  delete organization.password;
+
+  res.json({ organization });
+});
+
+organizationRouter.put('/profile', async (req, res) => {
+  const body = organizationProfileUpdateSchema.parse(req.body);
+  const organizationId = req.userJWT!.id;
+  const existingOrganization = await database
+    .selectFrom('organization_account')
+    .select([
+      'name',
+      'url',
+      'location_name',
+      'latitude',
+      'longitude',
+    ])
+    .where('id', '=', organizationId)
+    .executeTakeFirstOrThrow();
+
+  if (body.email !== undefined) {
+    const duplicateOrganization = await database
+      .selectFrom('organization_account')
+      .select('id')
+      .where('email', '=', body.email)
+      .where('id', '!=', organizationId)
+      .executeTakeFirst();
+
+    if (duplicateOrganization) {
+      res.status(409);
+      throw new Error('Another organization already uses this email');
+    }
+  }
+
+  const shouldRecomputeOrganizationVector = (
+    (body.name !== undefined && body.name !== existingOrganization.name)
+    || (body.url !== undefined && body.url !== existingOrganization.url)
+    || (body.location_name !== undefined && body.location_name !== existingOrganization.location_name)
+    || (body.latitude !== undefined && !isSameNullableNumber(body.latitude, existingOrganization.latitude))
+    || (body.longitude !== undefined && !isSameNullableNumber(body.longitude, existingOrganization.longitude))
+  );
+
+  if (Object.keys(body).length > 0) {
+    await database
+      .updateTable('organization_account')
+      .set(body)
+      .where('id', '=', organizationId)
+      .execute();
+  }
+
+  if (shouldRecomputeOrganizationVector) {
+    await recomputeOrganizationVector(organizationId);
+  }
+
+  const organization = await database
+    .selectFrom('organization_account')
+    .selectAll()
+    .where('id', '=', organizationId)
     .executeTakeFirstOrThrow();
 
   // @ts-expect-error: do not return the password

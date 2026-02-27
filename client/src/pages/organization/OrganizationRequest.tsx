@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building2, Mail, Phone, Globe, MapPin, Send, Home } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
@@ -46,6 +46,13 @@ export default function OrganizationRequestPage() {
       setSubmitted(true);
     });
   });
+
+  const onFormSetPosition = useCallback((position: [number, number], name?: string) => {
+    setPosition(position);
+    if (name && !form.getFieldState('location_name').isDirty) {
+      form.setValue('location_name', name);
+    }
+  }, [form]);
 
   if (submitted) {
     return (
@@ -123,7 +130,7 @@ export default function OrganizationRequestPage() {
             <div className="mt-2">
               <LocationPicker
                 position={position}
-                setPosition={setPosition}
+                setPosition={onFormSetPosition}
               />
             </div>
 

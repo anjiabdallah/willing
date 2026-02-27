@@ -13,3 +13,12 @@ export const loginInfoSchema = zod.object({
 });
 
 export type LoginInfo = zod.infer<typeof loginInfoSchema>;
+
+export interface GeocodingResponseEntry {
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+}
+
+export type GeocodingResponse = GeocodingResponseEntry[];

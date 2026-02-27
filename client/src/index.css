@@ -35,7 +35,7 @@
   --size-selector: 0.25rem;
   --size-field: 0.28125rem;
   --border: 0.5px;
-  --depth: 1;
+  --depth: 0;
   --noise: 0;
 }
 
@@ -70,7 +70,7 @@
   --size-selector: 0.25rem;
   --size-field: 0.28125rem;
   --border: 0.5px;
-  --depth: 1;
+  --depth: 0;
   --noise: 0;
 }
 

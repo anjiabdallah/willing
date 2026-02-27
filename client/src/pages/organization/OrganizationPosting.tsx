@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
@@ -67,8 +67,15 @@ export default function OrganizationPosting() {
     });
   });
 
+  const onMapPositionPick = useCallback((coords: [number, number], name?: string) => {
+    setPosition(coords);
+    if (name && !form.getFieldState('location_name').isDirty) {
+      form.setValue('location_name', name);
+    }
+  }, [form]);
+
   return (
-    <div className="flex-grow bg-base-200">
+    <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
         <h2 className="text-3xl font-extrabold tracking-tight mb-6">Create Posting</h2>
 
@@ -188,7 +195,7 @@ export default function OrganizationPosting() {
                     <label className="label">
                       <span className="label-text font-medium">Pin Location on Map</span>
                     </label>
-                    <LocationPicker position={position} setPosition={setPosition} />
+                    <LocationPicker position={position} setPosition={onMapPositionPick} />
                   </fieldset>
                 </div>
               </div>

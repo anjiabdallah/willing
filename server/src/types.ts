@@ -1,5 +1,13 @@
 import zod from 'zod';
 
+import {
+  EnrollmentSchema,
+  VolunteerSkillSchema,
+  volunteerAccountWithoutPasswordSchema,
+  type OrganizationPosting,
+  type PostingSkill,
+} from './db/tables.js';
+
 export type Role = 'admin' | 'volunteer' | 'organization';
 
 export interface UserJWT {
@@ -22,3 +30,27 @@ export interface GeocodingResponseEntry {
 }
 
 export type GeocodingResponse = GeocodingResponseEntry[];
+
+export type PostingResponse = {
+  posting: OrganizationPosting;
+  skills: PostingSkill[];
+};
+
+const _enrolledVolunteerSchema = volunteerAccountWithoutPasswordSchema
+  .omit({
+    id: true,
+    description: true,
+    privacy: true,
+  })
+  .extend({
+    enrollment_id: zod.number(),
+    volunteer_id: EnrollmentSchema.shape.volunteer_id,
+    message: EnrollmentSchema.shape.message,
+    skills: zod.array(VolunteerSkillSchema),
+  });
+
+export type EnrolledVolunteer = zod.infer<typeof _enrolledVolunteerSchema>;
+
+export type EnrollmentsResponse = {
+  enrollments: EnrolledVolunteer[];
+};

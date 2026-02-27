@@ -27,8 +27,8 @@ import { executeAndShowError, FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 import { useOrganization } from '../../utils/useUsers';
 
-import type { PostingResponse, EnrolledVolunteer, EnrollmentsResponse } from '../../../../server/src/api/routes/organization/posting';
 import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
+import type { PostingResponse, EnrolledVolunteer, EnrollmentsResponse } from '../../../../server/src/types';
 
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
 

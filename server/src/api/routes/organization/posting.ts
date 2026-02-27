@@ -2,30 +2,13 @@ import { Router } from 'express';
 import zod from 'zod';
 
 import database from '../../../db/index.js';
-import { newOrganizationPostingSchema, type NewOrganizationPosting, type OrganizationPosting, type PostingSkill, type VolunteerSkill } from '../../../db/tables.js';
+import {
+  newOrganizationPostingSchema,
+  type NewOrganizationPosting,
+  type PostingSkill,
+} from '../../../db/tables.js';
 
 const postingRouter = Router();
-
-export type PostingResponse = {
-  posting: OrganizationPosting;
-  skills: PostingSkill[];
-};
-
-export type EnrolledVolunteer = {
-  enrollment_id: number;
-  volunteer_id: number;
-  message?: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  date_of_birth: string;
-  gender: 'male' | 'female' | 'other';
-  skills: VolunteerSkill[];
-};
-
-export type EnrollmentsResponse = {
-  enrollments: EnrolledVolunteer[];
-};
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
@@ -272,7 +255,7 @@ postingRouter.delete('/:id', async (req, res) => {
     await trx.deleteFrom('organization_posting').where('id', '=', postingId).execute();
   });
 
-  res.json();
+  res.json({});
 });
 
 export default postingRouter;

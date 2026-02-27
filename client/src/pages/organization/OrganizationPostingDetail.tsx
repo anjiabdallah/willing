@@ -27,30 +27,10 @@ import { executeAndShowError, FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 import { useOrganization } from '../../utils/useUsers';
 
-import type { OrganizationPosting, PostingSkill, VolunteerSkill } from '../../../../server/src/db/tables';
+import type { PostingResponse, EnrolledVolunteer, EnrollmentsResponse } from '../../../../server/src/api/routes/organization/posting';
+import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
 
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
-
-type EnrolledVolunteer = {
-  enrollment_id: number;
-  volunteer_id: number;
-  message?: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  date_of_birth: string;
-  gender: 'male' | 'female' | 'other';
-  skills: VolunteerSkill[];
-};
-
-type PostingResponse = {
-  posting: OrganizationPosting;
-  skills: PostingSkill[];
-};
-
-type EnrollmentsResponse = {
-  enrollments: EnrolledVolunteer[];
-};
 
 const getDateTimeInputValue = (value: Date | string) => {
   const parsed = new Date(value);

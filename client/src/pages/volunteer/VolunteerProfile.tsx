@@ -15,6 +15,7 @@ import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '..
 import Loading from '../../components/Loading';
 import SkillsInput from '../../components/SkillsInput';
 import SkillsList from '../../components/SkillsList';
+import { ToggleButton } from '../../components/ToggleButton';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 
@@ -448,29 +449,20 @@ function VolunteerProfile() {
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Privacy Setting</h5>
-                <p className="text-sm opacity-70 mb-2">Profile visibility preference.</p>
+                <p className="text-sm opacity-70 mb-4">Profile visibility preference.</p>
                 {isEditMode
                   ? (
-                      <div className="join">
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'public', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Globe size={14} />
-                          Public
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'private', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Lock size={14} />
-                          Private
-                        </button>
-                      </div>
+                      <ToggleButton
+                        form={form}
+                        name="privacy"
+                        label="Visibility"
+                        compact
+                        disabled={saving}
+                        options={[
+                          { value: 'public', label: 'Public', Icon: Globe, btnColor: 'btn-primary' },
+                          { value: 'private', label: 'Private', Icon: Lock, btnColor: 'btn-secondary' },
+                        ]}
+                      />
                     )
                   : (
                       <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>

@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
 import SkillsInput from '../../components/SkillsInput';
+import { ToggleButton } from '../../components/ToggleButton';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/auth';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
@@ -27,11 +28,6 @@ export default function OrganizationPosting() {
 
   const [skills, setSkills] = useState<string[]>([]);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
-  const isOpen = useWatch({
-    control: form.control,
-    name: 'is_open',
-    defaultValue: true,
-  });
 
   const submit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {
@@ -151,43 +147,27 @@ export default function OrganizationPosting() {
 
                   <SkillsInput skills={skills} setSkills={setSkills} />
 
-                  <fieldset className="fieldset">
-                    <label className="label">
-                      <span className="label-text font-medium">Posting Type</span>
-                    </label>
-
-                    <div className="join w-full">
-                      <button
-                        type="button"
-                        className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
-                        }`}
-                        onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
-                      >
-                        <div className="flex items-center gap-2 font-bold">
-                          <LockOpen size={16} />
-                          <span>Open Posting</span>
-                        </div>
-                        <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
-                          Volunteers are accepted automatically.
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
-                        }`}
-                        onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
-                      >
-                        <div className="flex items-center gap-2 font-bold">
-                          <Lock size={16} />
-                          <span>Review-Based</span>
-                        </div>
-                        <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
-                          Volunteers must be approved by the organization.
-                        </p>
-                      </button>
-                    </div>
-                  </fieldset>
+                  <ToggleButton
+                    form={form}
+                    name="is_open"
+                    label="Posting Type"
+                    options={[
+                      {
+                        value: true,
+                        label: 'Open Posting',
+                        description: 'Volunteers are accepted automatically.',
+                        Icon: LockOpen,
+                        btnColor: 'btn-primary',
+                      },
+                      {
+                        value: false,
+                        label: 'Review-Based',
+                        description: 'Volunteers must be approved by the organization.',
+                        Icon: Lock,
+                        btnColor: 'btn-secondary',
+                      },
+                    ]}
+                  />
                 </div>
 
                 <div className="lg:col-span-1">

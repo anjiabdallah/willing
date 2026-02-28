@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import ColumnLayout from '../../components/ColumnLayout';
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
 import SkillsInput from '../../components/SkillsInput';
@@ -368,9 +369,9 @@ export default function OrganizationPostingDetail() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <div className="lg:sticky lg:top-24 space-y-6">
+          <ColumnLayout
+            sidebar={(
+              <>
                 <div className="card bg-base-100 shadow-md">
                   <div className="card-body">
                     <h4 className="text-xl font-bold mb-4">Posting Information</h4>
@@ -544,125 +545,123 @@ export default function OrganizationPostingDetail() {
                     />
                   </div>
                 </div>
+              </>
+            )}
+          >
+            <div className="card bg-base-100 shadow-md">
+              <div className="card-body">
+                <h5 className="font-bold text-lg">Required Skills</h5>
+                <p className="text-sm opacity-70 mt-1">Skills needed for this opportunity.</p>
+
+                {isEditMode
+                  ? (
+                      <SkillsInput skills={skills} setSkills={setSkills} />
+                    )
+                  : (
+                      <SkillsList skills={posting.skills} enableLimit={false} />
+                    )}
               </div>
             </div>
 
-            <div className="lg:col-span-2 space-y-6">
+            {!isOpen && (
               <div className="card bg-base-100 shadow-md">
                 <div className="card-body">
-                  <h5 className="font-bold text-lg">Required Skills</h5>
-                  <p className="text-sm opacity-70 mt-1">Skills needed for this opportunity.</p>
-
-                  {isEditMode
-                    ? (
-                        <SkillsInput skills={skills} setSkills={setSkills} />
-                      )
-                    : (
-                        <SkillsList skills={posting.skills} enableLimit={false} />
-                      )}
-                </div>
-              </div>
-
-              {!isOpen && (
-                <div className="card bg-base-100 shadow-md">
-                  <div className="card-body">
-                    <h4 className="text-xl font-bold mb-4">Enrollment Applications</h4>
-                    <div className="alert">
-                      <span className="text-sm">Enrollment applications feature coming soon.</span>
-                    </div>
+                  <h4 className="text-xl font-bold mb-4">Enrollment Applications</h4>
+                  <div className="alert">
+                    <span className="text-sm">Enrollment applications feature coming soon.</span>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              <div className="card bg-base-100 shadow-md">
-                <div className="card-body">
-                  <h4 className="text-xl font-bold mb-4">
-                    Enrolled Volunteers
-                    {' '}
-                    <span className="badge badge-primary">{enrollments.length}</span>
-                  </h4>
+            <div className="card bg-base-100 shadow-md">
+              <div className="card-body">
+                <h4 className="text-xl font-bold mb-4">
+                  Enrolled Volunteers
+                  {' '}
+                  <span className="badge badge-primary">{enrollments.length}</span>
+                </h4>
 
-                  {enrollments.length === 0
-                    ? (
-                        <div className="alert">
-                          <span className="text-sm">No volunteers have enrolled yet.</span>
-                        </div>
-                      )
-                    : (
-                        <div className="space-y-4">
-                          {enrollments.map((volunteer) => {
-                            const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
-                            const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
-                            const age = Math.floor(
-                              (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
-                            );
+                {enrollments.length === 0
+                  ? (
+                      <div className="alert">
+                        <span className="text-sm">No volunteers have enrolled yet.</span>
+                      </div>
+                    )
+                  : (
+                      <div className="space-y-4">
+                        {enrollments.map((volunteer) => {
+                          const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
+                          const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
+                          const age = Math.floor(
+                            (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+                          );
 
-                            const genderBadgeStyles = volunteer.gender === 'male'
-                              ? 'badge-info'
-                              : volunteer.gender === 'female'
-                                ? 'badge-secondary'
-                                : 'badge-accent';
+                          const genderBadgeStyles = volunteer.gender === 'male'
+                            ? 'badge-info'
+                            : volunteer.gender === 'female'
+                              ? 'badge-secondary'
+                              : 'badge-accent';
 
-                            return (
-                              <div
-                                key={volunteer.enrollment_id}
-                                className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className="avatar">
-                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
-                                      <span className="text-lg font-semibold">{initials}</span>
-                                    </div>
+                          return (
+                            <div
+                              key={volunteer.enrollment_id}
+                              className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="avatar">
+                                  <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                                    <span className="text-lg font-semibold">{initials}</span>
                                   </div>
-                                  <div className="grow">
-                                    <h5 className="font-bold text-base">{volunteerName}</h5>
-                                    <div className="flex gap-2 mt-1">
-                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                                        {volunteer.gender === 'male' && <Mars size={10} />}
-                                        {volunteer.gender === 'female' && <Venus size={10} />}
-                                        {volunteer.gender === 'other' && <span className="font-bold">*</span>}
-                                        {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
-                                      </span>
-                                      <span className="badge badge-sm">
-                                        {age}
-                                        {' '}
-                                        years old
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
-                                      <Mail size={12} />
-                                      {volunteer.email}
-                                    </div>
-                                    {volunteer.skills && volunteer.skills.length > 0 && (
-                                      <div className="mt-2">
-                                        <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          <SkillsList skills={volunteer.skills} />
-                                        </div>
-                                      </div>
-                                    )}
-                                    {volunteer.message && (
-                                      <div className="mt-2">
-                                        <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
-                                        <p className="text-xs opacity-80 italic">
-                                          "
-                                          {volunteer.message}
-                                          "
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-
                                 </div>
+                                <div className="grow">
+                                  <h5 className="font-bold text-base">{volunteerName}</h5>
+                                  <div className="flex gap-2 mt-1">
+                                    <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                                      {volunteer.gender === 'male' && <Mars size={10} />}
+                                      {volunteer.gender === 'female' && <Venus size={10} />}
+                                      {volunteer.gender === 'other' && <span className="font-bold">*</span>}
+                                      {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
+                                    </span>
+                                    <span className="badge badge-sm">
+                                      {age}
+                                      {' '}
+                                      years old
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
+                                    <Mail size={12} />
+                                    {volunteer.email}
+                                  </div>
+                                  {volunteer.skills && volunteer.skills.length > 0 && (
+                                    <div className="mt-2">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        <SkillsList skills={volunteer.skills} />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {volunteer.message && (
+                                    <div className="mt-2">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
+                                      <p className="text-xs opacity-80 italic">
+                                        "
+                                        {volunteer.message}
+                                        "
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
               </div>
             </div>
-          </div>
+          </ColumnLayout>
         </div>
       </div>
     </div>

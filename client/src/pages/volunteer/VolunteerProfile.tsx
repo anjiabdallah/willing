@@ -458,8 +458,8 @@ function VolunteerProfile() {
                       label="Visibility"
                       disabled={saving}
                       options={[
-                        { value: 'public', label: 'Public', description: 'Your profile is visible to all organizations', Icon: Globe, btnColor: 'btn-primary' },
-                        { value: 'private', label: 'Private', description: 'Your profile is hidden from public view', Icon: Lock, btnColor: 'btn-secondary' },
+                        { value: 'public', label: 'Public', description: 'Your profile is public', Icon: Globe, btnColor: 'btn-primary' },
+                        { value: 'private', label: 'Private', description: 'Your profile is private', Icon: Lock, btnColor: 'btn-secondary' },
                       ]}
                     />
                   )

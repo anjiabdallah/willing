@@ -23,6 +23,7 @@ import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
 import SkillsInput from '../../components/SkillsInput';
 import SkillsList from '../../components/SkillsList';
+import { ToggleButton } from '../../components/ToggleButton';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/auth';
 import { executeAndShowError, FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
@@ -496,44 +497,31 @@ export default function OrganizationPostingDetail() {
                 <div className="card bg-base-100 shadow-md">
                   <div className="card-body">
                     <h5 className="font-bold text-lg">Status</h5>
-                    <p className="text-sm opacity-70 mb-2">Posting visibility.</p>
+                    <p className="text-sm opacity-70 mb-4">Posting visibility.</p>
                     {isEditMode
                       ? (
-                          <fieldset className="fieldset">
-                            <div className="join w-full">
-                              <button
-                                type="button"
-                                className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
-                                }`}
-                                onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
-                                disabled={saving}
-                              >
-                                <div className="flex items-center gap-2 font-bold">
-                                  <LockOpen size={16} />
-                                  <span>Open Posting</span>
-                                </div>
-                                <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
-                                  Volunteers are accepted automatically.
-                                </p>
-                              </button>
-
-                              <button
-                                type="button"
-                                className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
-                                }`}
-                                onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
-                                disabled={saving}
-                              >
-                                <div className="flex items-center gap-2 font-bold">
-                                  <Lock size={16} />
-                                  <span>Review-Based</span>
-                                </div>
-                                <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
-                                  Volunteers must be approved by the organization.
-                                </p>
-                              </button>
-                            </div>
-                          </fieldset>
+                          <ToggleButton
+                            form={form}
+                            name="is_open"
+                            label="Posting Type"
+                            disabled={saving}
+                            options={[
+                              {
+                                value: true,
+                                label: 'Open Posting',
+                                description: 'Volunteers are accepted automatically.',
+                                Icon: LockOpen,
+                                btnColor: 'btn-primary',
+                              },
+                              {
+                                value: false,
+                                label: 'Review-Based',
+                                description: 'Volunteers must be approved by the organization.',
+                                Icon: Lock,
+                                btnColor: 'btn-secondary',
+                              },
+                            ]}
+                          />
                         )
                       : (
                           <span className={`badge gap-2 ${isOpen ? 'badge-primary' : 'badge-secondary'}`}>

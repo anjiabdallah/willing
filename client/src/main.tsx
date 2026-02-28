@@ -14,7 +14,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
 import OrganizationPage from './pages/organization/OrganizationPage';
 import OrganizationPosting from './pages/organization/OrganizationPosting';
-import OrganizationPostingDetail from './pages/organization/OrganizationPostingDetail';
+import OrganizationPostingCreate from './pages/organization/OrganizationPostingCreate';
 import OrganizationRequest from './pages/organization/OrganizationRequest';
 import OrganizationSettings from './pages/organization/VolunteerSettings';
 import UserLoginPage from './pages/UserLoginPage';
@@ -88,7 +88,7 @@ createRoot(document.getElementById('root')!).render(
               path="posting"
               element={(
                 <OrganizationOnly>
-                  <OrganizationPosting />
+                  <OrganizationPostingCreate />
                 </OrganizationOnly>
               )}
             />
@@ -96,7 +96,7 @@ createRoot(document.getElementById('root')!).render(
               path="posting/:id"
               element={(
                 <OrganizationOnly>
-                  <OrganizationPostingDetail />
+                  <OrganizationPosting />
                 </OrganizationOnly>
               )}
             />

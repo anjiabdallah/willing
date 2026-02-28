@@ -42,7 +42,7 @@ const getDateTimeInputValue = (value: Date | string) => {
   return localDate.toISOString().slice(0, 16);
 };
 
-export default function OrganizationPostingDetail() {
+export default function OrganizationPosting() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const account = useOrganization();

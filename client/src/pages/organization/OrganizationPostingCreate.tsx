@@ -13,7 +13,7 @@ import { executeAndShowError, FormField, FormRootError } from '../../utils/formU
 import requestServer from '../../utils/requestServer';
 import { useOrganization } from '../../utils/useUsers';
 
-export default function OrganizationPosting() {
+export default function OrganizationPostingCreate() {
   const account = useOrganization();
   const navigate = useNavigate();
 

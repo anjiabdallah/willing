@@ -302,176 +302,178 @@ function VolunteerProfile() {
           </div>
         )}
 
-        <ColumnLayout
-          sidebar={(
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="flex items-center gap-4">
-                  <div className="avatar">
-                    {avatarUrl
-                      ? (
-                          <div className="rounded-full w-20">
-                            <img src={avatarUrl} alt={`${volunteerName} avatar`} />
-                          </div>
-                        )
-                      : (
-                          <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
-                            <span className="text-2xl">{initials || 'V'}</span>
-                          </div>
-                        )}
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold">{volunteerName}</h4>
-                    <div className="mt-1">
-                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                        {formValues.gender === 'male' && <Mars size={12} />}
-                        {formValues.gender === 'female' && <Venus size={12} />}
-                        {formValues.gender === 'other' && <span className="font-bold">*</span>}
-                        {formattedGender}
-                      </span>
+        <div className="mt-4">
+          <ColumnLayout
+            sidebar={(
+              <div className="card bg-base-100 shadow-md mt-4">
+                <div className="card-body">
+                  <div className="flex items-center gap-4">
+                    <div className="avatar">
+                      {avatarUrl
+                        ? (
+                            <div className="rounded-full w-20">
+                              <img src={avatarUrl} alt={`${volunteerName} avatar`} />
+                            </div>
+                          )
+                        : (
+                            <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
+                              <span className="text-2xl">{initials || 'V'}</span>
+                            </div>
+                          )}
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold">{volunteerName}</h4>
+                      <div className="mt-1">
+                        <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                          {formValues.gender === 'male' && <Mars size={12} />}
+                          {formValues.gender === 'female' && <Venus size={12} />}
+                          {formValues.gender === 'other' && <span className="font-bold">*</span>}
+                          {formattedGender}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="divider my-4" />
+                  <div className="divider my-4" />
 
-                {isEditMode
-                  ? (
-                      <div className="space-y-3">
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="first_name" label="First Name" />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="last_name" label="Last Name" />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField
-                            form={form}
-                            name="gender"
-                            label="Gender"
-                            selectOptions={[
-                              { label: 'Male', value: 'male' },
-                              { label: 'Female', value: 'female' },
-                              { label: 'Other', value: 'other' },
-                            ]}
-                          />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="email" label="Email" type="email" Icon={Mail} />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="date_of_birth" label="Date of Birth" type="date" Icon={Calendar} />
-                        </div>
-                      </div>
-                    )
-                  : (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="opacity-70 flex items-center gap-2">
-                            <Mail size={14} />
-                            Email
-                          </span>
-                          <span className="font-medium text-right break-all">{formValues.email}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="opacity-70 flex items-center gap-2">
-                            <Calendar size={14} />
-                            Date of Birth
-                          </span>
-                          <span className="font-medium text-right">{formattedDateOfBirth}</span>
-                        </div>
-                      </div>
-                    )}
-
-                <div className="mt-4">
-                  <label className="text-sm opacity-70 mb-2 block">Description</label>
                   {isEditMode
                     ? (
-                        <>
-                          <textarea
-                            id="volunteer-description"
-                            className="textarea textarea-bordered w-full"
-                            {...form.register('description')}
-                            disabled={saving}
-                            rows={4}
-                            maxLength={DESCRIPTION_MAX_LENGTH}
-                          />
-                          <p className={`block min-h-5 text-xs mt-1 ${form.formState.errors.description ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.description?.message || 'placeholder'}
-                          </p>
-                          <p className="text-xs opacity-60 mt-1 text-right">
-                            {formValues.description?.length || 0}
-                            /
-                            {DESCRIPTION_MAX_LENGTH}
-                          </p>
-                        </>
+                        <div className="space-y-3">
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="first_name" label="First Name" />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="last_name" label="Last Name" />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField
+                              form={form}
+                              name="gender"
+                              label="Gender"
+                              selectOptions={[
+                                { label: 'Male', value: 'male' },
+                                { label: 'Female', value: 'female' },
+                                { label: 'Other', value: 'other' },
+                              ]}
+                            />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="email" label="Email" type="email" Icon={Mail} />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="date_of_birth" label="Date of Birth" type="date" Icon={Calendar} />
+                          </div>
+                        </div>
                       )
                     : (
-                        <p className="text-sm opacity-80 whitespace-pre-wrap break-words">
-                          {formValues.description || 'No description added yet.'}
-                        </p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="opacity-70 flex items-center gap-2">
+                              <Mail size={14} />
+                              Email
+                            </span>
+                            <span className="font-medium text-right break-all">{formValues.email}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="opacity-70 flex items-center gap-2">
+                              <Calendar size={14} />
+                              Date of Birth
+                            </span>
+                            <span className="font-medium text-right">{formattedDateOfBirth}</span>
+                          </div>
+                        </div>
                       )}
+
+                  <div className="mt-4">
+                    <label className="text-sm opacity-70 mb-2 block">Description</label>
+                    {isEditMode
+                      ? (
+                          <>
+                            <textarea
+                              id="volunteer-description"
+                              className="textarea textarea-bordered w-full"
+                              {...form.register('description')}
+                              disabled={saving}
+                              rows={4}
+                              maxLength={DESCRIPTION_MAX_LENGTH}
+                            />
+                            <p className={`block min-h-5 text-xs mt-1 ${form.formState.errors.description ? 'text-error' : 'invisible'}`}>
+                              {form.formState.errors.description?.message || 'placeholder'}
+                            </p>
+                            <p className="text-xs opacity-60 mt-1 text-right">
+                              {formValues.description?.length || 0}
+                              /
+                              {DESCRIPTION_MAX_LENGTH}
+                            </p>
+                          </>
+                        )
+                      : (
+                          <p className="text-sm opacity-80 whitespace-pre-wrap break-words">
+                            {formValues.description || 'No description added yet.'}
+                          </p>
+                        )}
+                  </div>
+                </div>
+              </div>
+            )}
+          >
+            <div className="card bg-base-100 shadow-md mt-4">
+              <div className="card-body">
+                <h5 className="font-bold text-lg">Skills</h5>
+                <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
+
+                {
+                  isEditMode
+                    ? (
+                        <SkillsInput skills={skills} setSkills={setSkills} />
+                      )
+                    : (
+                        <SkillsList skills={skills} enableLimit={false} />
+                      )
+                }
+
+              </div>
+            </div>
+
+            <div className="card bg-base-100 shadow-md">
+              <div className="card-body">
+                <h5 className="font-bold text-lg">Previous Experiences</h5>
+                <p className="text-sm opacity-70 mt-1">
+                  This section will show your past volunteering experiences completed through the platform.
+                </p>
+                <div className="alert alert-soft mt-4">
+                  <span className="text-sm">No experiences to show yet.</span>
                 </div>
               </div>
             </div>
-          )}
-        >
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h5 className="font-bold text-lg">Skills</h5>
-              <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
 
-              {
-                isEditMode
+            <div className="card bg-base-100 shadow-md">
+              <div className="card-body">
+                <h5 className="font-bold text-lg">Privacy Setting</h5>
+                <p className="text-sm opacity-70 mb-4">Profile visibility preference.</p>
+                {isEditMode
                   ? (
-                      <SkillsInput skills={skills} setSkills={setSkills} />
+                      <ToggleButton
+                        form={form}
+                        name="privacy"
+                        label="Visibility"
+                        disabled={saving}
+                        options={[
+                          { value: 'public', label: 'Public', description: 'Your profile is public', Icon: Globe, btnColor: 'btn-primary' },
+                          { value: 'private', label: 'Private', description: 'Your profile is private', Icon: Lock, btnColor: 'btn-secondary' },
+                        ]}
+                      />
                     )
                   : (
-                      <SkillsList skills={skills} enableLimit={false} />
-                    )
-              }
-
-            </div>
-          </div>
-
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h5 className="font-bold text-lg">Previous Experiences</h5>
-              <p className="text-sm opacity-70 mt-1">
-                This section will show your past volunteering experiences completed through the platform.
-              </p>
-              <div className="alert alert-soft mt-4">
-                <span className="text-sm">No experiences to show yet.</span>
+                      <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>
+                        {formValues.privacy === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+                        {formValues.privacy === 'private' ? 'Private' : 'Public'}
+                      </span>
+                    )}
               </div>
             </div>
-          </div>
-
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h5 className="font-bold text-lg">Privacy Setting</h5>
-              <p className="text-sm opacity-70 mb-4">Profile visibility preference.</p>
-              {isEditMode
-                ? (
-                    <ToggleButton
-                      form={form}
-                      name="privacy"
-                      label="Visibility"
-                      disabled={saving}
-                      options={[
-                        { value: 'public', label: 'Public', description: 'Your profile is public', Icon: Globe, btnColor: 'btn-primary' },
-                        { value: 'private', label: 'Private', description: 'Your profile is private', Icon: Lock, btnColor: 'btn-secondary' },
-                      ]}
-                    />
-                  )
-                : (
-                    <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>
-                      {formValues.privacy === 'private' ? <Lock size={12} /> : <Globe size={12} />}
-                      {formValues.privacy === 'private' ? 'Private' : 'Public'}
-                    </span>
-                  )}
-            </div>
-          </div>
-        </ColumnLayout>
+          </ColumnLayout>
+        </div>
       </div>
     </div>
   );

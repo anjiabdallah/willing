@@ -85,6 +85,43 @@ Useful client scripts:
 3. Keep existing DaisyUI/Tailwind visual language unless explicitly asked to redesign.
 4. Handle loading, error, and success states explicitly.
 
+## Reusable Components
+
+All components are in `client/src/components/`. **Use these instead of recreating similar logic.**
+
+### Layout & Navigation
+
+- **`ColumnLayout`**: Responsive column layout with a sidebar and main content. Sidebar can be made sticky via `stickySidebar` prop (prefer true for most pages). Use for pages with side panels.
+- **`Navbar`**: Standard top navbar with logo on left, optional `center` and `right` content slots. Sticky positioned. Use for all page headers.
+- **`Footer`**: Standard footer with company info, contact email, and GitHub link. Use at bottom of main pages.
+
+### Display Components
+
+- **`Loading`**: DaisyUI loading spinner with configurable size (`xs`, `sm`, `md`, `lg`, `xl`). Use for loading states in buttons and pages.
+- **`PostingCard`**: Display card for volunteer opportunity postings. Shows title, description, location, start/end dates, max volunteers, minimum age, and required skills. Accepts optional `footer` ReactNode for action buttons. Use for listing volunteer postings.
+- **`SkillsList`**: Display skills as colored badges. Supports expandable view when more than `limit` skills (default 5). Can accept optional `action` render prop for per-skill actions (e.g., remove button). Use `enableLimit={false}` to show all skills.
+
+### Form Components
+
+- **`PasswordResetCard`**: Complete password reset form with current/new/confirm password fields. Integrates with `AuthContext`. Handles validation and success/error states. Use in settings pages.
+- **`SkillsInput`**: Input field with add button for building a skill list. Supports Enter key to add. Displays current skills using `SkillsList` with remove buttons. Controlled via `skills` and `setSkills` props.
+- **`ToggleButton`**: Form-integrated toggle button group for react-hook-form. Supports two modes:
+  - **Compact mode** (`compact={true}`): Horizontal joined buttons, minimal styling
+  - **Full mode** (default): Larger cards with icons and descriptions
+  - Each option can have `value`, `label`, `description`, `Icon`, and `btnColor` properties
+  - Automatically integrates with form state via `form` and `name` props
+
+### Interactive Components
+
+- **`LocationPicker`**: Interactive map with Leaflet and React-Leaflet for selecting geographic locations. Features:
+  - Draggable marker for precise positioning
+  - Search bar with geocoding (limited to Lebanon)
+  - Click-to-place marker (when not `readOnly`)
+  - Custom zoom controls
+  - Dark theme support
+  - Accepts `position` ([lat, lng]), `setPosition` callback, and optional `readOnly` flag
+  - The `setPosition` callback receives optional `name` parameter when location selected via search
+
 ## Backend Conventions
 
 1. Route modules should live under `server/src/api/routes/<domain>/`.

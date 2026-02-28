@@ -369,7 +369,6 @@ export default function OrganizationPostingDetail() {
           )}
 
           <ColumnLayout
-            stickySidebar
             sidebar={(
               <>
                 <div className="card bg-base-100 shadow-md">

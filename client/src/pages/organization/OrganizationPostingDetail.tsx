@@ -368,7 +368,6 @@ export default function OrganizationPostingDetail() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Posting Details */}
             <div className="lg:col-span-1">
               <div className="lg:sticky lg:top-24 space-y-6">
                 <div className="card bg-base-100 shadow-md">
@@ -560,7 +559,6 @@ export default function OrganizationPostingDetail() {
               </div>
             </div>
 
-            {/* Right Column: Skills and Volunteers */}
             <div className="lg:col-span-2 space-y-6">
               <div className="card bg-base-100 shadow-md">
                 <div className="card-body">

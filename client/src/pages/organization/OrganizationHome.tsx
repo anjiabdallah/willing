@@ -1,7 +1,7 @@
-import { Plus, MapPin, Calendar, Users, Cake, Eye } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import SkillsList from '../../components/SkillsList';
+import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
@@ -60,106 +60,21 @@ function OrganizationHome() {
         {!loading && postings && postings.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {postings.map(posting => (
-              <div
+              <PostingCard
                 key={posting.id}
-                className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow"
-              >
-                <div className="card-body">
-                  <h2 className="card-title text-primary text-lg mb-2">{posting.title}</h2>
-                  <p className="text-sm opacity-80 mb-4 line-clamp-2">{posting.description}</p>
-
-                  <div className="space-y-3 text-sm mb-4">
-                    <p className="flex items-center gap-2">
-                      <MapPin size={16} className="text-primary flex-shrink-0" />
-                      <span>{posting.location_name}</span>
-                    </p>
-
-                    {posting.end_timestamp
-                      ? (
-                          <div className="flex gap-3 items-start">
-                            <div className="flex flex-col items-center flex-shrink-0 mt-1">
-                              <Calendar size={16} className="text-primary flex-shrink-0" />
-                              <div className="w-0.5 h-6 bg-primary my-0.5"></div>
-                              <Calendar size={16} className="text-primary flex-shrink-0" />
-                            </div>
-                            <div className="flex flex-col gap-1 flex-grow">
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">START</p>
-                                <span className="text-xs">
-                                  {new Date(posting.start_timestamp).toLocaleDateString()}
-                                  {' '}
-                                  {new Date(posting.start_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">END</p>
-                                <span className="text-xs">
-                                  {new Date(posting.end_timestamp).toLocaleDateString()}
-                                  {' '}
-                                  {new Date(posting.end_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      : (
-                          <p className="flex items-center gap-2">
-                            <Calendar size={16} className="text-primary flex-shrink-0" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START</p>
-                              <span className="text-xs">
-                                {new Date(posting.start_timestamp).toLocaleDateString()}
-                                {' '}
-                                {new Date(posting.start_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </p>
-                        )}
-
-                    <div className="flex gap-3">
-                      {posting.max_volunteers && (
-                        <p className="flex items-center gap-1">
-                          <Users size={16} className="text-primary flex-shrink-0" />
-                          <span>
-                            0/
-                            {posting.max_volunteers}
-                          </span>
-                        </p>
-                      )}
-                      {posting.minimum_age && (
-                        <p className="flex items-center gap-1">
-                          <Cake size={16} className="text-primary flex-shrink-0" />
-                          <span>
-                            {posting.minimum_age}
-                            +
-                          </span>
-                        </p>
-                      )}
-                    </div>
+                posting={posting}
+                footer={(
+                  <div className="card-actions gap-2">
+                    <button
+                      className="btn btn-sm w-full gap-2"
+                      onClick={() => navigate(`/organization/posting/${posting.id}`)}
+                    >
+                      <Eye size={16} />
+                      <span className="group-hover:font-semibold">View Details</span>
+                    </button>
                   </div>
-
-                  {posting.skills && posting.skills.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold opacity-70">REQUIRED SKILLS</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <SkillsList skills={posting.skills} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="card-actions justify-center border-t border-base-200 pt-4">
-                  <button
-                    className="btn btn-ghost btn-sm w-full gap-2 hover:btn-primary group transition-all"
-                    onClick={() => navigate(`/organization/posting/${posting.id}`)}
-                  >
-                    <Eye size={16} className="group-hover:scale-110 transition-transform" />
-                    <span className="group-hover:font-semibold">View Details</span>
-                  </button>
-                </div>
-              </div>
+                )}
+              />
             ))}
           </div>
         )}

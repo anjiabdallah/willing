@@ -303,7 +303,7 @@ export default function OrganizationPostingDetail() {
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-6 sticky top-0 z-20 bg-base-200 -mx-6 px-6 py-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-6 bg-base-200 -mx-6 px-6 py-4">
           <div className="flex items-center gap-3">
             <button
               className="btn btn-ghost btn-sm"
@@ -368,39 +368,38 @@ export default function OrganizationPostingDetail() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Posting Details */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="card bg-base-100 shadow-md sticky top-24 h-fit z-10">
-                <div className="card-body">
-                  <h4 className="text-xl font-bold mb-4">Posting Information</h4>
+            <div className="lg:col-span-1">
+              <div className="lg:sticky lg:top-24 space-y-6">
+                <div className="card bg-base-100 shadow-md">
+                  <div className="card-body">
+                    <h4 className="text-xl font-bold mb-4">Posting Information</h4>
 
-                  {isEditMode
-                    ? (
-                        <div className="space-y-4">
-                          <FormField
-                            form={form}
-                            label="Title"
-                            name="title"
-                            type="text"
-                            placeholder="Enter posting title"
-                            Icon={Edit3}
-                          />
-                          <FormField
-                            form={form}
-                            label="Description"
-                            name="description"
-                            type="textarea"
-                            placeholder="Describe the opportunity"
-                          />
-                          <FormField
-                            form={form}
-                            label="Location Name"
-                            name="location_name"
-                            type="text"
-                            placeholder="e.g. Downtown Community Center"
-                            Icon={MapPin}
-                          />
-                          <div className="grid grid-cols-2 gap-3">
+                    {isEditMode
+                      ? (
+                          <div className="space-y-4">
+                            <FormField
+                              form={form}
+                              label="Title"
+                              name="title"
+                              type="text"
+                              placeholder="Enter posting title"
+                              Icon={Edit3}
+                            />
+                            <FormField
+                              form={form}
+                              label="Description"
+                              name="description"
+                              type="textarea"
+                              placeholder="Describe the opportunity"
+                            />
+                            <FormField
+                              form={form}
+                              label="Location Name"
+                              name="location_name"
+                              type="text"
+                              placeholder="e.g. Downtown Community Center"
+                              Icon={MapPin}
+                            />
                             <FormField
                               form={form}
                               label="Max Volunteers"
@@ -417,8 +416,6 @@ export default function OrganizationPostingDetail() {
                               placeholder="Optional"
                               Icon={ShieldCheck}
                             />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
                             <FormField
                               form={form}
                               label="Start Date"
@@ -432,137 +429,136 @@ export default function OrganizationPostingDetail() {
                               type="datetime-local"
                             />
                           </div>
-                        </div>
-                      )
-                    : (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-xs font-semibold opacity-70 uppercase">Title</label>
-                            <p className="text-lg font-semibold text-primary">{formValues.title}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-semibold opacity-70 uppercase">Description</label>
-                            <p className="text-sm opacity-80 whitespace-pre-wrap">{formValues.description}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin size={16} className="text-primary" />
-                            <span className="text-sm">{formValues.location_name}</span>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">START</p>
-                                <span className="text-xs">{formattedStartDate}</span>
-                              </div>
+                        )
+                      : (
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-xs font-semibold opacity-70 uppercase">Title</label>
+                              <p className="text-lg font-semibold text-primary">{formValues.title}</p>
                             </div>
-                            {formValues.end_timestamp && (
+                            <div>
+                              <label className="text-xs font-semibold opacity-70 uppercase">Description</label>
+                              <p className="text-sm opacity-80 whitespace-pre-wrap">{formValues.description}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin size={16} className="text-primary" />
+                              <span className="text-sm">{formValues.location_name}</span>
+                            </div>
+                            <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <Calendar size={16} className="text-primary" />
                                 <div>
-                                  <p className="text-xs opacity-70 font-semibold">END</p>
-                                  <span className="text-xs">{formattedEndDate}</span>
+                                  <p className="text-xs opacity-70 font-semibold">START</p>
+                                  <span className="text-xs">{formattedStartDate}</span>
                                 </div>
                               </div>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            {formValues.max_volunteers
-                              ? (
-                                  <div className="flex items-center gap-2">
-                                    <Users size={16} className="text-primary" />
-                                    <div>
-                                      <p className="text-xs opacity-70 font-semibold">MAX VOLUNTEERS</p>
-                                      <span className="text-sm">{formValues.max_volunteers}</span>
-                                    </div>
+                              {formValues.end_timestamp && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar size={16} className="text-primary" />
+                                  <div>
+                                    <p className="text-xs opacity-70 font-semibold">END</p>
+                                    <span className="text-xs">{formattedEndDate}</span>
                                   </div>
-                                )
-                              : null}
-                            {formValues.minimum_age && (
-                              <div className="flex items-center gap-2">
-                                <Cake size={16} className="text-primary" />
-                                <div>
-                                  <p className="text-xs opacity-70 font-semibold">MIN AGE</p>
-                                  <span className="text-sm">
-                                    {formValues.minimum_age}
-                                    +
-                                  </span>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              {formValues.max_volunteers
+                                ? (
+                                    <div className="flex items-center gap-2">
+                                      <Users size={16} className="text-primary" />
+                                      <div>
+                                        <p className="text-xs opacity-70 font-semibold">MAX VOLUNTEERS</p>
+                                        <span className="text-sm">{formValues.max_volunteers}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                : null}
+                              {formValues.minimum_age && (
+                                <div className="flex items-center gap-2">
+                                  <Cake size={16} className="text-primary" />
+                                  <div>
+                                    <p className="text-xs opacity-70 font-semibold">MIN AGE</p>
+                                    <span className="text-sm">
+                                      {formValues.minimum_age}
+                                      +
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="card bg-base-100 shadow-md relative z-0">
-                <div className="card-body">
-                  <h5 className="font-bold text-lg">Status</h5>
-                  <p className="text-sm opacity-70 mb-2">Posting visibility.</p>
-                  {isEditMode
-                    ? (
-                        <fieldset className="fieldset">
-                          <div className="join w-full">
-                            <button
-                              type="button"
-                              className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
-                              }`}
-                              onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
-                              disabled={saving}
-                            >
-                              <div className="flex items-center gap-2 font-bold">
-                                <LockOpen size={16} />
-                                <span>Open Posting</span>
-                              </div>
-                              <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
-                                Volunteers are accepted automatically.
-                              </p>
-                            </button>
+                <div className="card bg-base-100 shadow-md">
+                  <div className="card-body">
+                    <h5 className="font-bold text-lg">Status</h5>
+                    <p className="text-sm opacity-70 mb-2">Posting visibility.</p>
+                    {isEditMode
+                      ? (
+                          <fieldset className="fieldset">
+                            <div className="join w-full">
+                              <button
+                                type="button"
+                                className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${isOpen ? 'btn-primary' : 'bg-base-200 border-base-300'
+                                }`}
+                                onClick={() => form.setValue('is_open', true, { shouldDirty: true, shouldTouch: true })}
+                                disabled={saving}
+                              >
+                                <div className="flex items-center gap-2 font-bold">
+                                  <LockOpen size={16} />
+                                  <span>Open Posting</span>
+                                </div>
+                                <p className={`text-xs font-normal leading-tight ${isOpen ? 'text-primary-content/80' : 'text-base-content/60'}`}>
+                                  Volunteers are accepted automatically.
+                                </p>
+                              </button>
 
-                            <button
-                              type="button"
-                              className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
-                              }`}
-                              onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
-                              disabled={saving}
-                            >
-                              <div className="flex items-center gap-2 font-bold">
-                                <Lock size={16} />
-                                <span>Review-Based</span>
-                              </div>
-                              <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
-                                Volunteers must be approved by the organization.
-                              </p>
-                            </button>
-                          </div>
-                        </fieldset>
-                      )
-                    : (
-                        <span className={`badge gap-2 ${isOpen ? 'badge-primary' : 'badge-secondary'}`}>
-                          {isOpen ? <LockOpen size={12} /> : <Lock size={12} />}
-                          {isOpen ? 'Open' : 'Review Based'}
-                        </span>
-                      )}
+                              <button
+                                type="button"
+                                className={`btn join-item h-auto flex-1 flex-col items-start gap-1 p-4 text-left normal-case ${!isOpen ? 'btn-secondary' : 'bg-base-200 border-base-300'
+                                }`}
+                                onClick={() => form.setValue('is_open', false, { shouldDirty: true, shouldTouch: true })}
+                                disabled={saving}
+                              >
+                                <div className="flex items-center gap-2 font-bold">
+                                  <Lock size={16} />
+                                  <span>Review-Based</span>
+                                </div>
+                                <p className={`text-xs font-normal leading-tight ${!isOpen ? 'text-secondary-content/80' : 'text-base-content/60'}`}>
+                                  Volunteers must be approved by the organization.
+                                </p>
+                              </button>
+                            </div>
+                          </fieldset>
+                        )
+                      : (
+                          <span className={`badge gap-2 ${isOpen ? 'badge-primary' : 'badge-secondary'}`}>
+                            {isOpen ? <LockOpen size={12} /> : <Lock size={12} />}
+                            {isOpen ? 'Open' : 'Review Based'}
+                          </span>
+                        )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="card bg-base-100 shadow-md relative z-0">
-                <div className="card-body">
-                  <h5 className="font-bold text-lg">Location</h5>
-                  <p className="text-sm opacity-70 mb-2">
-                    {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
-                  </p>
-                  <LocationPicker
-                    position={position}
-                    setPosition={onMapPositionPick}
-                    readOnly={!isEditMode}
-                  />
+                <div className="card bg-base-100 shadow-md">
+                  <div className="card-body">
+                    <h5 className="font-bold text-lg">Location</h5>
+                    <p className="text-sm opacity-70 mb-2">
+                      {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                    </p>
+                    <LocationPicker
+                      position={position}
+                      setPosition={onMapPositionPick}
+                      readOnly={!isEditMode}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Skills and Volunteers */}
             <div className="lg:col-span-2 space-y-6">
               <div className="card bg-base-100 shadow-md">
                 <div className="card-body">
@@ -630,7 +626,7 @@ export default function OrganizationPostingDetail() {
                                       <span className="text-lg font-semibold">{initials}</span>
                                     </div>
                                   </div>
-                                  <div className="flex-grow">
+                                  <div className="grow">
                                     <h5 className="font-bold text-base">{volunteerName}</h5>
                                     <div className="flex gap-2 mt-1">
                                       <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
@@ -668,6 +664,7 @@ export default function OrganizationPostingDetail() {
                                       </div>
                                     )}
                                   </div>
+
                                 </div>
                               </div>
                             );

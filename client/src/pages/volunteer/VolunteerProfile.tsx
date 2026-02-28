@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '../../../../server/src/db/tables';
+import ColumnLayout from '../../components/ColumnLayout';
 import Loading from '../../components/Loading';
 import SkillsInput from '../../components/SkillsInput';
 import SkillsList from '../../components/SkillsList';
@@ -300,8 +301,8 @@ function VolunteerProfile() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          <div className="lg:col-span-1 space-y-6">
+        <ColumnLayout
+          sidebar={(
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
                 <div className="flex items-center gap-4">
@@ -412,76 +413,74 @@ function VolunteerProfile() {
                 </div>
               </div>
             </div>
-          </div>
+          )}
+        >
+          <div className="card bg-base-100 shadow-md">
+            <div className="card-body">
+              <h5 className="font-bold text-lg">Skills</h5>
+              <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
 
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Skills</h5>
-                <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
-
-                {
-                  isEditMode
-                    ? (
-                        <SkillsInput skills={skills} setSkills={setSkills} />
-                      )
-                    : (
-                        <SkillsList skills={skills} enableLimit={false} />
-                      )
-                }
-
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Previous Experiences</h5>
-                <p className="text-sm opacity-70 mt-1">
-                  This section will show your past volunteering experiences completed through the platform.
-                </p>
-                <div className="alert alert-soft mt-4">
-                  <span className="text-sm">No experiences to show yet.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Privacy Setting</h5>
-                <p className="text-sm opacity-70 mb-2">Profile visibility preference.</p>
-                {isEditMode
+              {
+                isEditMode
                   ? (
-                      <div className="join">
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'public', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Globe size={14} />
-                          Public
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'private', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Lock size={14} />
-                          Private
-                        </button>
-                      </div>
+                      <SkillsInput skills={skills} setSkills={setSkills} />
                     )
                   : (
-                      <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>
-                        {formValues.privacy === 'private' ? <Lock size={12} /> : <Globe size={12} />}
-                        {formValues.privacy === 'private' ? 'Private' : 'Public'}
-                      </span>
-                    )}
+                      <SkillsList skills={skills} enableLimit={false} />
+                    )
+              }
+
+            </div>
+          </div>
+
+          <div className="card bg-base-100 shadow-md">
+            <div className="card-body">
+              <h5 className="font-bold text-lg">Previous Experiences</h5>
+              <p className="text-sm opacity-70 mt-1">
+                This section will show your past volunteering experiences completed through the platform.
+              </p>
+              <div className="alert alert-soft mt-4">
+                <span className="text-sm">No experiences to show yet.</span>
               </div>
             </div>
           </div>
-        </div>
+
+          <div className="card bg-base-100 shadow-md">
+            <div className="card-body">
+              <h5 className="font-bold text-lg">Privacy Setting</h5>
+              <p className="text-sm opacity-70 mb-2">Profile visibility preference.</p>
+              {isEditMode
+                ? (
+                    <div className="join">
+                      <button
+                        type="button"
+                        className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : ''}`}
+                        onClick={() => form.setValue('privacy', 'public', { shouldDirty: true, shouldTouch: true })}
+                        disabled={saving}
+                      >
+                        <Globe size={14} />
+                        Public
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : ''}`}
+                        onClick={() => form.setValue('privacy', 'private', { shouldDirty: true, shouldTouch: true })}
+                        disabled={saving}
+                      >
+                        <Lock size={14} />
+                        Private
+                      </button>
+                    </div>
+                  )
+                : (
+                    <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>
+                      {formValues.privacy === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+                      {formValues.privacy === 'private' ? 'Private' : 'Public'}
+                    </span>
+                  )}
+            </div>
+          </div>
+        </ColumnLayout>
       </div>
     </div>
   );

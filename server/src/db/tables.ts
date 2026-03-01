@@ -6,6 +6,17 @@ type WithGeneratedID<T> = Omit <T, 'id'> & {
   id: Generated<number>;
 };
 
+type WithGeneratedIDAndCreatedAt<T> = Omit<T, 'id' | 'created_at'> & {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+};
+
+type WithGeneratedIDAndTimestamps<T> = Omit<T, 'id' | 'created_at' | 'updated_at'> & {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+};
+
 const organizationWebsiteSchema = zod.url('URL is invalid')
   .trim()
   .refine(url => /^https?:\/\//i.test(url), {
@@ -49,7 +60,7 @@ export const volunteerAccountSchema = zod.object({
 });
 export type VolunteerAccount = zod.infer<typeof volunteerAccountSchema>;
 
-export type VolunteerAccountTable = WithGeneratedID<VolunteerAccount>;
+export type VolunteerAccountTable = WithGeneratedIDAndTimestamps<VolunteerAccount>;
 
 export const newVolunteerAccountSchema = volunteerAccountSchema.omit({ id: true, privacy: true, description: true, created_at: true, updated_at: true });
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
@@ -81,7 +92,7 @@ export const organizationRequestSchema = zod.object({
 
 export type OrganizationRequest = zod.infer<typeof organizationRequestSchema>;
 
-export type OrganizationRequestTable = WithGeneratedID<OrganizationRequest>;
+export type OrganizationRequestTable = WithGeneratedIDAndCreatedAt<OrganizationRequest>;
 
 export const newOrganizationRequestSchema = organizationRequestSchema.omit({ id: true, created_at: true });
 export type NewOrganizationRequest = zod.infer<typeof newOrganizationRequestSchema>;
@@ -112,7 +123,7 @@ export const organizationAccountSchema = zod.object({
 
 export type OrganizationAccount = zod.infer<typeof organizationAccountSchema>;
 
-export type OrganizationAccountTable = WithGeneratedID<OrganizationAccount>;
+export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<OrganizationAccount>;
 
 export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, created_at: true, updated_at: true });
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
@@ -134,7 +145,7 @@ export const adminAccountSchema = zod.object({
 
 export type AdminAccount = zod.infer <typeof adminAccountSchema>;
 
-export type AdminAccountTable = WithGeneratedID<AdminAccount>;
+export type AdminAccountTable = WithGeneratedIDAndTimestamps<AdminAccount>;
 
 export const newAdminAccountSchema = adminAccountSchema.omit({ id: true, created_at: true, updated_at: true });
 export type NewAdminAccount = zod.infer<typeof newAdminAccountSchema>;
@@ -185,7 +196,7 @@ export const organizationPostingSchema = zod.object({
 
 export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
 
-export type OrganizationPostingTable = WithGeneratedID<OrganizationPosting>;
+export type OrganizationPostingTable = WithGeneratedIDAndTimestamps<OrganizationPosting>;
 
 export const newOrganizationPostingSchema = organizationPostingSchema
   .omit({ id: true, created_at: true, updated_at: true })
@@ -232,7 +243,7 @@ export const EnrollmentSchema = zod.object({
 export type Enrollment = zod.infer<typeof EnrollmentSchema>;
 export const newEnrollmentSchema = EnrollmentSchema.omit({ created_at: true });
 
-export type EnrollmentTable = WithGeneratedID<Enrollment>;
+export type EnrollmentTable = WithGeneratedIDAndCreatedAt<Enrollment>;
 
 // enrollment_application
 
@@ -246,7 +257,7 @@ export const EnrollmentApplicationSchema = zod.object({
 
 export type EnrollmentApplication = zod.infer<typeof EnrollmentApplicationSchema>;
 export const newEnrollmentApplicationSchema = EnrollmentApplicationSchema.omit({ created_at: true });
-export type EnrollmentApplicationTable = WithGeneratedID<EnrollmentApplication>;
+export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
 export interface Database {
   volunteer_account: VolunteerAccountTable;

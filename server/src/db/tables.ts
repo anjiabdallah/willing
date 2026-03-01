@@ -53,7 +53,7 @@ export const volunteerAccountSchema = zod.object({
     .min(1, 'Date of birth is required')
     .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' }),
   gender: zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' '),
-  description: zod.string().max(500, 'Description must be less than 1000 characters').optional(),
+  description: zod.string().max(500, 'Description must be less than 500 characters').optional(),
   privacy: zod.enum(['public', 'private']),
   updated_at: zod.date(),
   created_at: zod.date(),
@@ -65,7 +65,9 @@ export type VolunteerAccountTable = WithGeneratedIDAndTimestamps<VolunteerAccoun
 export const newVolunteerAccountSchema = volunteerAccountSchema.omit({ id: true, privacy: true, description: true, created_at: true, updated_at: true });
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
 
-export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({ password: true });
+export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({ password: true,
+  created_at: true,
+  updated_at: true });
 export type VolunteerAccountWithoutPassword = zod.infer<typeof volunteerAccountWithoutPasswordSchema>;
 
 // organization_request
@@ -128,7 +130,7 @@ export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<Organization
 export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, created_at: true, updated_at: true });
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
 
-export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true });
+export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, created_at: true, updated_at: true });
 export type OrganizationAccountWithoutPassword = zod.infer<typeof organizationAccountUpdate>;
 
 // admin_account
@@ -150,7 +152,7 @@ export type AdminAccountTable = WithGeneratedIDAndTimestamps<AdminAccount>;
 export const newAdminAccountSchema = adminAccountSchema.omit({ id: true, created_at: true, updated_at: true });
 export type NewAdminAccount = zod.infer<typeof newAdminAccountSchema>;
 
-export const adminAccountUpdate = adminAccountSchema.omit({ password: true });
+export const adminAccountUpdate = adminAccountSchema.omit({ password: true, created_at: true, updated_at: true });
 export type AdminAccountWithoutPassword = zod.infer<typeof adminAccountUpdate>;
 
 // password_reset_token
@@ -236,12 +238,12 @@ export const EnrollmentSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   posting_id: zod.number().min(1, 'Posting ID is required'),
-  message: zod.string().max(350, 'Your message is too long. Please limit it to 500 characters.').optional(),
+  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').optional(),
   created_at: zod.date(),
 });
 
 export type Enrollment = zod.infer<typeof EnrollmentSchema>;
-export const newEnrollmentSchema = EnrollmentSchema.omit({ created_at: true });
+export const newEnrollmentSchema = EnrollmentSchema.omit({ id: true, created_at: true });
 
 export type EnrollmentTable = WithGeneratedIDAndCreatedAt<Enrollment>;
 
@@ -251,12 +253,12 @@ export const EnrollmentApplicationSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   enrollment_id: zod.number().min(1, 'Enrollment ID is required'),
-  message: zod.string().max(350, 'Your message is too long. Please limit it to 500 characters.').optional(),
+  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').optional(),
   created_at: zod.date(),
 });
 
 export type EnrollmentApplication = zod.infer<typeof EnrollmentApplicationSchema>;
-export const newEnrollmentApplicationSchema = EnrollmentApplicationSchema.omit({ created_at: true });
+export const newEnrollmentApplicationSchema = EnrollmentApplicationSchema.omit({ id: true, created_at: true });
 export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
 export interface Database {

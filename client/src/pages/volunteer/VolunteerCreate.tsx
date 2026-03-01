@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useContext } from 'react';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 
 import AuthContext from '../../auth/AuthContext';
 import Loading from '../../components/Loading';
@@ -142,6 +143,15 @@ export default function VolunteerCreate() {
                     )
               }
             </button>
+            <div className="text-center mt-4">
+              <span className="text-sm">
+                Already have an account?
+                {' '}
+                <Link to="/login" className="link link-primary">
+                  Log in
+                </Link>
+              </span>
+            </div>
           </form>
         </div>
       </div>

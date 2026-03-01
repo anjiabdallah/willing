@@ -82,6 +82,16 @@ function UserLoginPage() {
                       )
                 }
               </button>
+
+              <div className="text-center mt-4">
+                <span className="text-sm">
+                  Don&apos;t have an account?
+                  {' '}
+                  <Link to="/volunteer/create" className="link link-primary">
+                    Sign up
+                  </Link>
+                </span>
+              </div>
             </form>
           </div>
         </div>

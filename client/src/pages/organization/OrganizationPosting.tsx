@@ -616,6 +616,22 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
                     </p>
                   </div>
                 </div>
+
+                {!isVolunteerView && (
+                  <div className="card bg-base-100 shadow-md">
+                    <div className="card-body">
+                      <h5 className="font-bold text-lg">Location</h5>
+                      <p className="text-sm opacity-70 mb-2">
+                        {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                      </p>
+                      <LocationPicker
+                        position={position}
+                        setPosition={onMapPositionPick}
+                        readOnly={!isEditMode}
+                      />
+                    </div>
+                  </div>
+                )}
               </>
             )}
           >
@@ -634,19 +650,21 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Location</h5>
-                <p className="text-sm opacity-70 mb-2">
-                  {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
-                </p>
-                <LocationPicker
-                  position={position}
-                  setPosition={onMapPositionPick}
-                  readOnly={!isEditMode}
-                />
+            {isVolunteerView && (
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Location</h5>
+                  <p className="text-sm opacity-70 mb-2">
+                    {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                  </p>
+                  <LocationPicker
+                    position={position}
+                    setPosition={onMapPositionPick}
+                    readOnly={!isEditMode}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {!isVolunteerView && !isOpen && (
               <div className="card bg-base-100 shadow-md">

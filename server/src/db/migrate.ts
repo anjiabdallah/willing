@@ -56,18 +56,18 @@ export async function migrateToLatest() {
     console.error('Migration error details:', error);
     throw new Error(`Migration failed: ${String(error)}`);
   }
-
-  await database.destroy();
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   migrateToLatest()
-    .then(() => {
+    .then(async () => {
       console.log('All migrations completed successfully');
+      await database.destroy();
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(async (error) => {
       console.error('Migration failed:', error);
+      await database.destroy();
       process.exit(1);
     });
 }

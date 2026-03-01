@@ -693,7 +693,7 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
                         </div>
                       )
                     : (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           {enrollments.map((volunteer) => {
                             const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
                             const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
@@ -708,18 +708,16 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
                                 : 'badge-accent';
 
                             return (
-                              <div
-                                key={volunteer.enrollment_id}
-                                className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
-                              >
-                                <div className="flex items-start gap-3">
+                              <div key={volunteer.enrollment_id} className="collapse collapse-arrow border border-base-300 bg-base-100">
+                                <input type="checkbox" />
+                                <div className="collapse-title flex items-center gap-3">
                                   <div className="avatar">
                                     <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
                                       <span className="text-lg font-semibold">{initials}</span>
                                     </div>
                                   </div>
-                                  <div className="grow">
-                                    <h5 className="font-bold text-base">{volunteerName}</h5>
+                                  <div className="flex flex-col">
+                                    <h5 className="font-bold text-base leading-tight">{volunteerName}</h5>
                                     <div className="flex gap-2 mt-1">
                                       <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
                                         {volunteer.gender === 'male' && <Mars size={10} />}
@@ -733,30 +731,31 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
                                         years old
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
-                                      <Mail size={12} />
-                                      {volunteer.email}
-                                    </div>
-                                    {volunteer.skills && volunteer.skills.length > 0 && (
-                                      <div className="mt-2">
-                                        <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          <SkillsList skills={volunteer.skills} />
-                                        </div>
-                                      </div>
-                                    )}
-                                    {volunteer.message && (
-                                      <div className="mt-2">
-                                        <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
-                                        <p className="text-xs opacity-80 italic">
-                                          "
-                                          {volunteer.message}
-                                          "
-                                        </p>
-                                      </div>
-                                    )}
                                   </div>
-
+                                </div>
+                                <div className="collapse-content pt-0">
+                                  <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
+                                    <Mail size={12} />
+                                    {volunteer.email}
+                                  </div>
+                                  {volunteer.skills && volunteer.skills.length > 0 && (
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        <SkillsList skills={volunteer.skills} />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {volunteer.message && (
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Message</p>
+                                      <p className="text-xs opacity-80 italic">
+                                        "
+                                        {volunteer.message}
+                                        "
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );

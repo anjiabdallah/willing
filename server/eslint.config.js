@@ -62,8 +62,8 @@ export default defineConfig([
         node: true,
       },
       'import/resolver': {
-    typescript: true,
-  },
-},
+        typescript: true,
+      },
     },
+  },
 ]);

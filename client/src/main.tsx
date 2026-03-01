@@ -21,7 +21,7 @@ import UserLoginPage from './pages/UserLoginPage';
 import VolunteerCreate from './pages/volunteer/VolunteerCreate';
 import VolunteerHome from './pages/volunteer/VolunteerHome';
 import VolunteerPage from './pages/volunteer/VolunteerPage';
-import VolunteerPosting from './pages/volunteer/VolunteerPosting';
+import VolunteerPostingView from './pages/volunteer/VolunteerPostingView';
 import VolunteerProfile from './pages/volunteer/VolunteerProfile';
 import VolunteerSettings from './pages/volunteer/VolunteerSettings';
 
@@ -131,7 +131,7 @@ createRoot(document.getElementById('root')!).render(
               path="posting/:id"
               element={(
                 <VolunteerOnly>
-                  <VolunteerPosting />
+                  <VolunteerPostingView />
                 </VolunteerOnly>
               )}
             />

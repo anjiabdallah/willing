@@ -13,7 +13,7 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
 import OrganizationPage from './pages/organization/OrganizationPage';
-import OrganizationPosting from './pages/organization/OrganizationPosting';
+import OrganizationPostingView from './pages/organization/OrganizationPostingView';
 import OrganizationPostingCreate from './pages/organization/OrganizationPostingCreate';
 import OrganizationRequest from './pages/organization/OrganizationRequest';
 import OrganizationSettings from './pages/organization/VolunteerSettings';
@@ -97,7 +97,7 @@ createRoot(document.getElementById('root')!).render(
               path="posting/:id"
               element={(
                 <OrganizationOnly>
-                  <OrganizationPosting />
+                  <OrganizationPostingView />
                 </OrganizationOnly>
               )}
             />

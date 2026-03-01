@@ -1,7 +1,7 @@
-import OrganizationPosting from '../organization/OrganizationPosting';
+import { PostingView } from '../organization/OrganizationPostingView';
 
 function VolunteerPostingView() {
-  return <OrganizationPosting mode="volunteer" />;
+  return <PostingView mode="volunteer" />;
 }
 
 export default VolunteerPostingView;

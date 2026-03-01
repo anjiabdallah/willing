@@ -49,7 +49,7 @@ const getDateTimeInputValue = (value: Date | string) => {
 
 type PostingViewerMode = 'organization' | 'volunteer';
 
-export default function OrganizationPosting({ mode = 'organization' }: { mode?: PostingViewerMode }) {
+function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isVolunteerView = mode === 'volunteer';
@@ -771,3 +771,10 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
     </div>
   );
 }
+
+function OrganizationPostingView() {
+  return <PostingView mode="organization" />;
+}
+
+export { PostingView };
+export default OrganizationPostingView;

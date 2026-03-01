@@ -1,9 +1,18 @@
 import { Router } from 'express';
+import zod from 'zod';
 
 import database from '../../../db/index.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerPostingRouter = Router();
+
+const postingIdParamsSchema = zod.object({
+  id: zod.coerce.number().int().positive('ID must be a positive number'),
+});
+
+const applyBodySchema = zod.object({
+  message: zod.string().trim().min(1, 'Message cannot be empty').optional(),
+});
 
 volunteerPostingRouter.use(authorizeOnly('volunteer'));
 
@@ -18,8 +27,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
       'organization_posting.organization_id',
     )
     .selectAll('organization_posting')
-    .select(['organization_account.name as organization_name'])
-    .where('organization_posting.is_open', '=', true);
+    .select(['organization_account.name as organization_name']);
 
   if (location_name) {
     query = query.where(
@@ -32,7 +40,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
   if (start_timestamp) {
     query = query.where(
       'organization_posting.start_timestamp',
-      'ilike',
+      '>=',
       new Date(start_timestamp as string),
     );
   }
@@ -40,7 +48,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
   if (end_timestamp) {
     query = query.where(
       'organization_posting.end_timestamp',
-      'ilike',
+      '<=',
       new Date(end_timestamp as string),
     );
   }
@@ -82,6 +90,97 @@ volunteerPostingRouter.get('/', async (req, res) => {
   }
 
   res.json({ postings: postingWithSkills });
+});
+
+volunteerPostingRouter.get('/:id', async (req, res) => {
+  const volunteerId = req.userJWT!.id;
+  const { id } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_posting.id', '=', id)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  const skills = await database
+    .selectFrom('posting_skill')
+    .selectAll()
+    .where('posting_id', '=', id)
+    .execute();
+
+  const existingEnrollment = await database
+    .selectFrom('enrollment')
+    .select('id')
+    .where('posting_id', '=', id)
+    .where('volunteer_id', '=', volunteerId)
+    .executeTakeFirst();
+
+  res.json({ posting, skills, isEnrolled: Boolean(existingEnrollment) });
+});
+
+volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
+  const volunteerId = req.userJWT!.id;
+  const { id } = postingIdParamsSchema.parse(req.params);
+  const { message } = applyBodySchema.parse(req.body ?? {});
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('id', '=', id)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  const existingEnrollment = await database
+    .selectFrom('enrollment')
+    .select('id')
+    .where('posting_id', '=', id)
+    .where('volunteer_id', '=', volunteerId)
+    .executeTakeFirst();
+
+  if (existingEnrollment) {
+    res.status(409).json({ error: 'You have already applied to this posting' });
+    return;
+  }
+
+  const result = await database.transaction().execute(async (trx) => {
+    const enrollment = await trx
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteerId,
+        posting_id: id,
+        message: posting.is_open ? message ?? undefined : undefined,
+      })
+      .returningAll()
+      .executeTakeFirst();
+
+    if (!enrollment) {
+      throw new Error('Failed to create enrollment');
+    }
+
+    if (!posting.is_open) {
+      await trx
+        .insertInto('enrollment_application')
+        .values({
+          volunteer_id: volunteerId,
+          enrollment_id: enrollment.id,
+          message: message ?? undefined,
+        })
+        .execute();
+    }
+
+    return enrollment;
+  });
+
+  res.json({ enrollment: result, isOpen: posting.is_open });
 });
 
 export default volunteerPostingRouter;

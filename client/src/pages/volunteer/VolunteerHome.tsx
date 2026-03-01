@@ -1,4 +1,6 @@
+import { Eye } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
@@ -15,6 +17,7 @@ interface GetPostingsResponse {
 }
 
 function VolunteerHome() {
+  const navigate = useNavigate();
   const [postings, setPostings] = useState<PostingWithOrganization[]>([]);
   const [filters, setFilters] = useState({
     location: '',
@@ -104,7 +107,21 @@ function VolunteerHome() {
           : (
               <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                 {postings.map(posting => (
-                  <PostingCard posting={posting} />
+                  <PostingCard
+                    key={posting.id}
+                    posting={posting}
+                    footer={(
+                      <div className="card-actions gap-2">
+                        <button
+                          className="btn btn-sm w-full gap-2"
+                          onClick={() => navigate(`/volunteer/posting/${posting.id}`)}
+                        >
+                          <Eye size={16} />
+                          <span>View Details</span>
+                        </button>
+                      </div>
+                    )}
+                  />
                 ))}
               </div>
             )}

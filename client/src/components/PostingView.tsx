@@ -1,36 +1,42 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  Calendar,
-  MapPin,
-  Users,
-  Cake,
-  Edit3,
-  Trash2,
   ArrowLeft,
-  Mail,
-  Mars,
-  Venus,
-  ShieldCheck,
-  LockOpen,
+  Calendar,
+  Cake,
+  Check,
+  Edit3,
   Lock,
+  LockOpen,
+  Mail,
+  MapPin,
+  Mars,
+  ShieldCheck,
+  Trash2,
+  Users,
+  Venus,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import ColumnLayout from '../../components/ColumnLayout';
-import Loading from '../../components/Loading';
-import LocationPicker from '../../components/LocationPicker';
-import SkillsInput from '../../components/SkillsInput';
-import SkillsList from '../../components/SkillsList';
-import { ToggleButton } from '../../components/ToggleButton';
-import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/auth';
-import { executeAndShowError, FormField } from '../../utils/formUtils';
-import requestServer from '../../utils/requestServer';
-import { useOrganization } from '../../utils/useUsers';
+import ColumnLayout from './ColumnLayout';
+import Loading from './Loading';
+import LocationPicker from './LocationPicker';
+import SkillsInput from './SkillsInput';
+import SkillsList from './SkillsList';
+import { ToggleButton } from './ToggleButton';
+import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../schemas/auth';
+import { executeAndShowError, FormField } from '../utils/formUtils';
+import requestServer from '../utils/requestServer';
+import { useOrganization } from '../utils/useUsers';
 
-import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
-import type { PostingResponse, EnrolledVolunteer, EnrollmentsResponse } from '../../../../server/src/types';
+import type { OrganizationPosting, PostingSkill } from '../../../server/src/db/tables';
+import type {
+  EnrolledVolunteer,
+  EnrollmentsResponse,
+  PostingResponse,
+  VolunteerPostingResponse,
+} from '../../../server/src/types';
 
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
 
@@ -42,19 +48,25 @@ const getDateTimeInputValue = (value: Date | string) => {
   return localDate.toISOString().slice(0, 16);
 };
 
-export default function OrganizationPosting() {
+type PostingViewerMode = 'organization' | 'volunteer';
+
+function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const account = useOrganization();
+  const isVolunteerView = mode === 'volunteer';
+  const organizationAccount = useOrganization();
+  const account = isVolunteerView ? null : organizationAccount;
 
   const [posting, setPosting] = useState<PostingWithSkills | null>(null);
   const [enrollments, setEnrollments] = useState<EnrolledVolunteer[]>([]);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -83,6 +95,43 @@ export default function OrganizationPosting() {
       setLoading(true);
       setFetchError(null);
 
+      if (isVolunteerView) {
+        const postingResponse = await requestServer<VolunteerPostingResponse>(
+          `/volunteer/posting/${id}`,
+          {},
+          true,
+        );
+
+        const postingWithSkills = {
+          ...postingResponse.posting,
+          skills: postingResponse.skills,
+        };
+
+        setPosting(postingWithSkills);
+        setEnrollments([]);
+        setIsEnrolled(postingResponse.isEnrolled);
+        setSkills(postingResponse.skills.map(s => s.name));
+        setPosition([
+          postingResponse.posting.latitude ?? 33.90192863620578,
+          postingResponse.posting.longitude ?? 35.477959277880416,
+        ]);
+
+        form.reset({
+          title: postingResponse.posting.title,
+          description: postingResponse.posting.description,
+          location_name: postingResponse.posting.location_name,
+          start_timestamp: getDateTimeInputValue(postingResponse.posting.start_timestamp),
+          end_timestamp: postingResponse.posting.end_timestamp
+            ? getDateTimeInputValue(postingResponse.posting.end_timestamp)
+            : undefined,
+          max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? undefined,
+          minimum_age: postingResponse.posting.minimum_age?.toString() ?? undefined,
+          is_open: postingResponse.posting.is_open,
+        });
+
+        return;
+      }
+
       const [postingResponse, enrollmentsResponse] = await Promise.all([
         requestServer<PostingResponse>(`/organization/posting/${id}`, {}, true),
         requestServer<EnrollmentsResponse>(`/organization/posting/${id}/enrollments`, {}, true),
@@ -95,6 +144,7 @@ export default function OrganizationPosting() {
 
       setPosting(postingWithSkills);
       setEnrollments(enrollmentsResponse.enrollments);
+      setIsEnrolled(false);
       setSkills(postingResponse.skills.map(s => s.name));
       setPosition([
         postingResponse.posting.latitude ?? 33.90192863620578,
@@ -118,7 +168,7 @@ export default function OrganizationPosting() {
     } finally {
       setLoading(false);
     }
-  }, [id, form]);
+  }, [id, form, isVolunteerView]);
 
   useEffect(() => {
     loadPosting();
@@ -230,6 +280,25 @@ export default function OrganizationPosting() {
     }
   };
 
+  const onApply = useCallback(async () => {
+    if (!id || isEnrolled) return;
+
+    try {
+      setApplying(true);
+      setSaveMessage(null);
+      setSaveError(null);
+
+      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'POST' }, true);
+
+      setIsEnrolled(true);
+      setSaveMessage('Application submitted successfully.');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to apply to posting');
+    } finally {
+      setApplying(false);
+    }
+  }, [id, isEnrolled]);
+
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);
   }, []);
@@ -309,43 +378,62 @@ export default function OrganizationPosting() {
           <div className="flex items-center gap-3">
             <button
               className="btn btn-ghost btn-sm"
-              onClick={() => navigate('/organization')}
+              onClick={() => navigate(isVolunteerView ? '/volunteer' : '/organization')}
             >
               <ArrowLeft size={20} />
             </button>
             <div>
               <h3 className="text-3xl font-extrabold tracking-tight">Posting Details</h3>
-              <p className="opacity-70 mt-1">View and manage your posting</p>
+              <p className="opacity-70 mt-1">
+                {isVolunteerView ? 'Review details before applying' : 'View and manage your posting'}
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
-            {isEditMode
+            {isVolunteerView
               ? (
-                  <>
-                    <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
-                      Cancel
-                    </button>
-                    <button className="btn btn-primary" onClick={onSave} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </>
+                  <button
+                    className={`btn ${isEnrolled ? 'btn-success' : 'btn-primary'}`}
+                    onClick={onApply}
+                    disabled={applying || isEnrolled}
+                  >
+                    {isEnrolled
+                      ? (
+                          <span className="flex items-center gap-2">
+                            <Check size={16} />
+                            Applied
+                          </span>
+                        )
+                      : applying ? 'Applying...' : 'Apply'}
+                  </button>
                 )
-              : (
-                  <>
-                    <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
-                      <Edit3 size={16} />
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-outline btn-error"
-                      onClick={onDelete}
-                      disabled={deleting}
-                    >
-                      <Trash2 size={16} />
-                      {deleting ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </>
-                )}
+              : isEditMode
+                ? (
+                    <>
+                      <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
+                        Cancel
+                      </button>
+                      <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+                        {saving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </>
+                  )
+                : (
+                    <>
+                      <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
+                        <Edit3 size={16} />
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-outline btn-error"
+                        onClick={onDelete}
+                        disabled={deleting}
+                      >
+                        <Trash2 size={16} />
+                        {deleting ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </>
+                  )}
           </div>
         </div>
 
@@ -497,7 +585,7 @@ export default function OrganizationPosting() {
                 <div className="card bg-base-100 shadow-md">
                   <div className="card-body">
                     <h5 className="font-bold text-lg">Status</h5>
-                    <p className="text-sm opacity-70 mb-4">Posting visibility.</p>
+                    <p className="text-sm opacity-70 mb-3">Posting visibility.</p>
                     {isEditMode
                       ? (
                           <ToggleButton
@@ -529,22 +617,29 @@ export default function OrganizationPosting() {
                             {isOpen ? 'Open' : 'Review Based'}
                           </span>
                         )}
+                    <p className="text-xs opacity-70 mt-2">
+                      {isOpen
+                        ? 'Volunteers are accepted automatically.'
+                        : 'Volunteers must be accepted by the organization.'}
+                    </p>
                   </div>
                 </div>
 
-                <div className="card bg-base-100 shadow-md">
-                  <div className="card-body">
-                    <h5 className="font-bold text-lg">Location</h5>
-                    <p className="text-sm opacity-70 mb-2">
-                      {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
-                    </p>
-                    <LocationPicker
-                      position={position}
-                      setPosition={onMapPositionPick}
-                      readOnly={!isEditMode}
-                    />
+                {!isVolunteerView && (
+                  <div className="card bg-base-100 shadow-md">
+                    <div className="card-body">
+                      <h5 className="font-bold text-lg">Location</h5>
+                      <p className="text-sm opacity-70 mb-2">
+                        {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                      </p>
+                      <LocationPicker
+                        position={position}
+                        setPosition={onMapPositionPick}
+                        readOnly={!isEditMode}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           >
@@ -563,7 +658,23 @@ export default function OrganizationPosting() {
               </div>
             </div>
 
-            {!isOpen && (
+            {isVolunteerView && (
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Location</h5>
+                  <p className="text-sm opacity-70 mb-2">
+                    {isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
+                  </p>
+                  <LocationPicker
+                    position={position}
+                    setPosition={onMapPositionPick}
+                    readOnly={!isEditMode}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!isVolunteerView && !isOpen && (
               <div className="card bg-base-100 shadow-md">
                 <div className="card-body">
                   <h4 className="text-xl font-bold mb-4">Enrollment Applications</h4>
@@ -574,76 +685,78 @@ export default function OrganizationPosting() {
               </div>
             )}
 
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h4 className="text-xl font-bold mb-4">
-                  Enrolled Volunteers
-                  {' '}
-                  <span className="badge badge-primary">{enrollments.length}</span>
-                </h4>
+            {!isVolunteerView && (
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h4 className="text-xl font-bold mb-4">
+                    Enrolled Volunteers
+                    {' '}
+                    <span className="badge badge-primary">{enrollments.length}</span>
+                  </h4>
 
-                {enrollments.length === 0
-                  ? (
-                      <div className="alert">
-                        <span className="text-sm">No volunteers have enrolled yet.</span>
-                      </div>
-                    )
-                  : (
-                      <div className="space-y-4">
-                        {enrollments.map((volunteer) => {
-                          const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
-                          const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
-                          const age = Math.floor(
-                            (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
-                          );
+                  {enrollments.length === 0
+                    ? (
+                        <div className="alert">
+                          <span className="text-sm">No volunteers have enrolled yet.</span>
+                        </div>
+                      )
+                    : (
+                        <div className="space-y-2">
+                          {enrollments.map((volunteer) => {
+                            const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
+                            const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
+                            const age = Math.floor(
+                              (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+                            );
 
-                          const genderBadgeStyles = volunteer.gender === 'male'
-                            ? 'badge-info'
-                            : volunteer.gender === 'female'
-                              ? 'badge-secondary'
-                              : 'badge-accent';
+                            const genderBadgeStyles = volunteer.gender === 'male'
+                              ? 'badge-info'
+                              : volunteer.gender === 'female'
+                                ? 'badge-secondary'
+                                : 'badge-accent';
 
-                          return (
-                            <div
-                              key={volunteer.enrollment_id}
-                              className="border border-base-300 rounded-lg p-4 hover:bg-base-200 transition-colors"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="avatar">
-                                  <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
-                                    <span className="text-lg font-semibold">{initials}</span>
+                            return (
+                              <div key={volunteer.enrollment_id} className="collapse collapse-arrow border border-base-300 bg-base-100">
+                                <input type="checkbox" />
+                                <div className="collapse-title flex items-center gap-3">
+                                  <div className="avatar">
+                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                                      <span className="text-lg font-semibold">{initials}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <h5 className="font-bold text-base leading-tight">{volunteerName}</h5>
+                                    <div className="flex gap-2 mt-1">
+                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                                        {volunteer.gender === 'male' && <Mars size={10} />}
+                                        {volunteer.gender === 'female' && <Venus size={10} />}
+                                        {volunteer.gender === 'other' && <span className="font-bold">*</span>}
+                                        {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
+                                      </span>
+                                      <span className="badge badge-sm">
+                                        {age}
+                                        {' '}
+                                        years old
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="grow">
-                                  <h5 className="font-bold text-base">{volunteerName}</h5>
-                                  <div className="flex gap-2 mt-1">
-                                    <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                                      {volunteer.gender === 'male' && <Mars size={10} />}
-                                      {volunteer.gender === 'female' && <Venus size={10} />}
-                                      {volunteer.gender === 'other' && <span className="font-bold">*</span>}
-                                      {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
-                                    </span>
-                                    <span className="badge badge-sm">
-                                      {age}
-                                      {' '}
-                                      years old
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1 text-xs opacity-70 mt-2">
+                                <div className="collapse-content pt-0">
+                                  <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
                                     <Mail size={12} />
                                     {volunteer.email}
                                   </div>
                                   {volunteer.skills && volunteer.skills.length > 0 && (
-                                    <div className="mt-2">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">SKILLS</p>
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>
                                       <div className="flex flex-wrap gap-1">
                                         <SkillsList skills={volunteer.skills} />
                                       </div>
                                     </div>
                                   )}
                                   {volunteer.message && (
-                                    <div className="mt-2">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">MESSAGE</p>
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Message</p>
                                       <p className="text-xs opacity-80 italic">
                                         "
                                         {volunteer.message}
@@ -652,18 +765,19 @@ export default function OrganizationPosting() {
                                     </div>
                                   )}
                                 </div>
-
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                </div>
               </div>
-            </div>
+            )}
           </ColumnLayout>
         </div>
       </div>
     </div>
   );
 }
+
+export default PostingView;

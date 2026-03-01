@@ -1,4 +1,4 @@
-import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import PostingCard from '../../components/PostingCard';

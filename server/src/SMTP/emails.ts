@@ -56,7 +56,7 @@ export async function sendOrganizationRejectionEmail(
       + `Your organization request has been rejected.\n\n`
       + reasonBlock
       + `If you believe this was a mistake, you can submit a new request with updated information.\n`
-      + 'For any extra questions, please contact us at willing.aub@gmail.com.\n\n'
+      + 'For any extra questions, please contact us at willing.app.lb@gmail.com.\n\n'
       + `Willing Team`;
 
   await sendEmail({ to, subject, text });

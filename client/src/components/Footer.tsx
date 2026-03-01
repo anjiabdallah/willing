@@ -9,7 +9,7 @@ function Footer() {
       </nav>
       <nav>
         <h6 className="footer-title">Contact</h6>
-        <a className="link link-hover" href="mailto:willing.aub@gmail.com">willing.aub@gmail.com</a>
+        <a className="link link-hover" href="mailto:willing.app.lb@gmail.com">willing.aub@gmail.com</a>
         <span className="opacity-50 text-sm mt-2">Available Mon-Fri, 9am - 5pm</span>
       </nav>
       <nav>

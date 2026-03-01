@@ -28,7 +28,6 @@ volunteerPostingRouter.get('/', async (req, res) => {
     )
     .selectAll('organization_posting')
     .select(['organization_account.name as organization_name'])
-    .where('organization_posting.start_timestamp', 'is not', null);
 
   if (location_name) {
     query = query.where(

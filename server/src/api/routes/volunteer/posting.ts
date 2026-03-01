@@ -1,9 +1,18 @@
 import { Router } from 'express';
+import zod from 'zod';
 
 import database from '../../../db/index.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerPostingRouter = Router();
+
+const postingIdParamsSchema = zod.object({
+  id: zod.coerce.number().int().positive('ID must be a positive number'),
+});
+
+const applyBodySchema = zod.object({
+  message: zod.string().trim().min(1, 'Message cannot be empty').optional(),
+});
 
 volunteerPostingRouter.use(authorizeOnly('volunteer'));
 
@@ -82,6 +91,80 @@ volunteerPostingRouter.get('/', async (req, res) => {
   }
 
   res.json({ postings: postingWithSkills });
+});
+
+volunteerPostingRouter.get('/:id', async (req, res) => {
+  const volunteerId = req.userJWT!.id;
+  const { id } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_posting.id', '=', id)
+    .where('organization_posting.is_open', '=', true)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  const skills = await database
+    .selectFrom('posting_skill')
+    .selectAll()
+    .where('posting_id', '=', id)
+    .execute();
+
+  const existingEnrollment = await database
+    .selectFrom('enrollment')
+    .select('id')
+    .where('posting_id', '=', id)
+    .where('volunteer_id', '=', volunteerId)
+    .executeTakeFirst();
+
+  res.json({ posting, skills, isEnrolled: Boolean(existingEnrollment) });
+});
+
+volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
+  const volunteerId = req.userJWT!.id;
+  const { id } = postingIdParamsSchema.parse(req.params);
+  const { message } = applyBodySchema.parse(req.body);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('id', '=', id)
+    .where('is_open', '=', true)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found or closed' });
+    return;
+  }
+
+  const existingEnrollment = await database
+    .selectFrom('enrollment')
+    .select('id')
+    .where('posting_id', '=', id)
+    .where('volunteer_id', '=', volunteerId)
+    .executeTakeFirst();
+
+  if (existingEnrollment) {
+    res.status(409).json({ error: 'You have already applied to this posting' });
+    return;
+  }
+
+  const enrollment = await database
+    .insertInto('enrollment')
+    .values({
+      volunteer_id: volunteerId,
+      posting_id: id,
+      message: message ?? undefined,
+    })
+    .returningAll()
+    .executeTakeFirst();
+
+  res.json({ enrollment });
 });
 
 export default volunteerPostingRouter;

@@ -36,6 +36,10 @@ export type PostingResponse = {
   skills: PostingSkill[];
 };
 
+export type VolunteerPostingResponse = PostingResponse & {
+  isEnrolled: boolean;
+};
+
 const _enrolledVolunteerSchema = volunteerAccountWithoutPasswordSchema
   .omit({
     id: true,

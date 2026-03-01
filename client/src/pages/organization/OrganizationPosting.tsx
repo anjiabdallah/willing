@@ -611,8 +611,8 @@ export default function OrganizationPosting({ mode = 'organization' }: { mode?: 
                         )}
                     <p className="text-xs opacity-70 mt-2">
                       {isOpen
-                        ? 'Open: anyone who applies is enrolled automatically.'
-                        : 'Review-based: the organization must approve volunteers before they join.'}
+                        ? 'Volunteers are accepted automatically.'
+                        : 'Volunteers must be accepted by the organization.'}
                     </p>
                   </div>
                 </div>

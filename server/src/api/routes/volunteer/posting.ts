@@ -27,7 +27,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
       'organization_posting.organization_id',
     )
     .selectAll('organization_posting')
-    .select(['organization_account.name as organization_name'])
+    .select(['organization_account.name as organization_name']);
 
   if (location_name) {
     query = query.where(
@@ -40,7 +40,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
   if (start_timestamp) {
     query = query.where(
       'organization_posting.start_timestamp',
-      'ilike',
+      '>=',
       new Date(start_timestamp as string),
     );
   }
@@ -48,7 +48,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
   if (end_timestamp) {
     query = query.where(
       'organization_posting.end_timestamp',
-      'ilike',
+      '<=',
       new Date(end_timestamp as string),
     );
   }

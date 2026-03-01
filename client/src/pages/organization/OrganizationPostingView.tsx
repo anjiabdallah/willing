@@ -10,6 +10,7 @@ import {
   Mail,
   Mars,
   Venus,
+  Check,
   ShieldCheck,
   LockOpen,
   Lock,
@@ -392,11 +393,18 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
             {isVolunteerView
               ? (
                   <button
-                    className="btn btn-primary"
+                    className={`btn ${isEnrolled ? 'btn-success' : 'btn-primary'}`}
                     onClick={onApply}
                     disabled={applying || isEnrolled}
                   >
-                    {isEnrolled ? 'Applied' : applying ? 'Applying...' : 'Apply'}
+                    {isEnrolled
+                      ? (
+                          <span className="flex items-center gap-2">
+                            <Check size={16} />
+                            Applied
+                          </span>
+                        )
+                      : applying ? 'Applying...' : 'Apply'}
                   </button>
                 )
               : isEditMode

@@ -28,7 +28,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
     )
     .selectAll('organization_posting')
     .select(['organization_account.name as organization_name'])
-    .where('organization_posting.is_open', '=', true);
+    .where('organization_posting.start_timestamp', 'is not', null);
 
   if (location_name) {
     query = query.where(
@@ -101,7 +101,6 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .selectFrom('organization_posting')
     .selectAll()
     .where('organization_posting.id', '=', id)
-    .where('organization_posting.is_open', '=', true)
     .executeTakeFirst();
 
   if (!posting) {
@@ -128,17 +127,16 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
 volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
   const volunteerId = req.userJWT!.id;
   const { id } = postingIdParamsSchema.parse(req.params);
-  const { message } = applyBodySchema.parse(req.body);
+  const { message } = applyBodySchema.parse(req.body ?? {});
 
   const posting = await database
     .selectFrom('organization_posting')
     .select(['id', 'is_open'])
     .where('id', '=', id)
-    .where('is_open', '=', true)
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found or closed' });
+    res.status(404).json({ error: 'Posting not found' });
     return;
   }
 
@@ -154,17 +152,36 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     return;
   }
 
-  const enrollment = await database
-    .insertInto('enrollment')
-    .values({
-      volunteer_id: volunteerId,
-      posting_id: id,
-      message: message ?? undefined,
-    })
-    .returningAll()
-    .executeTakeFirst();
+  const result = await database.transaction().execute(async (trx) => {
+    const enrollment = await trx
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteerId,
+        posting_id: id,
+        message: posting.is_open ? message ?? undefined : undefined,
+      })
+      .returningAll()
+      .executeTakeFirst();
 
-  res.json({ enrollment });
+    if (!enrollment) {
+      throw new Error('Failed to create enrollment');
+    }
+
+    if (!posting.is_open) {
+      await trx
+        .insertInto('enrollment_application')
+        .values({
+          volunteer_id: volunteerId,
+          enrollment_id: enrollment.id,
+          message: message ?? undefined,
+        })
+        .execute();
+    }
+
+    return enrollment;
+  });
+
+  res.json({ enrollment: result, isOpen: posting.is_open });
 });
 
 export default volunteerPostingRouter;

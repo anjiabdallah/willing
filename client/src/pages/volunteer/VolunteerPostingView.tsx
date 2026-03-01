@@ -1,4 +1,4 @@
-import { PostingView } from '../organization/OrganizationPostingView';
+import PostingView from '../../components/PostingView';
 
 function VolunteerPostingView() {
   return <PostingView mode="volunteer" />;

@@ -50,8 +50,6 @@ function VolunteerHome() {
 
   useEffect(() => {
     fetchPostings();
-    // run once on mount; filters are applied via the button
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

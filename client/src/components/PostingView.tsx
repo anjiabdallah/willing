@@ -37,6 +37,8 @@ import type {
   EnrollmentsResponse,
   PostingResponse,
   VolunteerPostingResponse,
+  ApplicationsResponse,
+  PendingApplication,
 } from '../../../server/src/types';
 
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
@@ -60,6 +62,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
   const [posting, setPosting] = useState<PostingWithSkills | null>(null);
   const [enrollments, setEnrollments] = useState<EnrolledVolunteer[]>([]);
+  const [applications, setApplications] = useState<PendingApplication[]>([]);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
@@ -69,6 +72,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const [deleting, setDeleting] = useState(false);
   const [applying, setApplying] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [processingApplicationId, setProcessingApplicationId] = useState<number | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -148,6 +152,16 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
       setPosting(postingWithSkills);
       setEnrollments(enrollmentsResponse.enrollments);
+
+      if (!postingResponse.posting.is_open) {
+        const applicationsResponse = await requestServer<ApplicationsResponse>(
+          `/organization/posting/${id}/applications`,
+          {},
+          true,
+        );
+        setApplications(applicationsResponse.applications);
+      }
+
       setIsEnrolled(false);
       setSkills(postingResponse.skills.map(s => s.name));
       setPosition([
@@ -348,6 +362,55 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       setWithdrawing(false);
     }
   }, [id, isEnrolled]);
+
+  const acceptApplication = useCallback(async (applicationId: number) => {
+    if (!id) return;
+
+    try {
+      setProcessingApplicationId(applicationId);
+      setSaveError(null);
+      setSaveMessage(null);
+
+      await requestServer(
+        `/organization/posting/${id}/applications/${applicationId}/accept`,
+        { method: 'POST' },
+        true,
+      );
+
+      const enrollmentsResponse = await requestServer<EnrollmentsResponse>(
+        `/organization/posting/${id}/enrollments`,
+        {},
+        true,
+      );
+      setEnrollments(enrollmentsResponse.enrollments);
+
+      setApplications(prev => prev.filter(app => app.application_id !== applicationId));
+      setSaveMessage('Application accepted successfully.');
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Failed to accept application';
+      setSaveError(messageText);
+    } finally {
+      setProcessingApplicationId(null);
+    }
+  }, [id]);
+
+  const rejectApplication = useCallback(async (applicationId: number) => {
+    if (!id) return;
+    if (!confirm('Are you sure you want to reject this application?')) return;
+
+    try {
+      setProcessingApplicationId(applicationId);
+      await requestServer(`/organization/posting/${id}/applications/${applicationId}`, { method: 'DELETE' }, true);
+
+      setApplications(prev => prev.filter(app => app.application_id !== applicationId));
+      setSaveMessage('Application rejected.');
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Failed to reject application';
+      setSaveError(messageText);
+    } finally {
+      setProcessingApplicationId(null);
+    }
+  }, [id]);
 
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);
@@ -741,10 +804,104 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
             {!isVolunteerView && !isOpen && (
               <div className="card bg-base-100 shadow-md">
                 <div className="card-body">
-                  <h4 className="text-xl font-bold mb-4">Enrollment Applications</h4>
-                  <div className="alert">
-                    <span className="text-sm">Enrollment applications feature coming soon.</span>
-                  </div>
+                  <h4 className="text-xl font-bold mb-4">
+                    Enrollment Applications
+                    {' '}
+                    <span className="badge badge-primary">{applications.length}</span>
+                  </h4>
+
+                  {applications.length === 0
+                    ? (
+                        <div className="alert">
+                          <span className="text-sm">No pending applications.</span>
+                        </div>
+                      )
+                    : (
+                        <div className="space-y-2">
+                          {applications.map((app) => {
+                            const volunteerName = `${app.first_name} ${app.last_name}`;
+                            const initials = `${app.first_name.charAt(0)}${app.last_name.charAt(0)}`.toUpperCase();
+                            const age = Math.floor(
+                              (Date.now() - new Date(app.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+                            );
+
+                            const genderBadgeStyles = app.gender === 'male'
+                              ? 'badge-info'
+                              : app.gender === 'female'
+                                ? 'badge-secondary'
+                                : 'badge-accent';
+
+                            return (
+                              <div key={app.application_id} className="collapse collapse-arrow border border-base-300 bg-base-100">
+                                <input type="checkbox" />
+                                <div className="collapse-title flex items-center gap-3">
+                                  <div className="avatar">
+                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                                      <span className="text-lg font-semibold">{initials}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <h5 className="font-bold text-base leading-tight">{volunteerName}</h5>
+                                    <div className="flex gap-2 mt-1">
+                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                                        {app.gender === 'male' && <Mars size={10} />}
+                                        {app.gender === 'female' && <Venus size={10} />}
+                                        {app.gender === 'other' && <span className="font-bold">*</span>}
+                                        {app.gender.charAt(0).toUpperCase() + app.gender.slice(1)}
+                                      </span>
+                                      <span className="badge badge-sm">
+                                        {age}
+                                        {' '}
+                                        years old
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="collapse-content pt-0">
+                                  <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
+                                    <Mail size={12} />
+                                    {app.email}
+                                  </div>
+                                  {app.skills && app.skills.length > 0 && (
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        <SkillsList skills={app.skills} />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {app.message && (
+                                    <div className="mt-3">
+                                      <p className="text-xs font-semibold opacity-70 mb-1">Application Message</p>
+                                      <p className="text-xs opacity-80 italic">
+                                        "
+                                        {app.message}
+                                        "
+                                      </p>
+                                    </div>
+                                  )}
+                                  <div className="mt-4 flex gap-2">
+                                    <button
+                                      className="btn btn-sm btn-success"
+                                      onClick={() => acceptApplication(app.application_id)}
+                                      disabled={processingApplicationId === app.application_id}
+                                    >
+                                      {processingApplicationId === app.application_id ? 'Processing...' : 'Accept'}
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-error btn-outline"
+                                      onClick={() => rejectApplication(app.application_id)}
+                                      disabled={processingApplicationId === app.application_id}
+                                    >
+                                      {processingApplicationId === app.application_id ? 'Processing...' : 'Reject'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                 </div>
               </div>
             )}

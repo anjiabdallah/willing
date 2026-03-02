@@ -2,6 +2,7 @@ import zod from 'zod';
 
 import {
   EnrollmentSchema,
+  EnrollmentApplicationSchema,
   VolunteerSkillSchema,
   volunteerAccountWithoutPasswordSchema,
   type OrganizationPosting,
@@ -57,4 +58,25 @@ export type EnrolledVolunteer = zod.infer<typeof _enrolledVolunteerSchema>;
 
 export type EnrollmentsResponse = {
   enrollments: EnrolledVolunteer[];
+};
+
+const _pendingApplicationSchema = volunteerAccountWithoutPasswordSchema
+  .omit({
+    id: true,
+    description: true,
+    privacy: true,
+  })
+  .extend({
+    application_id: zod.number(),
+    enrollment_id: EnrollmentApplicationSchema.shape.enrollment_id,
+    volunteer_id: EnrollmentApplicationSchema.shape.volunteer_id,
+    message: EnrollmentApplicationSchema.shape.message,
+    created_at: EnrollmentApplicationSchema.shape.created_at,
+    skills: zod.array(VolunteerSkillSchema),
+  });
+
+export type PendingApplication = zod.infer<typeof _pendingApplicationSchema>;
+
+export type ApplicationsResponse = {
+  applications: PendingApplication[];
 };

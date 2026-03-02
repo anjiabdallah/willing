@@ -136,6 +136,7 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
   const enrollments = await database
     .selectFrom('enrollment')
     .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+    .leftJoin('enrollment_application', 'enrollment_application.enrollment_id', 'enrollment.id')
     .select([
       'enrollment.id as enrollment_id',
       'enrollment.volunteer_id',
@@ -147,6 +148,7 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
       'volunteer_account.gender',
     ])
     .where('enrollment.posting_id', '=', postingId)
+    .where('enrollment_application.id', 'is', null)
     .execute();
 
   const volunteerIds = enrollments.map(e => e.volunteer_id);
@@ -256,6 +258,182 @@ postingRouter.delete('/:id', async (req, res) => {
   });
 
   res.json({});
+});
+
+postingRouter.get('/:id/applications', async (req, res) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  if (posting.is_open) {
+    res.json({ applications: [] });
+    return;
+  }
+
+  const applications = await database
+    .selectFrom('enrollment_application')
+    .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment_application.volunteer_id')
+    .select([
+      'enrollment_application.id as application_id',
+      'enrollment_application.enrollment_id',
+      'enrollment_application.volunteer_id',
+      'enrollment_application.message',
+      'enrollment_application.created_at',
+      'volunteer_account.first_name',
+      'volunteer_account.last_name',
+      'volunteer_account.email',
+      'volunteer_account.date_of_birth',
+      'volunteer_account.gender',
+    ])
+    .where('enrollment_application.enrollment_id', 'in', qb =>
+      qb.selectFrom('enrollment').select('id').where('posting_id', '=', postingId),
+    )
+    .execute();
+
+  const volunteerIds = applications.map(a => a.volunteer_id);
+  const skills = volunteerIds.length > 0
+    ? await database
+        .selectFrom('volunteer_skill')
+        .selectAll()
+        .where('volunteer_id', 'in', volunteerIds)
+        .execute()
+    : [];
+
+  const skillsByVolunteerId = new Map<number, typeof skills>();
+  skills.forEach((skill) => {
+    if (!skillsByVolunteerId.has(skill.volunteer_id)) {
+      skillsByVolunteerId.set(skill.volunteer_id, []);
+    }
+    skillsByVolunteerId.get(skill.volunteer_id)!.push(skill);
+  });
+
+  const applicationsWithSkills = applications.map(app => ({
+    ...app,
+    skills: skillsByVolunteerId.get(app.volunteer_id) || [],
+  }));
+
+  res.json({ applications: applicationsWithSkills });
+});
+
+postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId, applicationId } = zod.object({
+    id: zod.coerce.number().int().positive(),
+    applicationId: zod.coerce.number().int().positive(),
+  }).parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  if (posting.is_open) {
+    res.status(400).json({ error: 'Cannot accept applications for open postings' });
+    return;
+  }
+
+  const application = await database
+    .selectFrom('enrollment_application')
+    .innerJoin('enrollment', 'enrollment.id', 'enrollment_application.enrollment_id')
+    .select([
+      'enrollment_application.id',
+      'enrollment_application.enrollment_id',
+      'enrollment_application.volunteer_id',
+      'enrollment_application.message',
+      'enrollment.posting_id',
+    ])
+    .where('enrollment_application.id', '=', applicationId)
+    .executeTakeFirst();
+
+  if (!application) {
+    res.status(404).json({ error: 'Application not found' });
+    return;
+  }
+
+  if (application.posting_id !== postingId) {
+    res.status(403).json({ error: 'Application does not belong to this posting' });
+    return;
+  }
+
+  await database.transaction().execute(async (trx) => {
+    if (application.message) {
+      await trx
+        .updateTable('enrollment')
+        .set({ message: application.message })
+        .where('id', '=', application.enrollment_id)
+        .execute();
+    }
+
+    await trx
+      .deleteFrom('enrollment_application')
+      .where('id', '=', applicationId)
+      .execute();
+  });
+
+  res.json({ });
+});
+
+postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId, applicationId } = zod.object({
+    id: zod.coerce.number().int().positive(),
+    applicationId: zod.coerce.number().int().positive(),
+  }).parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404).json({ error: 'Posting not found' });
+    return;
+  }
+
+  const application = await database
+    .selectFrom('enrollment_application')
+    .selectAll()
+    .where('id', '=', applicationId)
+    .executeTakeFirst();
+
+  if (!application) {
+    res.status(404).json({ error: 'Application not found' });
+    return;
+  }
+
+  await database.transaction().execute(async (trx) => {
+    await trx
+      .deleteFrom('enrollment_application')
+      .where('id', '=', applicationId)
+      .execute();
+
+    await trx
+      .deleteFrom('enrollment')
+      .where('id', '=', application.enrollment_id)
+      .execute();
+  });
+
+  res.json({ });
 });
 
 export default postingRouter;

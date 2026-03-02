@@ -20,6 +20,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import ColumnLayout from './ColumnLayout';
+import CustomMessageModal from './CustomMessageModal';
 import Loading from './Loading';
 import LocationPicker from './LocationPicker';
 import SkillsInput from './SkillsInput';
@@ -67,6 +68,8 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -280,20 +283,45 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
     }
   };
 
-  const onApply = useCallback(async () => {
+  const closeApplyModal = useCallback(() => {
+    setIsApplyModalOpen(false);
+    setApplyError(null);
+  }, []);
+
+  const openApplyModal = useCallback(() => {
+    if (!id || isEnrolled) return;
+    setSaveMessage(null);
+    setSaveError(null);
+    setApplyError(null);
+    setIsApplyModalOpen(true);
+  }, [id, isEnrolled]);
+
+  const submitApplication = useCallback(async (message?: string) => {
     if (!id || isEnrolled) return;
 
     try {
       setApplying(true);
+      setApplyError(null);
       setSaveMessage(null);
       setSaveError(null);
 
-      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'POST' }, true);
+      await requestServer(
+        `/volunteer/posting/${id}/enroll`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(message ? { message } : {}),
+        },
+        true,
+      );
 
       setIsEnrolled(true);
+      setIsApplyModalOpen(false);
       setSaveMessage('Application submitted successfully.');
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to apply to posting');
+      const messageText = error instanceof Error ? error.message : 'Failed to apply to posting';
+      setApplyError(messageText);
+      setSaveError(messageText);
     } finally {
       setApplying(false);
     }
@@ -373,6 +401,13 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
   return (
     <div className="grow bg-base-200">
+      <CustomMessageModal
+        open={isApplyModalOpen}
+        submitting={applying}
+        onClose={closeApplyModal}
+        onSubmit={submitApplication}
+        errorMessage={applyError}
+      />
       <div className="p-6 md:container mx-auto">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-6 bg-base-200 -mx-6 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -394,7 +429,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
               ? (
                   <button
                     className={`btn ${isEnrolled ? 'btn-success' : 'btn-primary'}`}
-                    onClick={onApply}
+                    onClick={openApplyModal}
                     disabled={applying || isEnrolled}
                   >
                     {isEnrolled

@@ -50,7 +50,16 @@ function VolunteerHome() {
 
   useEffect(() => {
     fetchPostings();
-  }, []);
+  }, [fetchPostings]);
+
+  const resetFilters = () => {
+    setFilters({
+      location: '',
+      skill: '',
+      startDate: '',
+      endDate: '',
+    });
+  };
 
   return (
     <div className="grow bg-base-200">
@@ -97,6 +106,14 @@ function VolunteerHome() {
             onClick={fetchPostings}
           >
             Apply Filters
+          </button>
+
+          <button
+            className="btn btn-sm btn-primary"
+            disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
+            onClick={resetFilters}
+          >
+            Reset Filters
           </button>
         </div>
 

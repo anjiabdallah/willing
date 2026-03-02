@@ -68,6 +68,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -327,6 +328,27 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
     }
   }, [id, isEnrolled]);
 
+  const withdrawApplication = useCallback(async () => {
+    if (!id || !isEnrolled) return;
+    if (!confirm('Are you sure you want to withdraw your application?')) return;
+
+    try {
+      setWithdrawing(true);
+      setSaveError(null);
+      setSaveMessage(null);
+
+      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'DELETE' }, true);
+
+      setIsEnrolled(false);
+      setSaveMessage('Application withdrawn successfully.');
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Failed to withdraw application';
+      setSaveError(messageText);
+    } finally {
+      setWithdrawing(false);
+    }
+  }, [id, isEnrolled]);
+
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);
   }, []);
@@ -427,20 +449,27 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
           <div className="flex gap-2">
             {isVolunteerView
               ? (
-                  <button
-                    className={`btn ${isEnrolled ? 'btn-success' : 'btn-primary'}`}
-                    onClick={openApplyModal}
-                    disabled={applying || isEnrolled}
-                  >
+                  <>
                     {isEnrolled
                       ? (
-                          <span className="flex items-center gap-2">
-                            <Check size={16} />
-                            Applied
-                          </span>
+                          <button
+                            className="btn btn-error btn-outline"
+                            onClick={withdrawApplication}
+                            disabled={withdrawing}
+                          >
+                            {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                          </button>
                         )
-                      : applying ? 'Applying...' : 'Apply'}
-                  </button>
+                      : (
+                          <button
+                            className="btn btn-primary"
+                            onClick={openApplyModal}
+                            disabled={applying}
+                          >
+                            {applying ? 'Applying...' : 'Apply'}
+                          </button>
+                        )}
+                  </>
                 )
               : isEditMode
                 ? (

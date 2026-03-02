@@ -183,4 +183,35 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
   res.json({ enrollment: result, isOpen: posting.is_open });
 });
 
+volunteerPostingRouter.delete('/:id/enroll', async (req, res) => {
+  const volunteerId = req.userJWT!.id;
+  const { id } = postingIdParamsSchema.parse(req.params);
+
+  const enrollment = await database
+    .selectFrom('enrollment')
+    .selectAll()
+    .where('posting_id', '=', id)
+    .where('volunteer_id', '=', volunteerId)
+    .executeTakeFirst();
+
+  if (!enrollment) {
+    res.status(404).json({ error: 'Enrollment not found' });
+    return;
+  }
+
+  await database.transaction().execute(async (trx) => {
+    await trx
+      .deleteFrom('enrollment_application')
+      .where('enrollment_id', '=', enrollment.id)
+      .execute();
+
+    await trx
+      .deleteFrom('enrollment')
+      .where('id', '=', enrollment.id)
+      .execute();
+  });
+
+  res.json({});
+});
+
 export default volunteerPostingRouter;

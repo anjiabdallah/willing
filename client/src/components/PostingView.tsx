@@ -6,13 +6,10 @@ import {
   Edit3,
   Lock,
   LockOpen,
-  Mail,
   MapPin,
-  Mars,
   ShieldCheck,
   Trash2,
   Users,
-  Venus,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';

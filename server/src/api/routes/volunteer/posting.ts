@@ -119,7 +119,7 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .where(eb => eb('volunteer_id', '=', volunteerId))
     .executeTakeFirst();
 
-  const applicableApplication = pendingApplication && 'posting_id' in pendingApplication && (pendingApplication as any).posting_id === id
+  const applicableApplication = pendingApplication && 'posting_id' in pendingApplication && (pendingApplication as Record<string, unknown>).posting_id === id
     ? pendingApplication
     : null;
 

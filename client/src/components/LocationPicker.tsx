@@ -148,7 +148,7 @@ function MapZoomControl() {
   }, []);
 
   return (
-    <div ref={containerRef} className="absolute top-2 left-2 z-1000 flex flex-col gap-1">
+    <div ref={containerRef} className="absolute top-2 left-2 z-500 flex flex-col gap-1">
       <div className="join join-vertical shadow-lg">
         <button type="button" className="btn btn-square btn-sm join-item border border-base-content/20 bg-base-100 hover:bg-base-200" onClick={() => map.zoomIn()}>
           <Plus size={20} />

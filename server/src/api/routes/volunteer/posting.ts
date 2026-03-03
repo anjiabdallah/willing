@@ -103,8 +103,8 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const skills = await database
@@ -150,8 +150,8 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const existingEnrollment = await database
@@ -162,8 +162,8 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (existingEnrollment) {
-    res.status(409).json({ error: 'You have already applied to this posting' });
-    return;
+    res.status(409);
+    throw new Error('You have already applied to this posting');
   }
 
   const result = await database.transaction().execute(async (trx) => {
@@ -210,8 +210,8 @@ volunteerPostingRouter.delete('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!enrollment) {
-    res.status(404).json({ error: 'Enrollment not found' });
-    return;
+    res.status(404);
+    throw new Error('Enrollment not found');
   }
 
   await database.transaction().execute(async (trx) => {

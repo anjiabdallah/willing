@@ -104,8 +104,8 @@ postingRouter.get('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const skills = await database
@@ -129,8 +129,8 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const enrollments = await database
@@ -188,8 +188,8 @@ postingRouter.put('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const body: Partial<NewOrganizationPosting> = req.body;
@@ -247,8 +247,8 @@ postingRouter.delete('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   await database.transaction().execute(async (trx) => {
@@ -272,8 +272,8 @@ postingRouter.get('/:id/applications', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   if (posting.is_open) {
@@ -341,13 +341,13 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) =
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   if (posting.is_open) {
-    res.status(400).json({ error: 'Cannot accept applications for open postings' });
-    return;
+    res.status(400);
+    throw new Error('Cannot accept applications for open postings');
   }
 
   const application = await database
@@ -364,13 +364,13 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) =
     .executeTakeFirst();
 
   if (!application) {
-    res.status(404).json({ error: 'Application not found' });
-    return;
+    res.status(404);
+    throw new Error('Application not found');
   }
 
   if (application.posting_id !== postingId) {
-    res.status(403).json({ error: 'Application does not belong to this posting' });
-    return;
+    res.status(403);
+    throw new Error('Application does not belong to this posting');
   }
 
   await database.transaction().execute(async (trx) => {
@@ -406,8 +406,8 @@ postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const application = await database
@@ -417,8 +417,8 @@ postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
     .executeTakeFirst();
 
   if (!application) {
-    res.status(404).json({ error: 'Application not found' });
-    return;
+    res.status(404);
+    throw new Error('Application not found');
   }
 
   await database.transaction().execute(async (trx) => {

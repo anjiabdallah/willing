@@ -1,5 +1,6 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 
+import { OrganizationMeResponse, OrganizationRequestResponse } from './index.types.js';
 import postingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import database from '../../../db/index.js';
@@ -9,7 +10,7 @@ import { authorizeOnly } from '../../authorization.js';
 
 const organizationRouter = Router();
 
-organizationRouter.post('/request', async (req, res) => {
+organizationRouter.post('/request', async (req, res: Response<OrganizationRequestResponse>) => {
   const body = newOrganizationRequestSchema.parse(req.body);
 
   const email = body.email;
@@ -52,19 +53,14 @@ organizationRouter.post('/request', async (req, res) => {
   if (!organization) {
     throw new Error('Failed to create organization request');
   } else {
-    try {
-      sendAdminOrganizationRequestEmail(organization);
-    } catch (error) {
-      console.error('Failed to send organization request email to admin', error);
-    }
+    await sendAdminOrganizationRequestEmail(organization);
     res.json({});
   }
 });
 
-// Protected organization routes
 organizationRouter.use(authorizeOnly('organization'));
 
-organizationRouter.get('/me', async (req, res) => {
+organizationRouter.get('/me', async (req, res: Response<OrganizationMeResponse>) => {
   const organization = await database
     .selectFrom('organization_account')
     .selectAll()

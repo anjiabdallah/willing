@@ -43,7 +43,7 @@ const schema = zod.object({
   for (const key of required) {
     if (values[key] === undefined) {
       ctx.addIssue({
-        code: zod.ZodIssueCode.custom,
+        code: 'custom',
         path: [key],
         message: `${key} is required when NODE_ENV is not development`,
       });

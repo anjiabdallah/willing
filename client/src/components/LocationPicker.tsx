@@ -3,10 +3,11 @@ import { Minus, Plus, Search, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 
-import 'leaflet/dist/leaflet.css';
 import requestServer from '../utils/requestServer';
 
-import type { GeocodingResponse, GeocodingResponseEntry } from '../../../server/src/types';
+import type { GeocodingResponse, GeocodingResponseEntry } from '../../../server/src/api/types';
+
+import 'leaflet/dist/leaflet.css';
 
 const customIcon = divIcon({
   className: 'custom-icon',
@@ -50,7 +51,7 @@ function MapSearchControl({ onLocationSelect }: { onLocationSelect: (item: Geoco
     setLoading(true);
     setHasSearched(true);
     try {
-      const data = await requestServer<GeocodingResponse>(`/geocoding/search?query=${encodeURIComponent(query)}`);
+      const data = await requestServer<GeocodingResponse>('/geocoding/search', { query: { query } });
       setResults(data);
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import zod from 'zod';
 
+import { OrganizationPostingApplicationAcceptanceResponse, OrganizationPostingApplicationRejectionResponse, OrganizationPostingApplicationsReponse, OrganizationPostingCreateResponse, OrganizationPostingDeleteResponse, OrganizationPostingEnrollmentsResponse, OrganizationPostingListResponse, OrganizationPostingResponse, OrganizationPostingUpdateResponse } from './posting.types.js';
 import database from '../../../db/index.js';
 import {
   newOrganizationPostingSchema,
@@ -14,8 +15,8 @@ const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
 });
 
-postingRouter.post('/', async (req, res) => {
-  const body: NewOrganizationPosting = newOrganizationPostingSchema.parse(req.body);
+postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateResponse>) => {
+  const body = newOrganizationPostingSchema.parse(req.body);
   const orgId = req.userJWT!.id;
 
   const result = await database.transaction().execute(async (trx) => {
@@ -57,7 +58,7 @@ postingRouter.post('/', async (req, res) => {
   res.json({ posting: result.posting, skills: result.skills });
 });
 
-postingRouter.get('/', async (req, res) => {
+postingRouter.get('/', async (req, res: Response<OrganizationPostingListResponse>) => {
   const orgId = req.userJWT!.id;
 
   const postings = await database
@@ -89,10 +90,10 @@ postingRouter.get('/', async (req, res) => {
     skills: skillsByPostingId.get(posting.id) || [],
   }));
 
-  res.json({ posting: postingsWithSkills });
+  res.json({ postings: postingsWithSkills });
 });
 
-postingRouter.get('/:id', async (req, res) => {
+postingRouter.get('/:id', async (req, res: Response<OrganizationPostingResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -117,7 +118,7 @@ postingRouter.get('/:id', async (req, res) => {
   res.json({ posting, skills });
 });
 
-postingRouter.get('/:id/enrollments', async (req, res) => {
+postingRouter.get('/:id/enrollments', async (req, res: Response<OrganizationPostingEnrollmentsResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -174,7 +175,7 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
   res.json({ enrollments: enrollmentsWithSkills });
 });
 
-postingRouter.put('/:id', async (req, res) => {
+postingRouter.put('/:id', async (req, res: Response<OrganizationPostingUpdateResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -233,7 +234,7 @@ postingRouter.put('/:id', async (req, res) => {
   res.json({ posting: result.posting, skills: result.skills });
 });
 
-postingRouter.delete('/:id', async (req, res) => {
+postingRouter.delete('/:id', async (req, res: Response<OrganizationPostingDeleteResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -259,7 +260,7 @@ postingRouter.delete('/:id', async (req, res) => {
   res.json({});
 });
 
-postingRouter.get('/:id/applications', async (req, res) => {
+postingRouter.get('/:id/applications', async (req, res: Response<OrganizationPostingApplicationsReponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -322,7 +323,7 @@ postingRouter.get('/:id/applications', async (req, res) => {
   res.json({ applications: applicationsWithSkills });
 });
 
-postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) => {
+postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: Response<OrganizationPostingApplicationAcceptanceResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId, applicationId } = zod.object({
     id: zod.coerce.number().int().positive(),
@@ -388,10 +389,10 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) =
       .execute();
   });
 
-  res.json({ });
+  res.json({});
 });
 
-postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
+postingRouter.delete('/:id/applications/:applicationId', async (req, res: Response<OrganizationPostingApplicationRejectionResponse>) => {
   const orgId = req.userJWT!.id;
   const { id: postingId, applicationId } = zod.object({
     id: zod.coerce.number().int().positive(),
@@ -422,8 +423,8 @@ postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
   }
 
   if (application.posting_id !== postingId) {
-    res.status(403).json({ error: 'Application does not belong to this posting' });
-    return;
+    res.status(403);
+    throw new Error('Application does not belong to this posting');
   }
 
   await database

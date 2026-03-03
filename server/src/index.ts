@@ -33,7 +33,7 @@ app.use((req, res, next) => {
 });
 
 // Error handler
-app.use(((err, req, res, _next) => {
+app.use(((err, _req, res, _next) => {
   if (res.statusCode === 200) {
     if (err instanceof ZodError) {
       res.status(400);

@@ -7,7 +7,11 @@ import config from '../config.js';
 import database from '../db/index.js';
 import { Database, passwordSchema } from '../db/tables.js';
 
-export default async function resetPassword(req: Request, res: Response) {
+export interface ResetPasswordResponse {
+  token: string;
+}
+
+export default async function resetPassword(req: Request, res: Response<ResetPasswordResponse>) {
   const body = zod.object({
     currentPassword: zod.string().min(1),
     newPassword: passwordSchema,

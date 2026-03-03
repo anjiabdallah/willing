@@ -29,15 +29,13 @@ function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }:
     // TODO: Should show the error if it fails
     await requestServer('/admin/reviewOrganizationRequest', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         requestId: request.id,
         accepted: false,
         reason: reason,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
       },
-    }, true);
+      includeJwt: true,
+    });
 
     refreshOrganizationRequests();
   }, [request, refreshOrganizationRequests, reason]);
@@ -46,15 +44,13 @@ function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }:
     // TODO: Should show the error if it fails
     await requestServer('/admin/reviewOrganizationRequest', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         requestId: request.id,
         accepted: true,
         reason: '',
-      }),
-      headers: {
-        'Content-Type': 'application/json',
       },
-    }, true);
+      includeJwt: true,
+    });
 
     refreshOrganizationRequests();
   }, [request, refreshOrganizationRequests]);

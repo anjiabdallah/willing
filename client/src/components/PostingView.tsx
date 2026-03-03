@@ -28,15 +28,9 @@ import { executeAndShowError, FormField } from '../utils/formUtils';
 import requestServer from '../utils/requestServer';
 import { useOrganization } from '../utils/useUsers';
 
+import type { OrganizationPostingApplicationsReponse, OrganizationPostingEnrollmentsResponse, OrganizationPostingResponse, VolunteerPostingResponse } from '../../../server/src/api/types';
 import type { OrganizationPosting, PostingSkill } from '../../../server/src/db/tables';
-import type {
-  EnrolledVolunteer,
-  EnrollmentsResponse,
-  PostingResponse,
-  VolunteerPostingResponse,
-  ApplicationsResponse,
-  PendingApplication,
-} from '../../../server/src/types';
+import type { PostingApplication, PostingEnrollment } from '../../../server/src/types';
 
 type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
 
@@ -58,8 +52,8 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const account = isVolunteerView ? null : organizationAccount;
 
   const [posting, setPosting] = useState<PostingWithSkills | null>(null);
-  const [enrollments, setEnrollments] = useState<EnrolledVolunteer[]>([]);
-  const [applications, setApplications] = useState<PendingApplication[]>([]);
+  const [enrollments, setEnrollments] = useState<PostingEnrollment[]>([]);
+  const [applications, setApplications] = useState<PostingApplication[]>([]);
   const [hasPendingApplication, setHasPendingApplication] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
@@ -104,8 +98,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       if (isVolunteerView) {
         const postingResponse = await requestServer<VolunteerPostingResponse>(
           `/volunteer/posting/${id}`,
-          {},
-          true,
+          { includeJwt: true },
         );
 
         const postingWithSkills = {
@@ -140,8 +133,8 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       }
 
       const [postingResponse, enrollmentsResponse] = await Promise.all([
-        requestServer<PostingResponse>(`/organization/posting/${id}`, {}, true),
-        requestServer<EnrollmentsResponse>(`/organization/posting/${id}/enrollments`, {}, true),
+        requestServer<OrganizationPostingResponse>(`/organization/posting/${id}`, { includeJwt: true }),
+        requestServer<OrganizationPostingEnrollmentsResponse>(`/organization/posting/${id}/enrollments`, { includeJwt: true }),
       ]);
 
       const postingWithSkills = {
@@ -153,10 +146,9 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       setEnrollments(enrollmentsResponse.enrollments);
 
       if (!postingResponse.posting.is_open) {
-        const applicationsResponse = await requestServer<ApplicationsResponse>(
+        const applicationsResponse = await requestServer<OrganizationPostingApplicationsReponse>(
           `/organization/posting/${id}/applications`,
-          {},
-          true,
+          { includeJwt: true },
         );
         setApplications(applicationsResponse.applications);
       }
@@ -234,14 +226,13 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
           skills: skills.length > 0 ? skills : undefined,
         };
 
-        const response = await requestServer<PostingResponse>(
+        const response = await requestServer<OrganizationPostingResponse>(
           `/organization/posting/${id}`,
           {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: payload,
+            includeJwt: true,
           },
-          true,
         );
 
         const updatedPosting = {
@@ -289,7 +280,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
     try {
       setDeleting(true);
-      await requestServer(`/organization/posting/${id}`, { method: 'DELETE' }, true);
+      await requestServer(`/organization/posting/${id}`, { method: 'DELETE', includeJwt: true });
       navigate('/organization');
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to delete posting');
@@ -320,15 +311,13 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       setSaveMessage(null);
       setSaveError(null);
 
-      await requestServer(
-        `/volunteer/posting/${id}/enroll`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(message ? { message } : {}),
+      await requestServer(`/volunteer/posting/${id}/enroll`, {
+        method: 'POST',
+        body: {
+          message,
         },
-        true,
-      );
+        includeJwt: true,
+      });
 
       setHasPendingApplication(true);
       setIsApplyModalOpen(false);
@@ -351,7 +340,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       setSaveError(null);
       setSaveMessage(null);
 
-      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'DELETE' }, true);
+      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'DELETE', includeJwt: true });
 
       setHasPendingApplication(false);
       setIsEnrolled(false);
@@ -374,14 +363,12 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
       await requestServer(
         `/organization/posting/${id}/applications/${applicationId}/accept`,
-        { method: 'POST' },
-        true,
+        { method: 'POST', includeJwt: true },
       );
 
-      const enrollmentsResponse = await requestServer<EnrollmentsResponse>(
+      const enrollmentsResponse = await requestServer<OrganizationPostingEnrollmentsResponse>(
         `/organization/posting/${id}/enrollments`,
-        {},
-        true,
+        { includeJwt: true },
       );
       setEnrollments(enrollmentsResponse.enrollments);
 
@@ -401,7 +388,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
     try {
       setProcessingApplicationId(applicationId);
-      await requestServer(`/organization/posting/${id}/applications/${applicationId}`, { method: 'DELETE' }, true);
+      await requestServer(`/organization/posting/${id}/applications/${applicationId}`, { method: 'DELETE', includeJwt: true });
 
       setApplications(prev => prev.filter(app => app.application_id !== applicationId));
       setSaveMessage('Application rejected.');
@@ -832,7 +819,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                           {applications.map(app => (
                             <VolunteerInfoCollapse
                               key={app.application_id}
-                              volunteer={{ ...app, id: app.application_id }}
+                              volunteer={app}
                               actions={(
                                 <>
                                   <button
@@ -879,7 +866,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                           {enrollments.map(volunteer => (
                             <VolunteerInfoCollapse
                               key={volunteer.enrollment_id}
-                              volunteer={{ ...volunteer, id: volunteer.enrollment_id }}
+                              volunteer={volunteer}
                             />
                           ))}
                         </div>

@@ -5,21 +5,20 @@ import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
-
-type PostingWithSkills = OrganizationPosting & { skills: PostingSkill[] };
+import type { OrganizationPostingListResponse } from '../../../../server/src/api/types';
 
 function OrganizationHome() {
   const navigate = useNavigate();
 
   const { data: postings, loading, error } = useAsync(
     async () => {
-      const response = await requestServer<{ posting: PostingWithSkills[] }>(
+      const response = await requestServer<OrganizationPostingListResponse>(
         '/organization/posting',
-        { method: 'GET' },
-        true,
+        {
+          includeJwt: true,
+        },
       );
-      return response.posting;
+      return response.postings;
     },
     true,
   );

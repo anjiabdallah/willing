@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '../../../../server/src/db/tables';
+import { volunteerAccountSchema } from '../../../../server/src/db/tables';
 import ColumnLayout from '../../components/ColumnLayout';
 import Loading from '../../components/Loading';
 import SkillsInput from '../../components/SkillsInput';
@@ -20,10 +20,7 @@ import { ToggleButton } from '../../components/ToggleButton';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 
-type VolunteerProfileResponse = {
-  volunteer: VolunteerAccountWithoutPassword;
-  skills: string[];
-};
+import type { VolunteerProfileResponse } from '../../../../server/src/api/types';
 
 const DESCRIPTION_MAX_LENGTH = 300;
 
@@ -69,7 +66,7 @@ function VolunteerProfile() {
     try {
       setLoading(true);
       setFetchError(null);
-      const response = await requestServer<VolunteerProfileResponse>('/volunteer/profile', {}, true);
+      const response = await requestServer<VolunteerProfileResponse>('/volunteer/profile', { includeJwt: true });
       setProfile(response);
       setSkills(response.skills);
       form.reset({
@@ -162,8 +159,7 @@ function VolunteerProfile() {
         '/volunteer/profile',
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: {
             first_name: data.first_name,
             last_name: data.last_name,
             email: data.email,
@@ -172,9 +168,9 @@ function VolunteerProfile() {
             description: data.description,
             skills,
             privacy: data.privacy,
-          }),
+          },
+          includeJwt: true,
         },
-        true,
       );
 
       setProfile(response);

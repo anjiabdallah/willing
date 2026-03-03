@@ -5,20 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 
-import type { OrganizationPosting, PostingSkill } from '../../../../server/src/db/tables';
-
-type PostingWithOrganization = OrganizationPosting & {
-  organization_name: string;
-  skills: PostingSkill[];
-};
-
-interface GetPostingsResponse {
-  postings: PostingWithOrganization[];
-}
+import type { VolunteerPostingSearchResponse } from '../../../../server/src/api/types';
+import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
 
 function VolunteerHome() {
   const navigate = useNavigate();
-  const [postings, setPostings] = useState<PostingWithOrganization[]>([]);
+  const [postings, setPostings] = useState<PostingWithSkillsAndOrgName[]>([]);
   const [filters, setFilters] = useState<{
     location: string;
     skill: string;
@@ -46,7 +38,7 @@ function VolunteerHome() {
 
     const url = '/volunteer/posting?' + query.toString();
 
-    const res = await requestServer<GetPostingsResponse>(url, {}, true);
+    const res = await requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true });
 
     setPostings(res.postings);
   };

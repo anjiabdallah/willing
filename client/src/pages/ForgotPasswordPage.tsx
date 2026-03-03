@@ -38,10 +38,7 @@ function ForgotPasswordPage() {
     await executeAndShowError(requestForm, async () => {
       await requestServer('/user/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email: data.email }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: { email: data.email },
       });
       setRequestSent(true);
     });
@@ -51,10 +48,7 @@ function ForgotPasswordPage() {
     await executeAndShowError(resetForm, async () => {
       await requestServer('/user/forgot-password/reset', {
         method: 'POST',
-        body: JSON.stringify({ key: resetKey, password: data.password }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: { key: resetKey, password: data.password },
       });
       setResetComplete(true);
       resetForm.reset();

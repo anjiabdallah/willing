@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import zod from 'zod';
 
+import { GeocodingResponse } from './geocoding.types.js';
 import config from '../../config.js';
-import { GeocodingResponse } from '../../types.js';
 
 export interface LocationIQSearchEntry {
   place_id: string;
@@ -74,7 +74,7 @@ const queryLocationIQ = async (query: string) => {
 
 const geocodingRouter = Router();
 
-geocodingRouter.get('/search', async (req, res) => {
+geocodingRouter.get('/search', async (req, res: Response<GeocodingResponse>) => {
   const { query } = zod.object({
     query: zod.string().nonempty(),
   }).parse(req.query);

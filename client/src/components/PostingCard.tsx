@@ -19,19 +19,19 @@ function PostingCard({ posting, footer }: PostingCardProps) {
 
         <div className="space-y-3 text-sm mb-4">
           <p className="flex items-center gap-2">
-            <MapPin size={16} className="text-primary flex-shrink-0" />
+            <MapPin size={16} className="text-primary shrink-0" />
             <span>{posting.location_name}</span>
           </p>
 
           {posting.end_timestamp
             ? (
                 <div className="flex gap-3 items-start">
-                  <div className="flex flex-col items-center flex-shrink-0 mt-1">
-                    <Calendar size={16} className="text-primary flex-shrink-0" />
+                  <div className="flex flex-col items-center shrink-0 mt-1">
+                    <Calendar size={16} className="text-primary shrink-0" />
                     <div className="w-0.5 h-6 bg-primary my-0.5" />
-                    <Calendar size={16} className="text-primary flex-shrink-0" />
+                    <Calendar size={16} className="text-primary shrink-0" />
                   </div>
-                  <div className="flex flex-col gap-1 flex-grow">
+                  <div className="flex flex-col gap-1 grow">
                     <div>
                       <p className="text-xs opacity-70 font-semibold">START</p>
                       <span className="text-xs">
@@ -53,7 +53,7 @@ function PostingCard({ posting, footer }: PostingCardProps) {
               )
             : (
                 <p className="flex items-center gap-2">
-                  <Calendar size={16} className="text-primary flex-shrink-0" />
+                  <Calendar size={16} className="text-primary shrink-0" />
                   <div>
                     <p className="text-xs opacity-70 font-semibold">START</p>
                     <span className="text-xs">
@@ -68,7 +68,7 @@ function PostingCard({ posting, footer }: PostingCardProps) {
           <div className="flex gap-3">
             {posting.max_volunteers && (
               <p className="flex items-center gap-1">
-                <Users size={16} className="text-primary flex-shrink-0" />
+                <Users size={16} className="text-primary shrink-0" />
                 <span>
                   0/
                   {posting.max_volunteers}
@@ -77,7 +77,7 @@ function PostingCard({ posting, footer }: PostingCardProps) {
             )}
             {posting.minimum_age && (
               <p className="flex items-center gap-1">
-                <Cake size={16} className="text-primary flex-shrink-0" />
+                <Cake size={16} className="text-primary shrink-0" />
                 <span>
                   {posting.minimum_age}
                   +

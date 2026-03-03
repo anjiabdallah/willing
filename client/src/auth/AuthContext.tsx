@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 
 import requestServer from '../utils/requestServer';
 
+import type { AdminLoginResponse, AdminMeResponse, AdminResetPasswordResponse, OrganizationMeResponse, OrganizationResetPasswordResponse, UserLoginResponse, VolunteerCreateResponse, VolunteerMeResponse, VolunteerResetPasswordResponse } from '../../../server/src/api/types';
 import type { AdminAccountWithoutPassword, NewVolunteerAccount, OrganizationAccountWithoutPassword, VolunteerAccountWithoutPassword } from '../../../server/src/db/tables';
 import type { Role, UserJWT } from '../../../server/src/types';
 
@@ -20,15 +21,15 @@ const getCurrentUserAccount = async (currentRole?: Role) => {
 
   try {
     if (currentRole === 'admin') {
-      const response = await requestServer<{ admin: AdminAccountWithoutPassword }>('/admin/me', {}, true);
+      const response = await requestServer<AdminMeResponse>('/admin/me', { includeJwt: true });
       return response.admin;
     }
     if (currentRole === 'organization') {
-      const response = await requestServer<{ organization: OrganizationAccountWithoutPassword }>('/organization/me', {}, true);
+      const response = await requestServer<OrganizationMeResponse>('/organization/me', { includeJwt: true });
       return response.organization;
     }
     if (currentRole === 'volunteer') {
-      const response = await requestServer<{ volunteer: VolunteerAccountWithoutPassword }>('/volunteer/me', {}, true);
+      const response = await requestServer<VolunteerMeResponse>('/volunteer/me', { includeJwt: true });
       return response.volunteer;
     }
   } catch (error) {
@@ -96,15 +97,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginAdmin = useCallback(async (email: string, password: string) => {
     console.log('Attempting admin login with email:', email);
-    const response = await requestServer<{
-      token: string;
-      admin: AdminAccountWithoutPassword;
-    }>('/admin/login', {
+    const response = await requestServer<AdminLoginResponse>('/admin/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      body: { email, password },
     });
 
     localStorage.setItem('jwt', response.token);
@@ -112,17 +107,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const loginUser = useCallback(async (email: string, password: string) => {
-    const response = await requestServer<{
-      token: string;
-      role: 'organization' | 'volunteer';
-      organization?: OrganizationAccountWithoutPassword;
-      volunteer?: VolunteerAccountWithoutPassword;
-    }>('/user/login', {
+    const response = await requestServer<UserLoginResponse>('/user/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      body: { email, password },
     });
 
     localStorage.setItem('jwt', response.token);
@@ -133,15 +120,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const createVolunteer = async (volunteer: NewVolunteerAccount) => {
-    const response = await requestServer<{
-      volunteer: VolunteerAccountWithoutPassword;
-      token: string;
-    }>('/volunteer/create', {
+    const response = await requestServer<VolunteerCreateResponse>('/volunteer/create', {
       method: 'POST',
-      body: JSON.stringify(volunteer),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      body: volunteer,
     });
 
     localStorage.setItem('jwt', response.token);
@@ -154,16 +135,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     if (!user) return;
 
-    const { token } = await requestServer<{ token: string }>('/' + user?.role + '/reset-password', {
+    const { token } = await requestServer<
+      AdminResetPasswordResponse
+      | VolunteerResetPasswordResponse
+      | OrganizationResetPasswordResponse
+    >('/' + user!.role + '/reset-password', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         currentPassword,
         newPassword,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
       },
-    }, true);
+      includeJwt: true,
+    });
 
     localStorage.setItem('jwt', token);
     refreshUser(token);

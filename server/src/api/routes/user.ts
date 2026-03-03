@@ -1,10 +1,11 @@
 import crypto from 'crypto';
 
 import bcrypt from 'bcrypt';
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
+import { UserForgotPasswordResetResponse, UserForgotPasswordResponse, UserLoginResponse } from './user.types.js';
 import config from '../../config.js';
 import database from '../../db/index.js';
 import { passwordSchema } from '../../db/tables.js';
@@ -22,7 +23,7 @@ const forgotPasswordResetSchema = zod.object({
   password: passwordSchema,
 });
 
-userRouter.post('/login', async (req, res) => {
+userRouter.post('/login', async (req, res: Response<UserLoginResponse>) => {
   const body = loginInfoSchema.parse(req.body);
 
   let organizationAccount;
@@ -80,7 +81,7 @@ userRouter.post('/login', async (req, res) => {
   });
 });
 
-userRouter.post('/forgot-password', async (req, res) => {
+userRouter.post('/forgot-password', async (req, res: Response<UserForgotPasswordResponse>) => {
   const body = forgotPasswordRequestSchema.parse(req.body);
 
   const organizationAccount = await database
@@ -106,7 +107,6 @@ userRouter.post('/forgot-password', async (req, res) => {
     }
   }
 
-  // Always return success to prevent email enumeration
   res.json({});
 
   if (!organizationAccount && !volunteerAccount) {
@@ -130,9 +130,11 @@ userRouter.post('/forgot-password', async (req, res) => {
     .execute();
 
   await sendPasswordResetEmail(body.email, accountName, resetToken);
+
+  res.json({});
 });
 
-userRouter.post('/forgot-password/reset', async (req, res) => {
+userRouter.post('/forgot-password/reset', async (req, res: Response<UserForgotPasswordResetResponse>) => {
   const body = forgotPasswordResetSchema.parse(req.body);
 
   const resetToken = await database
@@ -172,7 +174,7 @@ userRouter.post('/forgot-password/reset', async (req, res) => {
     .where('password_reset_token.id', '=', resetToken.id)
     .execute();
 
-  res.json({ success: true });
+  res.json({});
 });
 
 export default userRouter;

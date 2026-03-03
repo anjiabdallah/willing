@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import zod from 'zod';
 
+import { VolunteerPostingEnrollResponse, VolunteerPostingResponse, VolunteerPostingSearchResponse, VolunteerPostingWithdrawResponse } from './posting.types.js';
 import database from '../../../db/index.js';
 import { authorizeOnly } from '../../authorization.js';
 
@@ -16,7 +17,7 @@ const applyBodySchema = zod.object({
 
 volunteerPostingRouter.use(authorizeOnly('volunteer'));
 
-volunteerPostingRouter.get('/', async (req, res) => {
+volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearchResponse>) => {
   const { location_name, start_timestamp, end_timestamp, skill } = req.query;
 
   let query = database
@@ -92,7 +93,7 @@ volunteerPostingRouter.get('/', async (req, res) => {
   res.json({ postings: postingWithSkills });
 });
 
-volunteerPostingRouter.get('/:id', async (req, res) => {
+volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingResponse>) => {
   const volunteerId = req.userJWT!.id;
   const { id } = postingIdParamsSchema.parse(req.params);
 
@@ -138,7 +139,7 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
   });
 });
 
-volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
+volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPostingEnrollResponse>) => {
   const volunteerId = req.userJWT!.id;
   const { id } = postingIdParamsSchema.parse(req.params);
   const { message } = applyBodySchema.parse(req.body ?? {});
@@ -184,7 +185,7 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
   res.json({ application, isOpen: posting.is_open });
 });
 
-volunteerPostingRouter.delete('/:id/enroll', async (req, res) => {
+volunteerPostingRouter.delete('/:id/enroll', async (req, res: Response<VolunteerPostingWithdrawResponse>) => {
   const volunteerId = req.userJWT!.id;
   const { id } = postingIdParamsSchema.parse(req.params);
 

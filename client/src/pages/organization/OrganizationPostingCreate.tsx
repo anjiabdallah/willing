@@ -13,6 +13,8 @@ import { executeAndShowError, FormField, FormRootError } from '../../utils/formU
 import requestServer from '../../utils/requestServer';
 import { useOrganization } from '../../utils/useUsers';
 
+import type { OrganizationPostingCreateResponse } from '../../../../server/src/api/types';
+
 export default function OrganizationPostingCreate() {
   const account = useOrganization();
   const navigate = useNavigate();
@@ -52,11 +54,11 @@ export default function OrganizationPostingCreate() {
 
       console.log('Submitting posting payload:', payload);
 
-      const response = await requestServer<{ success: boolean; posting: unknown }>('/organization/posting', {
+      const response = await requestServer<OrganizationPostingCreateResponse>('/organization/posting', {
         method: 'POST',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
-      }, true);
+        body: payload,
+        includeJwt: true,
+      });
 
       console.log('Posting created successfully:', response);
       navigate('/organization');

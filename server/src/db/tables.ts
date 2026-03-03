@@ -1,5 +1,7 @@
 import zod from 'zod';
 
+import { genderSchema } from '../types.js';
+
 import type { Generated } from 'kysely';
 
 type WithGeneratedID<T> = Omit <T, 'id'> & {
@@ -52,7 +54,7 @@ export const volunteerAccountSchema = zod.object({
     .string()
     .min(1, 'Date of birth is required')
     .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' }),
-  gender: zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' '),
+  gender: genderSchema,
   description: zod.string().max(500, 'Description must be less than 500 characters').optional(),
   privacy: zod.enum(['public', 'private']),
   updated_at: zod.date(),
@@ -210,31 +212,31 @@ export type NewOrganizationPosting = zod.infer<typeof newOrganizationPostingSche
 
 // posting_skill
 
-export const PostingSkillSchema = zod.object({
+export const postingSkillSchema = zod.object({
   id: zod.number(),
   posting_id: zod.number().min(1, 'Posting ID is required'),
   name: zod.string().min(1, 'Skill name is required'),
 });
 
-export type PostingSkill = zod.infer<typeof PostingSkillSchema>;
+export type PostingSkill = zod.infer<typeof postingSkillSchema>;
 
 export type PostingSkillTable = WithGeneratedID<PostingSkill>;
 
 // volunteer_skill
 
-export const VolunteerSkillSchema = zod.object({
+export const volunteerSkillSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   name: zod.string().min(1, 'Skill name is required'),
 });
 
-export type VolunteerSkill = zod.infer<typeof VolunteerSkillSchema>;
+export type VolunteerSkill = zod.infer<typeof volunteerSkillSchema>;
 
 export type VolunteerSkillTable = WithGeneratedID<VolunteerSkill>;
 
 // enrollment
 
-export const EnrollmentSchema = zod.object({
+export const enrollmentSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   posting_id: zod.number().min(1, 'Posting ID is required'),
@@ -242,14 +244,14 @@ export const EnrollmentSchema = zod.object({
   created_at: zod.date(),
 });
 
-export type Enrollment = zod.infer<typeof EnrollmentSchema>;
-export const newEnrollmentSchema = EnrollmentSchema.omit({ id: true, created_at: true });
+export type Enrollment = zod.infer<typeof enrollmentSchema>;
+export const newEnrollmentSchema = enrollmentSchema.omit({ id: true, created_at: true });
 
 export type EnrollmentTable = WithGeneratedIDAndCreatedAt<Enrollment>;
 
 // enrollment_application
 
-export const EnrollmentApplicationSchema = zod.object({
+export const enrollmentApplicationSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   posting_id: zod.number().min(1, 'Posting ID is required'),
@@ -257,8 +259,8 @@ export const EnrollmentApplicationSchema = zod.object({
   created_at: zod.date(),
 });
 
-export type EnrollmentApplication = zod.infer<typeof EnrollmentApplicationSchema>;
-export const newEnrollmentApplicationSchema = EnrollmentApplicationSchema.omit({ id: true, created_at: true });
+export type EnrollmentApplication = zod.infer<typeof enrollmentApplicationSchema>;
+export const newEnrollmentApplicationSchema = enrollmentApplicationSchema.omit({ id: true, created_at: true });
 export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
 export interface Database {

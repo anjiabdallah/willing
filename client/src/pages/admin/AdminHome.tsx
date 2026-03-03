@@ -5,13 +5,11 @@ import OrganizationRequestReviewCard from './components/OrganizationRequestRevie
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { OrganizationRequest } from '../../../../server/src/db/tables';
+import type { AdminOrganizationRequestsResponse } from '../../../../server/src/api/types';
 
 function AdminHome() {
   const getOrganizationRequests = useCallback(async () => {
-    const res = await requestServer<{
-      organizationRequests: OrganizationRequest[];
-    }>('/admin/getOrganizationRequests', {}, true);
+    const res = await requestServer<AdminOrganizationRequestsResponse>('/admin/getOrganizationRequests', { includeJwt: true });
     return res.organizationRequests;
   }, []);
 

@@ -1,15 +1,18 @@
 import zod from 'zod';
 
 import {
-  EnrollmentSchema,
-  EnrollmentApplicationSchema,
-  VolunteerSkillSchema,
-  volunteerAccountWithoutPasswordSchema,
   type OrganizationPosting,
   type PostingSkill,
+  VolunteerSkill,
+  VolunteerAccountWithoutPassword,
 } from './db/tables.js';
 
 export type Role = 'admin' | 'volunteer' | 'organization';
+
+export const genderSchema = zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' ');
+export type Gender = zod.infer<typeof genderSchema>;
+
+export type SuccessResponse = Record<string, never>;
 
 export interface UserJWT {
   id: number;
@@ -23,60 +26,33 @@ export const loginInfoSchema = zod.object({
 
 export type LoginInfo = zod.infer<typeof loginInfoSchema>;
 
-export interface GeocodingResponseEntry {
-  name: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-}
-
-export type GeocodingResponse = GeocodingResponseEntry[];
-
-export type PostingResponse = {
-  posting: OrganizationPosting;
+export type PostingWithSkills = OrganizationPosting & {
   skills: PostingSkill[];
 };
 
-export type VolunteerPostingResponse = PostingResponse & {
-  hasPendingApplication: boolean;
-  isEnrolled: boolean;
+export type PostingWithSkillsAndOrgName = PostingWithSkills & {
+  organization_name: string;
 };
 
-const _enrolledVolunteerSchema = volunteerAccountWithoutPasswordSchema
-  .omit({
-    id: true,
-    description: true,
-    privacy: true,
-  })
-  .extend({
-    enrollment_id: zod.number(),
-    volunteer_id: EnrollmentSchema.shape.volunteer_id,
-    message: EnrollmentSchema.shape.message,
-    skills: zod.array(VolunteerSkillSchema),
-  });
-
-export type EnrolledVolunteer = zod.infer<typeof _enrolledVolunteerSchema>;
-
-export type EnrollmentsResponse = {
-  enrollments: EnrolledVolunteer[];
+export type PostingEnrollment = {
+  enrollment_id: number;
+  volunteer_id: number;
+  message: string | undefined;
+  first_name: string;
+  last_name: string;
+  email: string;
+  date_of_birth: string;
+  gender: Gender;
+  skills: VolunteerSkill[];
 };
 
-const _pendingApplicationSchema = volunteerAccountWithoutPasswordSchema
-  .omit({
-    id: true,
-    description: true,
-    privacy: true,
-  })
-  .extend({
-    application_id: zod.number(),
-    volunteer_id: EnrollmentApplicationSchema.shape.volunteer_id,
-    message: EnrollmentApplicationSchema.shape.message,
-    created_at: EnrollmentApplicationSchema.shape.created_at,
-    skills: zod.array(VolunteerSkillSchema),
-  });
-
-export type PendingApplication = zod.infer<typeof _pendingApplicationSchema>;
-
-export type ApplicationsResponse = {
-  applications: PendingApplication[];
+export type PostingApplication = Omit<
+  VolunteerAccountWithoutPassword,
+    'id' | 'description' | 'privacy'
+> & {
+  skills: VolunteerSkill[];
+  volunteer_id: number;
+  message: string | undefined;
+  created_at: Date;
+  application_id: number;
 };

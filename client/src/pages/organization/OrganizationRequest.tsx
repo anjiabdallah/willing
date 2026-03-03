@@ -35,12 +35,9 @@ export default function OrganizationRequestPage() {
         longitude: position[1],
       };
 
-      await requestServer<{ success: boolean }>('/organization/request', {
+      await requestServer('/organization/request', {
         method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: payload,
       });
 
       setSubmitted(true);

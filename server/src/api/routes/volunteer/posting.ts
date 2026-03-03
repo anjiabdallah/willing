@@ -103,8 +103,8 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const skills = await database
@@ -113,6 +113,16 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .where('posting_id', '=', id)
     .execute();
 
+  const pendingApplication = await database
+    .selectFrom('enrollment_application')
+    .selectAll()
+    .where(eb => eb('volunteer_id', '=', volunteerId))
+    .executeTakeFirst();
+
+  const applicableApplication = pendingApplication && 'posting_id' in pendingApplication && (pendingApplication as Record<string, unknown>).posting_id === id
+    ? pendingApplication
+    : null;
+
   const existingEnrollment = await database
     .selectFrom('enrollment_application')
     .select('id')
@@ -120,7 +130,12 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .where('volunteer_id', '=', volunteerId)
     .executeTakeFirst();
 
-  res.json({ posting, skills, isEnrolled: Boolean(existingEnrollment) });
+  res.json({
+    posting,
+    skills,
+    hasPendingApplication: Boolean(applicableApplication),
+    isEnrolled: Boolean(existingEnrollment),
+  });
 });
 
 volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
@@ -135,8 +150,8 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const existingApplication = await database
@@ -147,8 +162,8 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (existingApplication) {
-    res.status(409).json({ error: 'You have already applied to this posting' });
-    return;
+    res.status(409);
+    throw new Error('You have already applied to this posting');
   }
 
   const application = await database
@@ -162,8 +177,8 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!application) {
-    res.status(500).json({ error: 'Failed to create application' });
-    return;
+    res.status(500);
+    throw new Error('Failed to create application');
   }
 
   res.json({ application, isOpen: posting.is_open });
@@ -181,8 +196,8 @@ volunteerPostingRouter.delete('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!application) {
-    res.status(404).json({ error: 'Application not found' });
-    return;
+    res.status(404);
+    throw new Error('Enrollment not found');
   }
 
   await database

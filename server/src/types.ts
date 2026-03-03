@@ -38,6 +38,7 @@ export type PostingResponse = {
 };
 
 export type VolunteerPostingResponse = PostingResponse & {
+  hasPendingApplication: boolean;
   isEnrolled: boolean;
 };
 

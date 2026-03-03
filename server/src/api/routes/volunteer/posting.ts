@@ -103,8 +103,8 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const skills = await database
@@ -113,14 +113,29 @@ volunteerPostingRouter.get('/:id', async (req, res) => {
     .where('posting_id', '=', id)
     .execute();
 
+  const pendingApplication = await database
+    .selectFrom('enrollment_application')
+    .selectAll()
+    .where(eb => eb('volunteer_id', '=', volunteerId))
+    .executeTakeFirst();
+
+  const applicableApplication = pendingApplication && 'posting_id' in pendingApplication && (pendingApplication as Record<string, unknown>).posting_id === id
+    ? pendingApplication
+    : null;
+
   const existingEnrollment = await database
-    .selectFrom('enrollment')
+    .selectFrom('enrollment_application')
     .select('id')
     .where('posting_id', '=', id)
     .where('volunteer_id', '=', volunteerId)
     .executeTakeFirst();
 
-  res.json({ posting, skills, isEnrolled: Boolean(existingEnrollment) });
+  res.json({
+    posting,
+    skills,
+    hasPendingApplication: Boolean(applicableApplication),
+    isEnrolled: Boolean(existingEnrollment),
+  });
 });
 
 volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
@@ -135,81 +150,60 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
-  const existingEnrollment = await database
-    .selectFrom('enrollment')
+  const existingApplication = await database
+    .selectFrom('enrollment_application')
     .select('id')
     .where('posting_id', '=', id)
     .where('volunteer_id', '=', volunteerId)
     .executeTakeFirst();
 
-  if (existingEnrollment) {
-    res.status(409).json({ error: 'You have already applied to this posting' });
-    return;
+  if (existingApplication) {
+    res.status(409);
+    throw new Error('You have already applied to this posting');
   }
 
-  const result = await database.transaction().execute(async (trx) => {
-    const enrollment = await trx
-      .insertInto('enrollment')
-      .values({
-        volunteer_id: volunteerId,
-        posting_id: id,
-        message: posting.is_open ? message ?? undefined : undefined,
-      })
-      .returningAll()
-      .executeTakeFirst();
+  const application = await database
+    .insertInto('enrollment_application')
+    .values({
+      volunteer_id: volunteerId,
+      posting_id: id,
+      message: message ?? undefined,
+    })
+    .returningAll()
+    .executeTakeFirst();
 
-    if (!enrollment) {
-      throw new Error('Failed to create enrollment');
-    }
+  if (!application) {
+    res.status(500);
+    throw new Error('Failed to create application');
+  }
 
-    if (!posting.is_open) {
-      await trx
-        .insertInto('enrollment_application')
-        .values({
-          volunteer_id: volunteerId,
-          enrollment_id: enrollment.id,
-          message: message ?? undefined,
-        })
-        .execute();
-    }
-
-    return enrollment;
-  });
-
-  res.json({ enrollment: result, isOpen: posting.is_open });
+  res.json({ application, isOpen: posting.is_open });
 });
 
 volunteerPostingRouter.delete('/:id/enroll', async (req, res) => {
   const volunteerId = req.userJWT!.id;
   const { id } = postingIdParamsSchema.parse(req.params);
 
-  const enrollment = await database
-    .selectFrom('enrollment')
+  const application = await database
+    .selectFrom('enrollment_application')
     .selectAll()
     .where('posting_id', '=', id)
     .where('volunteer_id', '=', volunteerId)
     .executeTakeFirst();
 
-  if (!enrollment) {
-    res.status(404).json({ error: 'Enrollment not found' });
-    return;
+  if (!application) {
+    res.status(404);
+    throw new Error('Enrollment not found');
   }
 
-  await database.transaction().execute(async (trx) => {
-    await trx
-      .deleteFrom('enrollment_application')
-      .where('enrollment_id', '=', enrollment.id)
-      .execute();
-
-    await trx
-      .deleteFrom('enrollment')
-      .where('id', '=', enrollment.id)
-      .execute();
-  });
+  await database
+    .deleteFrom('enrollment_application')
+    .where('id', '=', application.id)
+    .execute();
 
   res.json({});
 });

@@ -104,8 +104,8 @@ postingRouter.get('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const skills = await database
@@ -129,14 +129,13 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const enrollments = await database
     .selectFrom('enrollment')
     .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
-    .leftJoin('enrollment_application', 'enrollment_application.enrollment_id', 'enrollment.id')
     .select([
       'enrollment.id as enrollment_id',
       'enrollment.volunteer_id',
@@ -148,7 +147,6 @@ postingRouter.get('/:id/enrollments', async (req, res) => {
       'volunteer_account.gender',
     ])
     .where('enrollment.posting_id', '=', postingId)
-    .where('enrollment_application.id', 'is', null)
     .execute();
 
   const volunteerIds = enrollments.map(e => e.volunteer_id);
@@ -188,8 +186,8 @@ postingRouter.put('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const body: Partial<NewOrganizationPosting> = req.body;
@@ -247,12 +245,13 @@ postingRouter.delete('/:id', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   await database.transaction().execute(async (trx) => {
     await trx.deleteFrom('posting_skill').where('posting_id', '=', postingId).execute();
+    await trx.deleteFrom('enrollment_application').where('posting_id', '=', postingId).execute();
     await trx.deleteFrom('enrollment').where('posting_id', '=', postingId).execute();
     await trx.deleteFrom('organization_posting').where('id', '=', postingId).execute();
   });
@@ -272,8 +271,8 @@ postingRouter.get('/:id/applications', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   if (posting.is_open) {
@@ -286,7 +285,6 @@ postingRouter.get('/:id/applications', async (req, res) => {
     .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment_application.volunteer_id')
     .select([
       'enrollment_application.id as application_id',
-      'enrollment_application.enrollment_id',
       'enrollment_application.volunteer_id',
       'enrollment_application.message',
       'enrollment_application.created_at',
@@ -296,9 +294,7 @@ postingRouter.get('/:id/applications', async (req, res) => {
       'volunteer_account.date_of_birth',
       'volunteer_account.gender',
     ])
-    .where('enrollment_application.enrollment_id', 'in', qb =>
-      qb.selectFrom('enrollment').select('id').where('posting_id', '=', postingId),
-    )
+    .where('enrollment_application.posting_id', '=', postingId)
     .execute();
 
   const volunteerIds = applications.map(a => a.volunteer_id);
@@ -341,45 +337,49 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res) =
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   if (posting.is_open) {
-    res.status(400).json({ error: 'Cannot accept applications for open postings' });
-    return;
+    res.status(400);
+    throw new Error('Cannot accept applications for open postings');
   }
 
   const application = await database
     .selectFrom('enrollment_application')
-    .innerJoin('enrollment', 'enrollment.id', 'enrollment_application.enrollment_id')
     .select([
       'enrollment_application.id',
-      'enrollment_application.enrollment_id',
       'enrollment_application.volunteer_id',
+      'enrollment_application.posting_id',
       'enrollment_application.message',
-      'enrollment.posting_id',
     ])
     .where('enrollment_application.id', '=', applicationId)
     .executeTakeFirst();
 
   if (!application) {
-    res.status(404).json({ error: 'Application not found' });
-    return;
+    res.status(404);
+    throw new Error('Application not found');
   }
 
   if (application.posting_id !== postingId) {
-    res.status(403).json({ error: 'Application does not belong to this posting' });
-    return;
+    res.status(403);
+    throw new Error('Application does not belong to this posting');
   }
 
   await database.transaction().execute(async (trx) => {
-    if (application.message) {
-      await trx
-        .updateTable('enrollment')
-        .set({ message: application.message })
-        .where('id', '=', application.enrollment_id)
-        .execute();
+    const enrollment = await trx
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: application.volunteer_id,
+        posting_id: application.posting_id,
+        message: application.message ?? undefined,
+      })
+      .returningAll()
+      .executeTakeFirst();
+
+    if (!enrollment) {
+      throw new Error('Failed to create enrollment');
     }
 
     await trx
@@ -406,8 +406,8 @@ postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
     .executeTakeFirst();
 
   if (!posting) {
-    res.status(404).json({ error: 'Posting not found' });
-    return;
+    res.status(404);
+    throw new Error('Posting not found');
   }
 
   const application = await database
@@ -417,21 +417,19 @@ postingRouter.delete('/:id/applications/:applicationId', async (req, res) => {
     .executeTakeFirst();
 
   if (!application) {
-    res.status(404).json({ error: 'Application not found' });
+    res.status(404);
+    throw new Error('Application not found');
+  }
+
+  if (application.posting_id !== postingId) {
+    res.status(403).json({ error: 'Application does not belong to this posting' });
     return;
   }
 
-  await database.transaction().execute(async (trx) => {
-    await trx
-      .deleteFrom('enrollment_application')
-      .where('id', '=', applicationId)
-      .execute();
-
-    await trx
-      .deleteFrom('enrollment')
-      .where('id', '=', application.enrollment_id)
-      .execute();
-  });
+  await database
+    .deleteFrom('enrollment_application')
+    .where('id', '=', applicationId)
+    .execute();
 
   res.json({ });
 });

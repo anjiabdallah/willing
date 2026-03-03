@@ -6,25 +6,23 @@ import {
   Edit3,
   Lock,
   LockOpen,
-  Mail,
   MapPin,
-  Mars,
   ShieldCheck,
   Trash2,
   Users,
-  Venus,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import ColumnLayout from './ColumnLayout';
-import CustomMessageModal from './CustomMessageModal';
 import Loading from './Loading';
 import LocationPicker from './LocationPicker';
+import PostingApplicationMessageModal from './PostingApplicationMessageModal';
 import SkillsInput from './SkillsInput';
 import SkillsList from './SkillsList';
 import { ToggleButton } from './ToggleButton';
+import VolunteerInfoCollapse from './VolunteerInfoCollapse';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../schemas/auth';
 import { executeAndShowError, FormField } from '../utils/formUtils';
 import requestServer from '../utils/requestServer';
@@ -62,6 +60,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   const [posting, setPosting] = useState<PostingWithSkills | null>(null);
   const [enrollments, setEnrollments] = useState<EnrolledVolunteer[]>([]);
   const [applications, setApplications] = useState<PendingApplication[]>([]);
+  const [hasPendingApplication, setHasPendingApplication] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
@@ -116,6 +115,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
         setPosting(postingWithSkills);
         setEnrollments([]);
+        setHasPendingApplication(postingResponse.hasPendingApplication);
         setIsEnrolled(postingResponse.isEnrolled);
         setSkills(postingResponse.skills.map(s => s.name));
         setPosition([
@@ -162,6 +162,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
       }
 
       setIsEnrolled(false);
+      setHasPendingApplication(false);
       setSkills(postingResponse.skills.map(s => s.name));
       setPosition([
         postingResponse.posting.latitude ?? 33.90192863620578,
@@ -303,15 +304,15 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   }, []);
 
   const openApplyModal = useCallback(() => {
-    if (!id || isEnrolled) return;
+    if (!id || hasPendingApplication || isEnrolled) return;
     setSaveMessage(null);
     setSaveError(null);
     setApplyError(null);
     setIsApplyModalOpen(true);
-  }, [id, isEnrolled]);
+  }, [id, hasPendingApplication, isEnrolled]);
 
   const submitApplication = useCallback(async (message?: string) => {
-    if (!id || isEnrolled) return;
+    if (!id || hasPendingApplication || isEnrolled) return;
 
     try {
       setApplying(true);
@@ -329,7 +330,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
         true,
       );
 
-      setIsEnrolled(true);
+      setHasPendingApplication(true);
       setIsApplyModalOpen(false);
       setSaveMessage('Application submitted successfully.');
     } catch (error) {
@@ -339,11 +340,11 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
     } finally {
       setApplying(false);
     }
-  }, [id, isEnrolled]);
+  }, [id, hasPendingApplication, isEnrolled]);
 
   const withdrawApplication = useCallback(async () => {
-    if (!id || !isEnrolled) return;
-    if (!confirm('Are you sure you want to withdraw your application?')) return;
+    if (!id || (!hasPendingApplication && !isEnrolled)) return;
+    if (!confirm(isEnrolled ? 'Are you sure you want to leave this position?' : 'Are you sure you want to withdraw your application?')) return;
 
     try {
       setWithdrawing(true);
@@ -352,15 +353,16 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
       await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'DELETE' }, true);
 
+      setHasPendingApplication(false);
       setIsEnrolled(false);
-      setSaveMessage('Application withdrawn successfully.');
+      setSaveMessage(isEnrolled ? 'Left volunteering position.' : 'Application withdrawn successfully.');
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Failed to withdraw application';
+      const messageText = error instanceof Error ? error.message : 'Failed to withdraw';
       setSaveError(messageText);
     } finally {
       setWithdrawing(false);
     }
-  }, [id, isEnrolled]);
+  }, [id, hasPendingApplication, isEnrolled]);
 
   const acceptApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -485,7 +487,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
 
   return (
     <div className="grow bg-base-200">
-      <CustomMessageModal
+      <PostingApplicationMessageModal
         open={isApplyModalOpen}
         submitting={applying}
         onClose={closeApplyModal}
@@ -519,18 +521,28 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                             onClick={withdrawApplication}
                             disabled={withdrawing}
                           >
-                            {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                            {withdrawing ? 'Leaving...' : 'Leave Position'}
                           </button>
                         )
-                      : (
-                          <button
-                            className="btn btn-primary"
-                            onClick={openApplyModal}
-                            disabled={applying}
-                          >
-                            {applying ? 'Applying...' : 'Apply'}
-                          </button>
-                        )}
+                      : hasPendingApplication
+                        ? (
+                            <button
+                              className="btn btn-error btn-outline"
+                              onClick={withdrawApplication}
+                              disabled={withdrawing}
+                            >
+                              {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                            </button>
+                          )
+                        : (
+                            <button
+                              className="btn btn-primary"
+                              onClick={openApplyModal}
+                              disabled={applying}
+                            >
+                              {applying ? 'Applying...' : 'Apply'}
+                            </button>
+                          )}
                   </>
                 )
               : isEditMode
@@ -817,88 +829,30 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                       )
                     : (
                         <div className="space-y-2">
-                          {applications.map((app) => {
-                            const volunteerName = `${app.first_name} ${app.last_name}`;
-                            const initials = `${app.first_name.charAt(0)}${app.last_name.charAt(0)}`.toUpperCase();
-                            const age = Math.floor(
-                              (Date.now() - new Date(app.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
-                            );
-
-                            const genderBadgeStyles = app.gender === 'male'
-                              ? 'badge-info'
-                              : app.gender === 'female'
-                                ? 'badge-secondary'
-                                : 'badge-accent';
-
-                            return (
-                              <div key={app.application_id} className="collapse collapse-arrow border border-base-300 bg-base-100">
-                                <input type="checkbox" />
-                                <div className="collapse-title flex items-center gap-3">
-                                  <div className="avatar">
-                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
-                                      <span className="text-lg font-semibold">{initials}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <h5 className="font-bold text-base leading-tight">{volunteerName}</h5>
-                                    <div className="flex gap-2 mt-1">
-                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                                        {app.gender === 'male' && <Mars size={10} />}
-                                        {app.gender === 'female' && <Venus size={10} />}
-                                        {app.gender === 'other' && <span className="font-bold">*</span>}
-                                        {app.gender.charAt(0).toUpperCase() + app.gender.slice(1)}
-                                      </span>
-                                      <span className="badge badge-sm">
-                                        {age}
-                                        {' '}
-                                        years old
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="collapse-content pt-0">
-                                  <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
-                                    <Mail size={12} />
-                                    {app.email}
-                                  </div>
-                                  {app.skills && app.skills.length > 0 && (
-                                    <div className="mt-3">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        <SkillsList skills={app.skills} />
-                                      </div>
-                                    </div>
-                                  )}
-                                  {app.message && (
-                                    <div className="mt-3">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">Application Message</p>
-                                      <p className="text-xs opacity-80 italic">
-                                        "
-                                        {app.message}
-                                        "
-                                      </p>
-                                    </div>
-                                  )}
-                                  <div className="mt-4 flex gap-2">
-                                    <button
-                                      className="btn btn-sm btn-success"
-                                      onClick={() => acceptApplication(app.application_id)}
-                                      disabled={processingApplicationId === app.application_id}
-                                    >
-                                      {processingApplicationId === app.application_id ? 'Processing...' : 'Accept'}
-                                    </button>
-                                    <button
-                                      className="btn btn-sm btn-error btn-outline"
-                                      onClick={() => rejectApplication(app.application_id)}
-                                      disabled={processingApplicationId === app.application_id}
-                                    >
-                                      {processingApplicationId === app.application_id ? 'Processing...' : 'Reject'}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {applications.map(app => (
+                            <VolunteerInfoCollapse
+                              key={app.application_id}
+                              volunteer={{ ...app, id: app.application_id }}
+                              actions={(
+                                <>
+                                  <button
+                                    className="btn btn-success btn-soft"
+                                    onClick={() => acceptApplication(app.application_id)}
+                                    disabled={processingApplicationId === app.application_id}
+                                  >
+                                    {processingApplicationId === app.application_id ? 'Processing...' : 'Accept'}
+                                  </button>
+                                  <button
+                                    className="btn btn-error btn-soft"
+                                    onClick={() => rejectApplication(app.application_id)}
+                                    disabled={processingApplicationId === app.application_id}
+                                  >
+                                    {processingApplicationId === app.application_id ? 'Processing...' : 'Reject'}
+                                  </button>
+                                </>
+                              )}
+                            />
+                          ))}
                         </div>
                       )}
                 </div>
@@ -922,72 +876,12 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                       )
                     : (
                         <div className="space-y-2">
-                          {enrollments.map((volunteer) => {
-                            const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
-                            const initials = `${volunteer.first_name.charAt(0)}${volunteer.last_name.charAt(0)}`.toUpperCase();
-                            const age = Math.floor(
-                              (Date.now() - new Date(volunteer.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
-                            );
-
-                            const genderBadgeStyles = volunteer.gender === 'male'
-                              ? 'badge-info'
-                              : volunteer.gender === 'female'
-                                ? 'badge-secondary'
-                                : 'badge-accent';
-
-                            return (
-                              <div key={volunteer.enrollment_id} className="collapse collapse-arrow border border-base-300 bg-base-100">
-                                <input type="checkbox" />
-                                <div className="collapse-title flex items-center gap-3">
-                                  <div className="avatar">
-                                    <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
-                                      <span className="text-lg font-semibold">{initials}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <h5 className="font-bold text-base leading-tight">{volunteerName}</h5>
-                                    <div className="flex gap-2 mt-1">
-                                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                                        {volunteer.gender === 'male' && <Mars size={10} />}
-                                        {volunteer.gender === 'female' && <Venus size={10} />}
-                                        {volunteer.gender === 'other' && <span className="font-bold">*</span>}
-                                        {volunteer.gender.charAt(0).toUpperCase() + volunteer.gender.slice(1)}
-                                      </span>
-                                      <span className="badge badge-sm">
-                                        {age}
-                                        {' '}
-                                        years old
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="collapse-content pt-0">
-                                  <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
-                                    <Mail size={12} />
-                                    {volunteer.email}
-                                  </div>
-                                  {volunteer.skills && volunteer.skills.length > 0 && (
-                                    <div className="mt-3">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        <SkillsList skills={volunteer.skills} />
-                                      </div>
-                                    </div>
-                                  )}
-                                  {volunteer.message && (
-                                    <div className="mt-3">
-                                      <p className="text-xs font-semibold opacity-70 mb-1">Message</p>
-                                      <p className="text-xs opacity-80 italic">
-                                        "
-                                        {volunteer.message}
-                                        "
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {enrollments.map(volunteer => (
+                            <VolunteerInfoCollapse
+                              key={volunteer.enrollment_id}
+                              volunteer={{ ...volunteer, id: volunteer.enrollment_id }}
+                            />
+                          ))}
                         </div>
                       )}
                 </div>

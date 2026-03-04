@@ -432,6 +432,30 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
     });
   }, [formValues.end_timestamp]);
 
+  const applicationStatus = useMemo(() => {
+    if (isEnrolled) {
+      return {
+        label: 'Accepted',
+        description: 'Your application was accepted and you are enrolled in this posting.',
+        badgeClassName: 'badge-success',
+      };
+    }
+
+    if (hasPendingApplication) {
+      return {
+        label: 'Pending',
+        description: 'Your application is waiting for the organization to review it.',
+        badgeClassName: 'badge-warning',
+      };
+    }
+
+    return {
+      label: 'Not Applied',
+      description: 'You have not applied to this posting yet.',
+      badgeClassName: 'badge-ghost',
+    };
+  }, [hasPendingApplication, isEnrolled]);
+
   if (loading) {
     return (
       <div className="grow bg-base-200">
@@ -498,67 +522,33 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
             </div>
           </div>
           <div className="flex gap-2">
-            {isVolunteerView
+            {!isVolunteerView && (isEditMode
               ? (
                   <>
-                    {isEnrolled
-                      ? (
-                          <button
-                            className="btn btn-error btn-outline"
-                            onClick={withdrawApplication}
-                            disabled={withdrawing}
-                          >
-                            {withdrawing ? 'Leaving...' : 'Leave Position'}
-                          </button>
-                        )
-                      : hasPendingApplication
-                        ? (
-                            <button
-                              className="btn btn-error btn-outline"
-                              onClick={withdrawApplication}
-                              disabled={withdrawing}
-                            >
-                              {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
-                            </button>
-                          )
-                        : (
-                            <button
-                              className="btn btn-primary"
-                              onClick={openApplyModal}
-                              disabled={applying}
-                            >
-                              {applying ? 'Applying...' : 'Apply'}
-                            </button>
-                          )}
+                    <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
+                      Cancel
+                    </button>
+                    <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
                   </>
                 )
-              : isEditMode
-                ? (
-                    <>
-                      <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
-                        Cancel
-                      </button>
-                      <button className="btn btn-primary" onClick={onSave} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </>
-                  )
-                : (
-                    <>
-                      <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
-                        <Edit3 size={16} />
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-outline btn-error"
-                        onClick={onDelete}
-                        disabled={deleting}
-                      >
-                        <Trash2 size={16} />
-                        {deleting ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </>
-                  )}
+              : (
+                  <>
+                    <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
+                      <Edit3 size={16} />
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-outline btn-error"
+                      onClick={onDelete}
+                      disabled={deleting}
+                    >
+                      <Trash2 size={16} />
+                      {deleting ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </>
+                ))}
           </div>
         </div>
 
@@ -747,6 +737,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                         ? 'Volunteers are accepted automatically.'
                         : 'Volunteers must be accepted by the organization.'}
                     </p>
+
                   </div>
                 </div>
 
@@ -768,6 +759,52 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
               </>
             )}
           >
+            {isVolunteerView && (
+              <div className="card bg-base-100 shadow-md">
+                <div className="card-body">
+                  <h5 className="font-bold text-lg">Application Status</h5>
+                  <span className={`badge mt-1 w-fit ${applicationStatus.badgeClassName}`}>
+                    {applicationStatus.label}
+                  </span>
+                  <p className="text-sm opacity-70 mt-2">
+                    {applicationStatus.description}
+                  </p>
+
+                  <div className="mt-3 flex justify-end">
+                    {isEnrolled
+                      ? (
+                          <button
+                            className="btn btn-error btn-outline"
+                            onClick={withdrawApplication}
+                            disabled={withdrawing}
+                          >
+                            {withdrawing ? 'Leaving...' : 'Leave Position'}
+                          </button>
+                        )
+                      : hasPendingApplication
+                        ? (
+                            <button
+                              className="btn btn-error btn-outline"
+                              onClick={withdrawApplication}
+                              disabled={withdrawing}
+                            >
+                              {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                            </button>
+                          )
+                        : (
+                            <button
+                              className="btn btn-primary"
+                              onClick={openApplyModal}
+                              disabled={applying}
+                            >
+                              {applying ? 'Applying...' : 'Apply'}
+                            </button>
+                          )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Required Skills</h5>

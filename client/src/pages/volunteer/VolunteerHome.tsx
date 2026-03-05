@@ -1,4 +1,4 @@
-import { Eye, Search } from 'lucide-react';
+import { Eye, TextSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -60,10 +60,10 @@ function VolunteerHome() {
         <PageHeader
           title="Find Opportunities"
           subtitle="Browse postings and apply to opportunities that match your interests."
-          icon={Search}
+          icon={TextSearch}
           badge={
             postings && (
-              <div className="badge badge-primary badge-outline">
+              <div className="badge badge-primary">
                 {postings.length}
                 {' '}
                 {postings.length === 1 ? 'Opportunity' : 'Opportunities'}

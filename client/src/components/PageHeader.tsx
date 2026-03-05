@@ -32,22 +32,24 @@ export default function PageHeader({
             <ArrowLeft size={20} />
           </button>
         )}
-        {Icon && <Icon className="text-primary" size={32} />}
-        <div>
-          <h3 className="text-3xl font-extrabold tracking-tight">{title}</h3>
-          {subtitle && (
-            <p className="opacity-70 mt-1">{subtitle}</p>
-          )}
+        <div className="flex gap-4">
+          {Icon && <Icon className="text-primary mt-0.5" size={32} />}
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-3xl font-extrabold tracking-tight">{title}</h3>
+              {badge && badge}
+            </div>
+            {subtitle && (
+              <p className="opacity-70 mt-1">{subtitle}</p>
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {badge && badge}
-        {actions && (
-          <div className="flex gap-2">
-            {actions}
-          </div>
-        )}
-      </div>
+      {actions && (
+        <div className="flex gap-2">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

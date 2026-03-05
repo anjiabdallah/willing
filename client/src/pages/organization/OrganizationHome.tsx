@@ -32,7 +32,7 @@ function OrganizationHome() {
           icon={ClipboardList}
           badge={
             postings && (
-              <div className="badge badge-primary badge-outline">
+              <div className="badge badge-primary">
                 {postings.length}
                 {' '}
                 {postings.length === 1 ? 'Posting' : 'Postings'}

@@ -28,7 +28,7 @@ function AdminHome() {
           badge={
             organizationRequests
               ? (
-                  <div className="badge badge-primary badge-outline">
+                  <div className="badge badge-primary">
                     {organizationRequests.length}
                     {' '}
                     Pending

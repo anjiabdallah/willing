@@ -1,12 +1,28 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import zod from 'zod';
 
+import {
+  OrganizationPostingApplicationAcceptanceResponse,
+  OrganizationPostingApplicationRejectionResponse,
+  OrganizationPostingApplicationsReponse,
+  OrganizationPostingCreateResponse,
+  OrganizationPostingDeleteResponse,
+  OrganizationPostingEnrollmentsResponse,
+  OrganizationPostingListResponse,
+  OrganizationPostingResponse,
+  OrganizationPostingUpdateResponse,
+} from './posting.types.js';
 import database from '../../../db/index.js';
-import { newOrganizationPostingSchema, type NewOrganizationPosting, type PostingSkill } from '../../../db/tables.js';
+import {
+  newOrganizationPostingSchema,
+  type NewOrganizationPosting,
+  type PostingSkill,
+} from '../../../db/tables.js';
 import { recomputePostingVectors } from '../../../services/embeddingUpdateService.js';
 
 const postingRouter = Router();
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial();
+
 const normalizeSkillList = (skills: string[]) => Array.from(new Set(skills.map(skill => skill.trim()).filter(Boolean))).sort();
 const areSkillListsEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false;
@@ -14,7 +30,11 @@ const areSkillListsEqual = (left: string[], right: string[]) => {
 };
 const areDatesEqual = (left: Date | undefined, right: Date | undefined) => (left?.getTime() ?? null) === (right?.getTime() ?? null);
 
-postingRouter.post('/', async (req, res) => {
+const postingIdParamsSchema = zod.object({
+  id: zod.coerce.number().int().positive('ID must be a positive number'),
+});
+
+postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateResponse>) => {
   const body: NewOrganizationPosting = newOrganizationPostingSchema.parse(req.body);
   const orgId = req.userJWT!.id;
 
@@ -70,9 +90,126 @@ postingRouter.post('/', async (req, res) => {
   res.json({ posting, skills });
 });
 
-postingRouter.put('/:postingId', async (req, res) => {
-  const postingId = zod.coerce.number().parse(req.params.postingId);
+postingRouter.get('/', async (req, res: Response<OrganizationPostingListResponse>) => {
   const orgId = req.userJWT!.id;
+
+  const postings = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_id', '=', orgId)
+    .orderBy('start_timestamp', 'asc')
+    .execute();
+
+  const postingIds = postings.map(p => p.id);
+  const skills = postingIds.length > 0
+    ? await database
+        .selectFrom('posting_skill')
+        .selectAll()
+        .where('posting_id', 'in', postingIds)
+        .execute()
+    : [];
+
+  const skillsByPostingId = new Map<number, PostingSkill[]>();
+  skills.forEach((skill) => {
+    if (!skillsByPostingId.has(skill.posting_id)) {
+      skillsByPostingId.set(skill.posting_id, []);
+    }
+    skillsByPostingId.get(skill.posting_id)!.push(skill);
+  });
+
+  const postingsWithSkills = postings.map(posting => ({
+    ...posting,
+    skills: skillsByPostingId.get(posting.id) || [],
+  }));
+
+  res.json({ postings: postingsWithSkills });
+});
+
+postingRouter.get('/:id', async (req, res: Response<OrganizationPostingResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .selectAll()
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  const skills = await database
+    .selectFrom('posting_skill')
+    .selectAll()
+    .where('posting_id', '=', postingId)
+    .execute();
+
+  res.json({ posting, skills });
+});
+
+postingRouter.get('/:id/enrollments', async (req, res: Response<OrganizationPostingEnrollmentsResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  const enrollments = await database
+    .selectFrom('enrollment')
+    .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+    .select([
+      'enrollment.id as enrollment_id',
+      'enrollment.volunteer_id',
+      'enrollment.message',
+      'volunteer_account.first_name',
+      'volunteer_account.last_name',
+      'volunteer_account.email',
+      'volunteer_account.date_of_birth',
+      'volunteer_account.gender',
+    ])
+    .where('enrollment.posting_id', '=', postingId)
+    .execute();
+
+  const volunteerIds = enrollments.map(e => e.volunteer_id);
+  const skills = volunteerIds.length > 0
+    ? await database
+        .selectFrom('volunteer_skill')
+        .selectAll()
+        .where('volunteer_id', 'in', volunteerIds)
+        .execute()
+    : [];
+
+  const skillsByVolunteerId = new Map<number, typeof skills>();
+  skills.forEach((skill) => {
+    if (!skillsByVolunteerId.has(skill.volunteer_id)) {
+      skillsByVolunteerId.set(skill.volunteer_id, []);
+    }
+    skillsByVolunteerId.get(skill.volunteer_id)!.push(skill);
+  });
+
+  const enrollmentsWithSkills = enrollments.map(enrollment => ({
+    ...enrollment,
+    skills: skillsByVolunteerId.get(enrollment.volunteer_id) || [],
+  }));
+
+  res.json({ enrollments: enrollmentsWithSkills });
+});
+
+postingRouter.put('/:id', async (req, res: Response<OrganizationPostingUpdateResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
   const body = organizationPostingUpdateSchema.parse(req.body);
 
   const posting = await database
@@ -119,7 +256,7 @@ postingRouter.put('/:postingId', async (req, res) => {
     || didSkillsChange
   );
 
-  const result = await database.transaction().execute(async (trx) => {
+  await database.transaction().execute(async (trx) => {
     const postingFields: Record<string, unknown> = {};
 
     if (body.title !== undefined) postingFields.title = body.title;
@@ -158,14 +295,13 @@ postingRouter.put('/:postingId', async (req, res) => {
           .execute();
       }
     }
-    return { postingId };
   });
 
   if (shouldRecomputePostingVectors) {
-    await recomputePostingVectors(result.postingId);
+    await recomputePostingVectors(postingId);
   }
 
-  const postingWithVectors = await database
+  const updatedPosting = await database
     .selectFrom('organization_posting')
     .selectAll()
     .where('id', '=', postingId)
@@ -178,42 +314,208 @@ postingRouter.put('/:postingId', async (req, res) => {
     .where('posting_id', '=', postingId)
     .execute();
 
-  res.json({ posting: postingWithVectors, skills });
+  res.json({ posting: updatedPosting, skills });
 });
 
-postingRouter.get('/', async (req, res) => {
+postingRouter.delete('/:id', async (req, res: Response<OrganizationPostingDeleteResponse>) => {
   const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
-  const postings = await database
+  const posting = await database
     .selectFrom('organization_posting')
-    .selectAll()
+    .select(['id'])
+    .where('id', '=', postingId)
     .where('organization_id', '=', orgId)
-    .orderBy('start_timestamp', 'asc')
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  await database.transaction().execute(async (trx) => {
+    await trx.deleteFrom('posting_skill').where('posting_id', '=', postingId).execute();
+    await trx.deleteFrom('enrollment_application').where('posting_id', '=', postingId).execute();
+    await trx.deleteFrom('enrollment').where('posting_id', '=', postingId).execute();
+    await trx.deleteFrom('organization_posting').where('id', '=', postingId).execute();
+  });
+
+  res.json({});
+});
+
+postingRouter.get('/:id/applications', async (req, res: Response<OrganizationPostingApplicationsReponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  if (posting.is_open) {
+    res.json({ applications: [] });
+    return;
+  }
+
+  const applications = await database
+    .selectFrom('enrollment_application')
+    .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment_application.volunteer_id')
+    .select([
+      'enrollment_application.id as application_id',
+      'enrollment_application.volunteer_id',
+      'enrollment_application.message',
+      'enrollment_application.created_at',
+      'volunteer_account.first_name',
+      'volunteer_account.last_name',
+      'volunteer_account.email',
+      'volunteer_account.date_of_birth',
+      'volunteer_account.gender',
+    ])
+    .where('enrollment_application.posting_id', '=', postingId)
     .execute();
 
-  const postingIds = postings.map(p => p.id);
-  const skills = postingIds.length > 0
+  const volunteerIds = applications.map(a => a.volunteer_id);
+  const skills = volunteerIds.length > 0
     ? await database
-        .selectFrom('posting_skill')
+        .selectFrom('volunteer_skill')
         .selectAll()
-        .where('posting_id', 'in', postingIds)
+        .where('volunteer_id', 'in', volunteerIds)
         .execute()
     : [];
 
-  const skillsByPostingId = new Map<number, PostingSkill[]>();
+  const skillsByVolunteerId = new Map<number, typeof skills>();
   skills.forEach((skill) => {
-    if (!skillsByPostingId.has(skill.posting_id)) {
-      skillsByPostingId.set(skill.posting_id, []);
+    if (!skillsByVolunteerId.has(skill.volunteer_id)) {
+      skillsByVolunteerId.set(skill.volunteer_id, []);
     }
-    skillsByPostingId.get(skill.posting_id)!.push(skill);
+    skillsByVolunteerId.get(skill.volunteer_id)!.push(skill);
   });
 
-  const postingsWithSkills = postings.map(posting => ({
-    ...posting,
-    skills: skillsByPostingId.get(posting.id) || [],
+  const applicationsWithSkills = applications.map(app => ({
+    ...app,
+    skills: skillsByVolunteerId.get(app.volunteer_id) || [],
   }));
 
-  res.json({ posting: postingsWithSkills });
+  res.json({ applications: applicationsWithSkills });
+});
+
+postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: Response<OrganizationPostingApplicationAcceptanceResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId, applicationId } = zod.object({
+    id: zod.coerce.number().int().positive(),
+    applicationId: zod.coerce.number().int().positive(),
+  }).parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  if (posting.is_open) {
+    res.status(400);
+    throw new Error('Cannot accept applications for open postings');
+  }
+
+  const application = await database
+    .selectFrom('enrollment_application')
+    .select([
+      'enrollment_application.id',
+      'enrollment_application.volunteer_id',
+      'enrollment_application.posting_id',
+      'enrollment_application.message',
+    ])
+    .where('enrollment_application.id', '=', applicationId)
+    .executeTakeFirst();
+
+  if (!application) {
+    res.status(404);
+    throw new Error('Application not found');
+  }
+
+  if (application.posting_id !== postingId) {
+    res.status(403);
+    throw new Error('Application does not belong to this posting');
+  }
+
+  await database.transaction().execute(async (trx) => {
+    const enrollment = await trx
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: application.volunteer_id,
+        posting_id: application.posting_id,
+        message: application.message ?? undefined,
+      })
+      .returningAll()
+      .executeTakeFirst();
+
+    if (!enrollment) {
+      throw new Error('Failed to create enrollment');
+    }
+
+    await trx
+      .deleteFrom('enrollment_application')
+      .where('id', '=', applicationId)
+      .execute();
+  });
+
+  res.json({});
+});
+
+postingRouter.delete('/:id/applications/:applicationId', async (req, res: Response<OrganizationPostingApplicationRejectionResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId, applicationId } = zod.object({
+    id: zod.coerce.number().int().positive(),
+    applicationId: zod.coerce.number().int().positive(),
+  }).parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'is_open'])
+    .where('organization_posting.id', '=', postingId)
+    .where('organization_posting.organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  const application = await database
+    .selectFrom('enrollment_application')
+    .selectAll()
+    .where('id', '=', applicationId)
+    .executeTakeFirst();
+
+  if (!application) {
+    res.status(404);
+    throw new Error('Application not found');
+  }
+
+  if (application.posting_id !== postingId) {
+    res.status(403);
+    throw new Error('Application does not belong to this posting');
+  }
+
+  await database
+    .deleteFrom('enrollment_application')
+    .where('id', '=', applicationId)
+    .execute();
+
+  res.json({});
 });
 
 export default postingRouter;

@@ -13,7 +13,13 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use(cors({
-  origin: config.CLIENT_URL,
+  origin: config.NODE_ENV === 'development'
+    ? [
+        config.CLIENT_URL,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+      ]
+    : config.CLIENT_URL,
   credentials: true,
 }));
 
@@ -27,7 +33,7 @@ app.use((req, res, next) => {
 });
 
 // Error handler
-app.use(((err, req, res, _next) => {
+app.use(((err, _req, res, _next) => {
   if (res.statusCode === 200) {
     if (err instanceof ZodError) {
       res.status(400);

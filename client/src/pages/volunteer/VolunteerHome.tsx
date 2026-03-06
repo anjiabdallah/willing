@@ -1,88 +1,76 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Eye, TextSearch } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import SkillsList from '../../components/SkillsList';
+import PageHeader from '../../components/PageHeader';
+import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 
-interface postingType {
-  id: number;
-  organization_id: number;
-  title: string;
-  description: string;
-  location_name: string;
-  start_timestamp: Date;
-  end_timestamp: Date | null;
-  is_open: boolean;
-  organization_name: string;
-  skills: { name: string }[];
-}
-
-interface getPostingsResponse {
-  postings: postingType[];
-}
-
-interface Posting {
-  id: number;
-  title: string;
-  description: string;
-  location_name?: string;
-  start_timestamp: string;
-  end_timestamp?: string;
-  skills: { name: string }[];
-}
+import type { VolunteerPostingSearchResponse } from '../../../../server/src/api/types';
+import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
 
 function VolunteerHome() {
-  const [postings, setPostings] = useState<Posting[]>([]);
-  const [filters, setFilters] = useState({
+  const navigate = useNavigate();
+  const [postings, setPostings] = useState<PostingWithSkillsAndOrgName[]>([]);
+  const [filters, setFilters] = useState<{
+    location: string;
+    skill: string;
+    startDate: string;
+    endDate: string;
+  }>({
     location: '',
     skill: '',
     startDate: '',
     endDate: '',
   });
 
-  const fetchPostings = useCallback(async () => {
+  const fetchPostings = async (useFilters?: typeof filters) => {
+    const f = useFilters ?? filters;
     const query = new URLSearchParams();
 
-    if (filters.location)
-      query.append('location_name', filters.location);
-
-    if (filters.skill)
-      query.append('skill', filters.skill);
-
-    if (filters.startDate)
-      query.append('start_timestamp', filters.startDate);
-
-    if (filters.endDate)
-      query.append('end_timestamp', filters.endDate);
+    if (f.location)
+      query.append('location_name', f.location);
+    if (f.skill)
+      query.append('skill', f.skill);
+    if (f.startDate)
+      query.append('start_timestamp', f.startDate);
+    if (f.endDate)
+      query.append('end_timestamp', f.endDate);
 
     const url = '/volunteer/posting?' + query.toString();
 
-    const res = await requestServer<getPostingsResponse>(url, {}, true);
+    const res = await requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true });
 
-    const formattedPostings: Posting[] = res.postings.map(p => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-      location_name: p.location_name,
-      start_timestamp: new Date(p.start_timestamp).toISOString(),
-      end_timestamp: p.end_timestamp
-        ? new Date(p.end_timestamp).toISOString()
-        : undefined,
-      skills: p.skills,
-    }));
-
-    setPostings(formattedPostings);
-  }, [filters]);
+    setPostings(res.postings);
+  };
 
   useEffect(() => {
     fetchPostings();
   }, []);
 
+  const resetFilters = () => {
+    const reset = { location: '', skill: '', startDate: '', endDate: '' };
+    setFilters(reset);
+    fetchPostings(reset);
+  };
+
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <h3 className="text-3xl font-extrabold tracking-tight mb-6">
-          Volunteer Home
-        </h3>
+        <PageHeader
+          title="Find Opportunities"
+          subtitle="Browse postings and apply to opportunities that match your interests."
+          icon={TextSearch}
+          badge={
+            postings && (
+              <div className="badge badge-primary">
+                {postings.length}
+                {' '}
+                {postings.length === 1 ? 'Opportunity' : 'Opportunities'}
+              </div>
+            )
+          }
+        />
 
         <div className="mb-4">
           <h4 className="text-lg font-semibold mb-2">Filter</h4>
@@ -116,13 +104,23 @@ function VolunteerHome() {
               className="input input-bordered"
             />
           </div>
-          <button
-            className="btn btn-sm btn-primary"
-            disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
-            onClick={fetchPostings}
-          >
-            Apply Filters
-          </button>
+          <div className="flex gap-3">
+            <button
+              className="btn btn-sm btn-primary"
+              disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
+              onClick={() => void fetchPostings()}
+            >
+              Apply Filters
+            </button>
+
+            <button
+              className="btn btn-sm btn-ghost"
+              disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
+              onClick={resetFilters}
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
 
         {postings.length === 0
@@ -130,39 +128,23 @@ function VolunteerHome() {
               <p>No postings found yet</p>
             )
           : (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                 {postings.map(posting => (
-                  <div
+                  <PostingCard
                     key={posting.id}
-                    className="bg-base-100 shadow-md rounded-lg p-4 border border-base-300"
-                  >
-                    <h4 className="text-xl font-bold mb-2">{posting.title}</h4>
-                    <p className="text-base mb-2">{posting.description}</p>
-
-                    <p className="text-sm text-gray-500 mb-1">
-                      Location:
-                      {' '}
-                      {posting.location_name || 'N/A'}
-                    </p>
-
-                    <p className="text-sm text-gray-500 mb-1">
-                      Start:
-                      {' '}
-                      {new Date(posting.start_timestamp).toLocaleString()}
-                    </p>
-
-                    {posting.end_timestamp && (
-                      <p className="text-sm text-gray-500 mb-1">
-                        End:
-                        {' '}
-                        {new Date(posting.end_timestamp).toLocaleString()}
-                      </p>
+                    posting={posting}
+                    footer={(
+                      <div className="card-actions gap-2">
+                        <button
+                          className="btn btn-sm w-full gap-2"
+                          onClick={() => navigate(`/volunteer/posting/${posting.id}`)}
+                        >
+                          <Eye size={16} />
+                          <span>View Details</span>
+                        </button>
+                      </div>
                     )}
-
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <SkillsList skills={posting.skills} />
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             )}

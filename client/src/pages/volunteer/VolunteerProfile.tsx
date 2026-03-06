@@ -11,17 +11,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { volunteerAccountSchema, type VolunteerAccountWithoutPassword } from '../../../../server/src/db/tables';
+import { volunteerAccountSchema } from '../../../../server/src/db/tables';
+import ColumnLayout from '../../components/ColumnLayout';
 import Loading from '../../components/Loading';
+import PageHeader from '../../components/PageHeader';
 import SkillsInput from '../../components/SkillsInput';
 import SkillsList from '../../components/SkillsList';
+import { ToggleButton } from '../../components/ToggleButton';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
 
-type VolunteerProfileResponse = {
-  volunteer: VolunteerAccountWithoutPassword;
-  skills: string[];
-};
+import type { VolunteerProfileResponse } from '../../../../server/src/api/types';
 
 const DESCRIPTION_MAX_LENGTH = 300;
 
@@ -67,7 +67,7 @@ function VolunteerProfile() {
     try {
       setLoading(true);
       setFetchError(null);
-      const response = await requestServer<VolunteerProfileResponse>('/volunteer/profile', {}, true);
+      const response = await requestServer<VolunteerProfileResponse>('/volunteer/profile', { includeJwt: true });
       setProfile(response);
       setSkills(response.skills);
       form.reset({
@@ -160,8 +160,7 @@ function VolunteerProfile() {
         '/volunteer/profile',
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: {
             first_name: data.first_name,
             last_name: data.last_name,
             email: data.email,
@@ -170,9 +169,9 @@ function VolunteerProfile() {
             description: data.description,
             skills,
             privacy: data.privacy,
-          }),
+          },
+          includeJwt: true,
         },
-        true,
       );
 
       setProfile(response);
@@ -254,32 +253,32 @@ function VolunteerProfile() {
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="text-3xl font-extrabold tracking-tight">Volunteer Profile</h3>
-            <p className="opacity-70 mt-1">Manage your details, availability, and focus areas.</p>
-          </div>
-          <div className="flex gap-2">
-            {
-              isEditMode
-                ? (
-                    <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
-                      Cancel
-                    </button>
-                  )
-                : (
-                    <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
-                      Edit Profile
-                    </button>
-                  )
-            }
-            {isEditMode && (
-              <button className="btn btn-primary" onClick={onSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          title="Profile"
+          subtitle="Manage your details, availability, and focus areas."
+          actions={(
+            <>
+              {
+                isEditMode
+                  ? (
+                      <button className="btn btn-outline" onClick={onCancelEdit} disabled={saving}>
+                        Cancel
+                      </button>
+                    )
+                  : (
+                      <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
+                        Edit Profile
+                      </button>
+                    )
+              }
+              {isEditMode && (
+                <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              )}
+            </>
+          )}
+        />
 
         {saveMessage && (
           <div
@@ -300,122 +299,122 @@ function VolunteerProfile() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="flex items-center gap-4">
-                  <div className="avatar">
-                    {avatarUrl
-                      ? (
-                          <div className="rounded-full w-20">
-                            <img src={avatarUrl} alt={`${volunteerName} avatar`} />
-                          </div>
-                        )
-                      : (
-                          <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
-                            <span className="text-2xl">{initials || 'V'}</span>
-                          </div>
-                        )}
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold">{volunteerName}</h4>
-                    <div className="mt-1">
-                      <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                        {formValues.gender === 'male' && <Mars size={12} />}
-                        {formValues.gender === 'female' && <Venus size={12} />}
-                        {formValues.gender === 'other' && <span className="font-bold">*</span>}
-                        {formattedGender}
-                      </span>
+        <div className="mt-4">
+          <ColumnLayout
+            sidebar={(
+              <div className="card bg-base-100 shadow-md mt-4">
+                <div className="card-body">
+                  <div className="flex items-center gap-4">
+                    <div className="avatar">
+                      {avatarUrl
+                        ? (
+                            <div className="rounded-full w-20">
+                              <img src={avatarUrl} alt={`${volunteerName} avatar`} />
+                            </div>
+                          )
+                        : (
+                            <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
+                              <span className="text-2xl">{initials || 'V'}</span>
+                            </div>
+                          )}
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold">{volunteerName}</h4>
+                      <div className="mt-1">
+                        <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                          {formValues.gender === 'male' && <Mars size={12} />}
+                          {formValues.gender === 'female' && <Venus size={12} />}
+                          {formValues.gender === 'other' && <span className="font-bold">*</span>}
+                          {formattedGender}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="divider my-4" />
+                  <div className="divider my-4" />
 
-                {isEditMode
-                  ? (
-                      <div className="space-y-3">
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="first_name" label="First Name" />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="last_name" label="Last Name" />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField
-                            form={form}
-                            name="gender"
-                            label="Gender"
-                            selectOptions={[
-                              { label: 'Male', value: 'male' },
-                              { label: 'Female', value: 'female' },
-                              { label: 'Other', value: 'other' },
-                            ]}
-                          />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="email" label="Email" type="email" Icon={Mail} />
-                        </div>
-                        <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                          <FormField form={form} name="date_of_birth" label="Date of Birth" type="date" Icon={Calendar} />
-                        </div>
-                      </div>
-                    )
-                  : (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="opacity-70 flex items-center gap-2">
-                            <Mail size={14} />
-                            Email
-                          </span>
-                          <span className="font-medium text-right break-all">{formValues.email}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="opacity-70 flex items-center gap-2">
-                            <Calendar size={14} />
-                            Date of Birth
-                          </span>
-                          <span className="font-medium text-right">{formattedDateOfBirth}</span>
-                        </div>
-                      </div>
-                    )}
-
-                <div className="mt-4">
-                  <label className="text-sm opacity-70 mb-2 block">Description</label>
                   {isEditMode
                     ? (
-                        <>
-                          <textarea
-                            id="volunteer-description"
-                            className="textarea textarea-bordered w-full"
-                            {...form.register('description')}
-                            disabled={saving}
-                            rows={4}
-                            maxLength={DESCRIPTION_MAX_LENGTH}
-                          />
-                          <p className={`block min-h-5 text-xs mt-1 ${form.formState.errors.description ? 'text-error' : 'invisible'}`}>
-                            {form.formState.errors.description?.message || 'placeholder'}
-                          </p>
-                          <p className="text-xs opacity-60 mt-1 text-right">
-                            {formValues.description?.length || 0}
-                            /
-                            {DESCRIPTION_MAX_LENGTH}
-                          </p>
-                        </>
+                        <div className="space-y-3">
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="first_name" label="First Name" />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="last_name" label="Last Name" />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField
+                              form={form}
+                              name="gender"
+                              label="Gender"
+                              selectOptions={[
+                                { label: 'Male', value: 'male' },
+                                { label: 'Female', value: 'female' },
+                                { label: 'Other', value: 'other' },
+                              ]}
+                            />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="email" label="Email" type="email" Icon={Mail} />
+                          </div>
+                          <div className={saving ? 'pointer-events-none opacity-70' : ''}>
+                            <FormField form={form} name="date_of_birth" label="Date of Birth" type="date" Icon={Calendar} />
+                          </div>
+                        </div>
                       )
                     : (
-                        <p className="text-sm opacity-80 whitespace-pre-wrap break-words">
-                          {formValues.description || 'No description added yet.'}
-                        </p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="opacity-70 flex items-center gap-2">
+                              <Mail size={14} />
+                              Email
+                            </span>
+                            <span className="font-medium text-right break-all">{formValues.email}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="opacity-70 flex items-center gap-2">
+                              <Calendar size={14} />
+                              Date of Birth
+                            </span>
+                            <span className="font-medium text-right">{formattedDateOfBirth}</span>
+                          </div>
+                        </div>
                       )}
+
+                  <div className="mt-4">
+                    <label className="text-sm opacity-70 mb-2 block">Description</label>
+                    {isEditMode
+                      ? (
+                          <>
+                            <textarea
+                              id="volunteer-description"
+                              className="textarea textarea-bordered w-full"
+                              {...form.register('description')}
+                              disabled={saving}
+                              rows={4}
+                              maxLength={DESCRIPTION_MAX_LENGTH}
+                            />
+                            <p className={`block min-h-5 text-xs mt-1 ${form.formState.errors.description ? 'text-error' : 'invisible'}`}>
+                              {form.formState.errors.description?.message || 'placeholder'}
+                            </p>
+                            <p className="text-xs opacity-60 mt-1 text-right">
+                              {formValues.description?.length || 0}
+                              /
+                              {DESCRIPTION_MAX_LENGTH}
+                            </p>
+                          </>
+                        )
+                      : (
+                          <p className="text-sm opacity-80 whitespace-pre-wrap break-words">
+                            {formValues.description || 'No description added yet.'}
+                          </p>
+                        )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card bg-base-100 shadow-md">
+            )}
+          >
+            <div className="card bg-base-100 shadow-md mt-4">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Skills</h5>
                 <p className="text-sm opacity-70 mt-1">Add skills to highlight your expertise.</p>
@@ -448,29 +447,19 @@ function VolunteerProfile() {
             <div className="card bg-base-100 shadow-md">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Privacy Setting</h5>
-                <p className="text-sm opacity-70 mb-2">Profile visibility preference.</p>
+                <p className="text-sm opacity-70 mb-4">Profile visibility preference.</p>
                 {isEditMode
                   ? (
-                      <div className="join">
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'public' ? 'btn-primary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'public', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Globe size={14} />
-                          Public
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm join-item gap-2 ${formValues.privacy === 'private' ? 'btn-secondary' : ''}`}
-                          onClick={() => form.setValue('privacy', 'private', { shouldDirty: true, shouldTouch: true })}
-                          disabled={saving}
-                        >
-                          <Lock size={14} />
-                          Private
-                        </button>
-                      </div>
+                      <ToggleButton
+                        form={form}
+                        name="privacy"
+                        label="Visibility"
+                        disabled={saving}
+                        options={[
+                          { value: 'public', label: 'Public', description: 'Your profile is public', Icon: Globe, btnColor: 'btn-primary' },
+                          { value: 'private', label: 'Private', description: 'Your profile is private', Icon: Lock, btnColor: 'btn-secondary' },
+                        ]}
+                      />
                     )
                   : (
                       <span className={`badge gap-2 ${formValues.privacy === 'private' ? 'badge-secondary' : 'badge-primary'}`}>
@@ -480,7 +469,7 @@ function VolunteerProfile() {
                     )}
               </div>
             </div>
-          </div>
+          </ColumnLayout>
         </div>
       </div>
     </div>

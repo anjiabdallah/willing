@@ -1,8 +1,9 @@
 import bcrypt from 'bcrypt';
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
+import { VolunteerCreateResponse, VolunteerMeResponse, VolunteerProfileResponse } from './index.types.js';
 import volunteerPostingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
@@ -12,11 +13,6 @@ import { recomputeVolunteerProfileVector } from '../../../services/embeddingUpda
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerRouter = Router();
-
-type VolunteerProfileResponse = {
-  volunteer: VolunteerAccountWithoutPassword;
-  skills: string[];
-};
 
 const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
   id: true,
@@ -73,7 +69,7 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
   };
 };
 
-volunteerRouter.post('/create', async (req, res) => {
+volunteerRouter.post('/create', async (req, res: Response<VolunteerCreateResponse>) => {
   const body = newVolunteerAccountSchema.parse(req.body);
 
   const existingVolunteer = await database
@@ -118,12 +114,13 @@ volunteerRouter.post('/create', async (req, res) => {
 
   // @ts-expect-error: do not return the password
   delete newVolunteer.password;
-  res.status(201).json({ volunteer: newVolunteer, token });
+
+  res.json({ volunteer: newVolunteer, token });
 });
 
 volunteerRouter.use(authorizeOnly('volunteer'));
 
-volunteerRouter.get('/me', async (req, res) => {
+volunteerRouter.get('/me', async (req, res: Response<VolunteerMeResponse>) => {
   const volunteer = await database
     .selectFrom('volunteer_account')
     .selectAll()
@@ -136,12 +133,12 @@ volunteerRouter.get('/me', async (req, res) => {
   res.json({ volunteer });
 });
 
-volunteerRouter.get('/profile', async (req, res) => {
+volunteerRouter.get('/profile', async (req, res: Response<VolunteerProfileResponse>) => {
   const profile = await getVolunteerProfile(req.userJWT!.id);
   res.json(profile);
 });
 
-volunteerRouter.put('/profile', async (req, res) => {
+volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileResponse>) => {
   const body = volunteerProfileUpdateSchema.parse(req.body);
   const volunteerId = req.userJWT!.id;
   const existingVolunteer = await database

@@ -1,17 +1,34 @@
-export default async function requestServer<ReturnType>(path: string, request?: RequestInit, includeJwt?: boolean) {
-  let options = request;
+interface RequestServerOptions {
+  method?: string;
+  query?: Record<string, string>;
+  body?: unknown;
+  includeJwt?: boolean;
+}
+
+export default async function requestServer<ReturnType>(path: string, { body, method = 'GET', includeJwt = false, query }: RequestServerOptions) {
+  const headers = new Headers();
+  const options: RequestInit = {
+    method,
+    headers,
+  };
+
   if (includeJwt) {
-    if (!options) {
-      options = {};
-    }
-    if (!options.headers) {
-      options.headers = {};
-    }
-    options.headers = new Headers(options.headers);
-    options.headers.append('authorization', 'Bearer ' + localStorage.getItem('jwt'));
+    headers.append('Authorization', 'Bearer ' + localStorage.getItem('jwt'));
   }
 
-  const response = await fetch('http://localhost:9090' + path, options);
+  if (body) {
+    headers.append('Content-Type', 'application/json');
+    options.body = JSON.stringify(body);
+  }
+
+  let url = 'http://localhost:9090';
+  url += path;
+  if (query) {
+    url += '?';
+    url += (new URLSearchParams(query)).toString();
+  }
+
+  const response = await fetch(url, options);
   const json = await response.json();
 
   if (response.status >= 400) {

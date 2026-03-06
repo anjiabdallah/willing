@@ -13,13 +13,15 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
 import OrganizationPage from './pages/organization/OrganizationPage';
-import OrganizationPosting from './pages/organization/OrganizationPosting';
+import OrganizationPostingCreate from './pages/organization/OrganizationPostingCreate';
+import OrganizationPostingView from './pages/organization/OrganizationPostingView';
 import OrganizationRequest from './pages/organization/OrganizationRequest';
 import OrganizationSettings from './pages/organization/VolunteerSettings';
 import UserLoginPage from './pages/UserLoginPage';
 import VolunteerCreate from './pages/volunteer/VolunteerCreate';
 import VolunteerHome from './pages/volunteer/VolunteerHome';
 import VolunteerPage from './pages/volunteer/VolunteerPage';
+import VolunteerPostingView from './pages/volunteer/VolunteerPostingView';
 import VolunteerProfile from './pages/volunteer/VolunteerProfile';
 import VolunteerSettings from './pages/volunteer/VolunteerSettings';
 
@@ -87,7 +89,15 @@ createRoot(document.getElementById('root')!).render(
               path="posting"
               element={(
                 <OrganizationOnly>
-                  <OrganizationPosting />
+                  <OrganizationPostingCreate />
+                </OrganizationOnly>
+              )}
+            />
+            <Route
+              path="posting/:id"
+              element={(
+                <OrganizationOnly>
+                  <OrganizationPostingView />
                 </OrganizationOnly>
               )}
             />
@@ -114,6 +124,14 @@ createRoot(document.getElementById('root')!).render(
               element={(
                 <VolunteerOnly>
                   <VolunteerHome />
+                </VolunteerOnly>
+              )}
+            />
+            <Route
+              path="posting/:id"
+              element={(
+                <VolunteerOnly>
+                  <VolunteerPostingView />
                 </VolunteerOnly>
               )}
             />

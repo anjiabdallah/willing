@@ -6,38 +6,58 @@ A platform dedicated to bridging the gap between passionate volunteers and organ
 
 ## Setup
 
-### Server
-```sh
-cd server
-npm install
-npm run migrate
-```
+### Prerequisites
+- Node.js (v18 or higher)
+- Docker and Docker Compose
 
-### Client
-```sh
-cd client
-npm install
-```
-
-## Usage
-
-### Database
+### Database Setup
+First, start the PostgreSQL database using Docker:
 ```sh
 cd server
 docker compose up
 ```
 
-### Server
+### Server Setup
+1. Install dependencies:
+   ```sh
+   cd server
+   npm ci
+   ```
+
+2. Create environment configuration:
+   ```sh
+   cp .env.example .env
+   ```
+   Then edit `.env` and update the values as needed.
+
+3. Run database migrations:
+   ```sh
+   npm run migrate
+   ```
+
+### Client Setup
+```sh
+cd client
+npm ci
+```
+
+## Usage
+
+### Start the Server
 ```sh
 cd server
 npm start
 ```
+The server will run on `http://localhost:9090` (or the port specified in your `.env` file).
 
-### Client
+In development mode, migrations run automatically when the server starts.
+
+### Start the Client
 ```sh
 cd client
 npm start
 ```
+The client will run on `http://localhost:5173`.
 
 ## Tools and Technologies
 

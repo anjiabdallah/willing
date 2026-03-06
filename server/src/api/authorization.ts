@@ -15,7 +15,7 @@ export const authorizeOnly = (...roles: ('admin' | 'organization' | 'volunteer')
   }) as RequestHandler;
 };
 
-export const setUserJWT = (async (req, res, next) => {
+export const setUserJWT = (async (req, _res, next) => {
   if (!req.headers.authorization) {
     next();
     return;

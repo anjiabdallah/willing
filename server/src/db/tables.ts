@@ -1,9 +1,22 @@
 import zod from 'zod';
 
+import { genderSchema } from '../types.js';
+
 import type { Generated } from 'kysely';
 
-type WithGeneratedID<T> = Omit <T, 'id'> & {
+type WithGeneratedID<T> = Omit<T, 'id'> & {
   id: Generated<number>;
+};
+
+type WithGeneratedIDAndCreatedAt<T> = Omit<T, 'id' | 'created_at'> & {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+};
+
+type WithGeneratedIDAndTimestamps<T> = Omit<T, 'id' | 'created_at' | 'updated_at'> & {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 };
 
 const organizationWebsiteSchema = zod.url('URL is invalid')
@@ -41,15 +54,17 @@ export const volunteerAccountSchema = zod.object({
     .string()
     .min(1, 'Date of birth is required')
     .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' }),
-  gender: zod.enum(['male', 'female', 'other'], 'Gender should be \'female\', \'male\', or \'other\' '),
-  description: zod.string().optional(),
+  gender: genderSchema,
+  description: zod.string().max(500, 'Description must be less than 500 characters').optional(),
   privacy: zod.enum(['public', 'private']),
   profile_vector: zod.string().optional(),
   experience_vector: zod.string().optional(),
+  updated_at: zod.date(),
+  created_at: zod.date(),
 });
 export type VolunteerAccount = zod.infer<typeof volunteerAccountSchema>;
 
-export type VolunteerAccountTable = WithGeneratedID<VolunteerAccount>;
+export type VolunteerAccountTable = WithGeneratedIDAndTimestamps<VolunteerAccount>;
 
 export const newVolunteerAccountSchema = volunteerAccountSchema.omit({
   id: true,
@@ -57,10 +72,18 @@ export const newVolunteerAccountSchema = volunteerAccountSchema.omit({
   description: true,
   profile_vector: true,
   experience_vector: true,
+  created_at: true,
+  updated_at: true,
 });
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
 
-export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({ password: true });
+export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({
+  password: true,
+  profile_vector: true,
+  experience_vector: true,
+  created_at: true,
+  updated_at: true,
+});
 export type VolunteerAccountWithoutPassword = zod.infer<typeof volunteerAccountWithoutPasswordSchema>;
 
 // organization_request
@@ -82,13 +105,14 @@ export const organizationRequestSchema = zod.object({
     .max(180, { message: 'Longitude must be <= 180' })
     .optional(),
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
+  created_at: zod.date(),
 });
 
 export type OrganizationRequest = zod.infer<typeof organizationRequestSchema>;
 
-export type OrganizationRequestTable = WithGeneratedID<OrganizationRequest>;
+export type OrganizationRequestTable = WithGeneratedIDAndCreatedAt<OrganizationRequest>;
 
-export const newOrganizationRequestSchema = organizationRequestSchema.omit({ id: true });
+export const newOrganizationRequestSchema = organizationRequestSchema.omit({ id: true, created_at: true });
 export type NewOrganizationRequest = zod.infer<typeof newOrganizationRequestSchema>;
 
 // organization_account
@@ -112,16 +136,18 @@ export const organizationAccountSchema = zod.object({
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
   password: passwordSchema,
   org_vector: zod.string().optional(),
+  updated_at: zod.date(),
+  created_at: zod.date(),
 });
 
 export type OrganizationAccount = zod.infer<typeof organizationAccountSchema>;
 
-export type OrganizationAccountTable = WithGeneratedID<OrganizationAccount>;
+export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<OrganizationAccount>;
 
-export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true });
+export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, org_vector: true, created_at: true, updated_at: true });
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
 
-export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true });
+export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, org_vector: true, created_at: true, updated_at: true });
 export type OrganizationAccountWithoutPassword = zod.infer<typeof organizationAccountUpdate>;
 
 // admin_account
@@ -132,16 +158,18 @@ export const adminAccountSchema = zod.object({
   last_name: zod.string().min(1, 'last name should have at least 1 character'),
   email: zod.email('Invalid email').transform(val => val.toLowerCase().trim()),
   password: passwordSchema,
+  updated_at: zod.date(),
+  created_at: zod.date(),
 });
 
-export type AdminAccount = zod.infer <typeof adminAccountSchema>;
+export type AdminAccount = zod.infer<typeof adminAccountSchema>;
 
-export type AdminAccountTable = WithGeneratedID<AdminAccount>;
+export type AdminAccountTable = WithGeneratedIDAndTimestamps<AdminAccount>;
 
-export const newAdminAccountSchema = adminAccountSchema.omit({ id: true });
+export const newAdminAccountSchema = adminAccountSchema.omit({ id: true, created_at: true, updated_at: true });
 export type NewAdminAccount = zod.infer<typeof newAdminAccountSchema>;
 
-export const adminAccountUpdate = adminAccountSchema.omit({ password: true });
+export const adminAccountUpdate = adminAccountSchema.omit({ password: true, created_at: true, updated_at: true });
 export type AdminAccountWithoutPassword = zod.infer<typeof adminAccountUpdate>;
 
 // password_reset_token
@@ -183,68 +211,75 @@ export const organizationPostingSchema = zod.object({
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
   opportunity_vector: zod.string().optional(),
   posting_context_vector: zod.string().optional(),
+  updated_at: zod.date(),
+  created_at: zod.date(),
 });
 
 export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
 
-export type OrganizationPostingTable = WithGeneratedID<OrganizationPosting>;
+export type OrganizationPostingTable = WithGeneratedIDAndTimestamps<OrganizationPosting>;
 
 export const newOrganizationPostingSchema = organizationPostingSchema
-  .omit({ id: true, opportunity_vector: true, posting_context_vector: true })
-  .extend({ skills: zod
-    .array(zod.string().min(1, 'Skill name is required'))
-    .optional(),
+  .omit({ id: true, opportunity_vector: true, posting_context_vector: true, created_at: true, updated_at: true })
+  .extend({
+    skills: zod
+      .array(zod.string().min(1, 'Skill name is required'))
+      .optional(),
   });
 export type NewOrganizationPosting = zod.infer<typeof newOrganizationPostingSchema>;
 
 // posting_skill
 
-export const PostingSkillSchema = zod.object({
+export const postingSkillSchema = zod.object({
   id: zod.number(),
   posting_id: zod.number().min(1, 'Posting ID is required'),
   name: zod.string().min(1, 'Skill name is required'),
 });
 
-export type PostingSkill = zod.infer<typeof PostingSkillSchema>;
+export type PostingSkill = zod.infer<typeof postingSkillSchema>;
 
 export type PostingSkillTable = WithGeneratedID<PostingSkill>;
 
 // volunteer_skill
 
-export const VolunteerSkillSchema = zod.object({
+export const volunteerSkillSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   name: zod.string().min(1, 'Skill name is required'),
 });
 
-export type VolunteerSkill = zod.infer<typeof VolunteerSkillSchema>;
+export type VolunteerSkill = zod.infer<typeof volunteerSkillSchema>;
 
 export type VolunteerSkillTable = WithGeneratedID<VolunteerSkill>;
 
 // enrollment
 
-export const EnrollmentSchema = zod.object({
+export const enrollmentSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
   posting_id: zod.number().min(1, 'Posting ID is required'),
-  message: zod.string().optional(),
+  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').optional(),
+  created_at: zod.date(),
 });
 
-export type Enrollment = zod.infer<typeof EnrollmentSchema>;
+export type Enrollment = zod.infer<typeof enrollmentSchema>;
+export const newEnrollmentSchema = enrollmentSchema.omit({ id: true, created_at: true });
 
-export type EnrollmentTable = WithGeneratedID<Enrollment>;
+export type EnrollmentTable = WithGeneratedIDAndCreatedAt<Enrollment>;
 
 // enrollment_application
 
-export const EnrollmentApplicationSchema = zod.object({
+export const enrollmentApplicationSchema = zod.object({
   id: zod.number(),
   volunteer_id: zod.number().min(1, 'Volunteer ID is required'),
-  enrollment_id: zod.number().min(1, 'Enrollment ID is required'),
-  message: zod.string().optional(),
+  posting_id: zod.number().min(1, 'Posting ID is required'),
+  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').optional(),
+  created_at: zod.date(),
 });
 
-export type EnrollmentApplication = zod.infer<typeof EnrollmentApplicationSchema>;
-export type EnrollmentApplicationTable = WithGeneratedID<EnrollmentApplication>;
+export type EnrollmentApplication = zod.infer<typeof enrollmentApplicationSchema>;
+export const newEnrollmentApplicationSchema = enrollmentApplicationSchema.omit({ id: true, created_at: true });
+export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
 export interface Database {
   volunteer_account: VolunteerAccountTable;

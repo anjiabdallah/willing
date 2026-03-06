@@ -1,8 +1,9 @@
 import bcrypt from 'bcrypt';
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
+import { AdminLoginResponse, AdminMeResponse, AdminOrganizationRequestReviewResponse, AdminOrganizationRequestsResponse } from './index.types.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
 import database from '../../../db/index.js';
@@ -13,7 +14,7 @@ import { authorizeOnly } from '../../authorization.js';
 
 const adminRouter = Router();
 
-adminRouter.post('/login', async (req, res) => {
+adminRouter.post('/login', async (req, res: Response<AdminLoginResponse>) => {
   const body = loginInfoSchema.parse(req.body);
 
   const account = await database
@@ -53,7 +54,7 @@ adminRouter.post('/login', async (req, res) => {
 
 adminRouter.use(authorizeOnly('admin'));
 
-adminRouter.get('/me', async (req, res) => {
+adminRouter.get('/me', async (req, res: Response<AdminMeResponse>) => {
   const admin = await database
     .selectFrom('admin_account')
     .selectAll()
@@ -66,7 +67,7 @@ adminRouter.get('/me', async (req, res) => {
   res.json({ admin });
 });
 
-adminRouter.get('/getOrganizationRequests', async (req, res) => {
+adminRouter.get('/getOrganizationRequests', async (_req, res: Response<AdminOrganizationRequestsResponse>) => {
   const organizationRequests = await database
     .selectFrom('organization_request')
     .selectAll()
@@ -75,7 +76,7 @@ adminRouter.get('/getOrganizationRequests', async (req, res) => {
   res.json({ organizationRequests });
 });
 
-adminRouter.post('/reviewOrganizationRequest', async (req, res, next) => {
+adminRouter.post('/reviewOrganizationRequest', async (req, res: Response<AdminOrganizationRequestReviewResponse>, next) => {
   const { requestId, accepted, reason } = zod.object({
     requestId: zod.number(),
     accepted: zod.boolean(),
@@ -95,7 +96,7 @@ adminRouter.post('/reviewOrganizationRequest', async (req, res, next) => {
   }
 
   if (!accepted) {
-    sendOrganizationRejectionEmail(organizationRequest, reason);
+    await sendOrganizationRejectionEmail(organizationRequest, reason);
     await database
       .deleteFrom('organization_request')
       .where('id', '=', requestId)

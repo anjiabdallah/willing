@@ -1,17 +1,16 @@
-import { Inbox, ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, Inbox } from 'lucide-react';
 import { useCallback } from 'react';
 
 import OrganizationRequestReviewCard from './components/OrganizationRequestReviewCard';
+import PageHeader from '../../components/PageHeader';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { OrganizationRequest } from '../../../../server/src/db/tables';
+import type { AdminOrganizationRequestsResponse } from '../../../../server/src/api/types';
 
 function AdminHome() {
   const getOrganizationRequests = useCallback(async () => {
-    const res = await requestServer<{
-      organizationRequests: OrganizationRequest[];
-    }>('/admin/getOrganizationRequests', {}, true);
+    const res = await requestServer<AdminOrganizationRequestsResponse>('/admin/getOrganizationRequests', { includeJwt: true });
     return res.organizationRequests;
   }, []);
 
@@ -23,26 +22,23 @@ function AdminHome() {
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <ClipboardCheck className="text-primary" size={32} />
-            <h3 className="text-3xl font-extrabold tracking-tight">Organization Requests</h3>
-          </div>
-          {
-            (organizationRequests)
+        <PageHeader
+          title="Organization Requests"
+          icon={ClipboardCheck}
+          badge={
+            organizationRequests
               ? (
-                  <div className="badge badge-primary badge-outline">
+                  <div className="badge badge-primary">
                     {organizationRequests.length}
                     {' '}
                     Pending
                   </div>
                 )
               : (
-                  <div className="w-22 h-6 skeleton">
-                  </div>
+                  <div className="w-22 h-6 skeleton" />
                 )
           }
-        </div>
+        />
 
         {
           organizationRequests

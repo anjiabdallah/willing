@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
+import CalenderInfo from '../../components/CalenderInfo.tsx';
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
 import PageHeader from '../../components/PageHeader';
@@ -135,21 +136,11 @@ export default function OrganizationPostingCreate() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      form={form}
-                      label="Start Date"
-                      name="start_timestamp"
-                      type="datetime-local"
-                    />
-
-                    <FormField
-                      form={form}
-                      label="End Date"
-                      name="end_timestamp"
-                      type="datetime-local"
-                    />
-                  </div>
+                  <CalenderInfo
+                    form={form}
+                    startName="start_timestamp"
+                    endName="end_timestamp"
+                  />
 
                   <SkillsInput skills={skills} setSkills={setSkills} />
 

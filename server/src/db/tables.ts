@@ -249,13 +249,12 @@ export const enrollmentSchema = zod.object({
 export type Enrollment = zod.infer<typeof enrollmentSchema>;
 export const newEnrollmentSchema = enrollmentSchema.omit({ id: true, created_at: true, experience_vector: true, is_done: true });
 
-export type EnrollmentTable =
-  Omit<Enrollment, 'id' | 'created_at' | 'is_done' | 'experience_vector'> & {
-    id: Generated<number>;
-    created_at: Generated<Date>;
-    is_done: Generated<boolean>;
-    experience_vector: Generated<unknown>;
-  };
+export type EnrollmentTable = Omit<Enrollment, 'id' | 'created_at' | 'is_done' | 'experience_vector'> & {
+  id: Generated<number>;
+  created_at: Generated<Date>;
+  is_done: Generated<boolean>;
+  experience_vector: Generated<unknown>;
+};
 // enrollment_application
 
 export const enrollmentApplicationSchema = zod.object({

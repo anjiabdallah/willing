@@ -55,6 +55,7 @@ export const volunteerAccountSchema = zod.object({
     .min(1, 'Date of birth is required')
     .refine(str => !isNaN(Date.parse(str)), { message: 'Invalid date format' }),
   gender: genderSchema,
+  cv_path: zod.string().trim().max(256, 'CV path must be at most 256 characters').optional(),
   description: zod.string().max(500, 'Description must be less than 500 characters').optional(),
   privacy: zod.enum(['public', 'private']),
   profile_vector: zod.string().optional(),
@@ -69,6 +70,7 @@ export type VolunteerAccountTable = WithGeneratedIDAndTimestamps<VolunteerAccoun
 export const newVolunteerAccountSchema = volunteerAccountSchema.omit({
   id: true,
   privacy: true,
+  cv_path: true,
   description: true,
   profile_vector: true,
   experience_vector: true,

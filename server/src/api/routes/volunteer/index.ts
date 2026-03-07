@@ -41,6 +41,7 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
       'email',
       'date_of_birth',
       'gender',
+      'cv_path',
       'description',
       'privacy',
     ])
@@ -63,6 +64,7 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
       date_of_birth: volunteer.date_of_birth,
       gender: volunteer.gender,
       privacy: volunteer.privacy,
+      ...(volunteer.cv_path !== undefined ? { cv_path: volunteer.cv_path } : {}),
       ...(volunteer.description !== undefined ? { description: volunteer.description } : {}),
     },
     skills: volunteerSkills.map(skill => skill.name),
@@ -149,6 +151,7 @@ volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileRespon
       'email',
       'date_of_birth',
       'gender',
+      'cv_path',
       'description',
       'privacy',
     ])
@@ -197,6 +200,7 @@ volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileRespon
     if (body.email !== undefined) volunteerUpdate.email = body.email;
     if (body.date_of_birth !== undefined) volunteerUpdate.date_of_birth = body.date_of_birth;
     if (body.gender !== undefined) volunteerUpdate.gender = body.gender;
+    if (body.cv_path !== undefined) volunteerUpdate.cv_path = body.cv_path;
     if (body.description !== undefined) volunteerUpdate.description = body.description;
     if (body.privacy !== undefined) volunteerUpdate.privacy = body.privacy;
 

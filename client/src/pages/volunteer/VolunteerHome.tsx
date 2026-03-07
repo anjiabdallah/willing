@@ -2,6 +2,7 @@ import { Eye, TextSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import CalenderInfo from '../../components/CalenderInfo.tsx';
 import PageHeader from '../../components/PageHeader';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
@@ -89,19 +90,14 @@ function VolunteerHome() {
               onChange={e => setFilters({ ...filters, skill: e.target.value })}
               className="input input-bordered"
             />
-            <input
-              type="date"
-              placeholder="Start Date"
-              value={filters.startDate}
-              onChange={e => setFilters({ ...filters, startDate: e.target.value })}
-              className="input input-bordered"
-            />
-            <input
-              type="date"
-              placeholder="End Date"
-              value={filters.endDate}
-              onChange={e => setFilters({ ...filters, endDate: e.target.value })}
-              className="input input-bordered"
+            <CalenderInfo
+              startValue={filters.startDate}
+              endValue={filters.endDate}
+              onStartChange={(value: string) => setFilters({ ...filters, startDate: value })}
+              onEndChange={(value: string) => setFilters({ ...filters, endDate: value })}
+              inputType="date"
+              startPlaceholder="Start Date"
+              endPlaceholder="End Date"
             />
           </div>
           <div className="flex gap-3">

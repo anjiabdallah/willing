@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
-import CalenderInfo from '../../components/CalenderInfo.tsx';
+import CalendarInfo from '../../components/CalendarInfo.tsx';
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
 import PageHeader from '../../components/PageHeader';
@@ -32,6 +32,8 @@ export default function OrganizationPostingCreate() {
 
   const [skills, setSkills] = useState<string[]>([]);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
+  const startTimestamp = useWatch({ control: form.control, name: 'start_timestamp' }) ?? '';
+  const endTimestamp = useWatch({ control: form.control, name: 'end_timestamp' }) ?? '';
 
   const submit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {
@@ -136,10 +138,27 @@ export default function OrganizationPostingCreate() {
                     />
                   </div>
 
-                  <CalenderInfo
-                    form={form}
-                    startName="start_timestamp"
-                    endName="end_timestamp"
+                  <CalendarInfo
+                    startValue={startTimestamp}
+                    endValue={endTimestamp}
+                    onStartChange={(value: string) => {
+                      form.setValue('start_timestamp', value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                    onEndChange={(value: string) => {
+                      form.setValue('end_timestamp', value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                    inputType="datetime-local"
+                    className="grid grid-cols-2 gap-3"
+                    startPlaceholder="Start Date & Time"
+                    endPlaceholder="End Date & Time"
                   />
 
                   <SkillsInput skills={skills} setSkills={setSkills} />

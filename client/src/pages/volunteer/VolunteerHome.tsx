@@ -2,7 +2,7 @@ import { Eye, TextSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import CalenderInfo from '../../components/CalenderInfo.tsx';
+import CalendarInfo from '../../components/CalendarInfo.tsx';
 import PageHeader from '../../components/PageHeader';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
@@ -90,7 +90,7 @@ function VolunteerHome() {
               onChange={e => setFilters({ ...filters, skill: e.target.value })}
               className="input input-bordered"
             />
-            <CalenderInfo
+            <CalendarInfo
               startValue={filters.startDate}
               endValue={filters.endDate}
               onStartChange={(value: string) => setFilters({ ...filters, startDate: value })}

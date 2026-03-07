@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import CalenderInfo from './CalenderInfo.tsx';
+import CalendarInfo from './CalendarInfo.tsx';
 import ColumnLayout from './ColumnLayout';
 import Loading from './Loading';
 import LocationPicker from './LocationPicker';
@@ -610,7 +610,7 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
                               placeholder="Optional"
                               Icon={ShieldCheck}
                             />
-                            <CalenderInfo
+                            <CalendarInfo
                               form={form}
                               startName="start_timestamp"
                               endName="end_timestamp"

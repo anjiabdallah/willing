@@ -32,7 +32,7 @@ interface CalendarControlledProps extends CalendarCommonProps {
 
 type CalendarProps<T extends FieldValues> = CalendarFormProps<T> | CalendarControlledProps;
 
-export default function CalenderInfo<T extends FieldValues>({
+export default function CalendarInfo<T extends FieldValues>({
   startLabel = 'Start Date',
   endLabel = 'End Date',
   inputType = 'datetime-local',
@@ -62,7 +62,7 @@ export default function CalenderInfo<T extends FieldValues>({
   }
 
   return (
-    <ControlledCalenderInfo
+    <ControlledCalendarInfo
       inputType={inputType}
       className={className}
       startLabel={startLabel}
@@ -77,7 +77,7 @@ export default function CalenderInfo<T extends FieldValues>({
   );
 }
 
-function ControlledCalenderInfo({
+function ControlledCalendarInfo({
   startLabel,
   endLabel,
   className,
@@ -98,18 +98,40 @@ function ControlledCalenderInfo({
 
   const controlledClassName = className ?? 'relative';
 
-  if (inputType === 'date') {
-    const selectedStartDate = startValue
-      ? new Date(`${startValue}T00:00:00`)
-      : undefined;
-    const selectedEndDate = endValue
-      ? new Date(`${endValue}T00:00:00`)
-      : undefined;
+  if (inputType === 'date' || inputType === 'datetime-local') {
+    const parseSelectedDate = (value: string) => {
+      if (!value) return undefined;
+      const datePart = value.split('T')[0];
+      if (!datePart) return undefined;
 
-    const formatter = new Intl.DateTimeFormat(undefined, {
+      const parsed = new Date(`${datePart}T00:00:00`);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    };
+
+    const getSelectedTime = (value: string) => {
+      if (inputType !== 'datetime-local' || !value) return '';
+
+      const timeMatch = value.match(/T(\d{2}:\d{2})/);
+      return timeMatch?.[1] ?? '';
+    };
+
+    const selectedStartDate = parseSelectedDate(startValue);
+    const selectedEndDate = parseSelectedDate(endValue);
+    const selectedStartTime = getSelectedTime(startValue);
+    const selectedEndTime = getSelectedTime(endValue);
+
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+    });
+
+    const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
     });
 
     const formatInputDate = (date: Date) => {
@@ -120,12 +142,34 @@ function ControlledCalenderInfo({
       return `${year}-${month}-${day}`;
     };
 
+    const formatDisplayDateTime = (date: Date, time: string) => {
+      if (!time) return dateFormatter.format(date);
+
+      const [hours, minutes] = time.split(':').map(Number);
+      const displayDate = new Date(date);
+      displayDate.setHours(hours, minutes, 0, 0);
+
+      return dateTimeFormatter.format(displayDate);
+    };
+
+    const buildNextValue = (date: Date, currentValue: string) => {
+      const datePart = formatInputDate(date);
+      if (inputType === 'date') return datePart;
+
+      const existingTime = getSelectedTime(currentValue) || '00:00';
+      return `${datePart}T${existingTime}`;
+    };
+
     const startText = selectedStartDate
-      ? formatter.format(selectedStartDate)
+      ? inputType === 'datetime-local'
+        ? formatDisplayDateTime(selectedStartDate, selectedStartTime)
+        : dateFormatter.format(selectedStartDate)
       : (startPlaceholder ?? startLabel);
 
     const endText = selectedEndDate
-      ? formatter.format(selectedEndDate)
+      ? inputType === 'datetime-local'
+        ? formatDisplayDateTime(selectedEndDate, selectedEndTime)
+        : dateFormatter.format(selectedEndDate)
       : (endPlaceholder ?? endLabel);
 
     const dateClassName = className ?? 'contents';
@@ -149,12 +193,30 @@ function ControlledCalenderInfo({
                 mode="single"
                 selected={selectedStartDate}
                 onSelect={(date) => {
-                  onStartChange(date ? formatInputDate(date) : '');
-                  if (date) {
+                  onStartChange(date ? buildNextValue(date, startValue) : '');
+                  if (date && inputType === 'date') {
                     setActivePicker(null);
                   }
                 }}
               />
+
+              {inputType === 'datetime-local' && (
+                <fieldset className="fieldset mt-2">
+                  <label className="label py-1">
+                    <span className="label-text text-xs">Time</span>
+                  </label>
+                  <input
+                    type="time"
+                    className="input input-bordered input-sm w-full"
+                    value={selectedStartTime}
+                    onChange={(event) => {
+                      if (!selectedStartDate) return;
+                      onStartChange(`${formatInputDate(selectedStartDate)}T${event.target.value}`);
+                    }}
+                    disabled={!selectedStartDate}
+                  />
+                </fieldset>
+              )}
 
               <div className="mt-3 flex items-center justify-between">
                 <button
@@ -194,12 +256,30 @@ function ControlledCalenderInfo({
                 mode="single"
                 selected={selectedEndDate}
                 onSelect={(date) => {
-                  onEndChange(date ? formatInputDate(date) : '');
-                  if (date) {
+                  onEndChange(date ? buildNextValue(date, endValue) : '');
+                  if (date && inputType === 'date') {
                     setActivePicker(null);
                   }
                 }}
               />
+
+              {inputType === 'datetime-local' && (
+                <fieldset className="fieldset mt-2">
+                  <label className="label py-1">
+                    <span className="label-text text-xs">Time</span>
+                  </label>
+                  <input
+                    type="time"
+                    className="input input-bordered input-sm w-full"
+                    value={selectedEndTime}
+                    onChange={(event) => {
+                      if (!selectedEndDate) return;
+                      onEndChange(`${formatInputDate(selectedEndDate)}T${event.target.value}`);
+                    }}
+                    disabled={!selectedEndDate}
+                  />
+                </fieldset>
+              )}
 
               <div className="mt-3 flex items-center justify-between">
                 <button

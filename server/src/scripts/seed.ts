@@ -14,16 +14,18 @@ async function seed() {
   const passwordHash = await bcrypt.hash(PASSWORD_PLAIN, 10);
 
   await sql`
-    TRUNCATE TABLE
-      posting_skill,
-      volunteer_skill,
-      organization_posting,
-      organization_request,
-      volunteer_account,
-      organization_account,
-      admin_account
-    RESTART IDENTITY CASCADE
-  `.execute(database);
+  TRUNCATE TABLE
+    enrollment_application,
+    enrollment,
+    posting_skill,
+    volunteer_skill,
+    organization_posting,
+    organization_request,
+    volunteer_account,
+    organization_account,
+    admin_account
+  RESTART IDENTITY CASCADE
+`.execute(database);
 
   await database.insertInto('admin_account').values({
     first_name: 'Admin',
@@ -257,6 +259,50 @@ async function seed() {
 
     { volunteer_id: volByEmail.get('vol4@willing.com')!, name: 'Organization' },
     { volunteer_id: volByEmail.get('vol4@willing.com')!, name: 'Empathy' },
+  ]).execute();
+  await database.insertInto('enrollment').values([
+    {
+      volunteer_id: volByEmail.get('vol1@willing.com')!,
+      posting_id: postingByTitle.get('Food Packing')!,
+      message: 'Happy to help with packing and organizing.',
+      is_done: true,
+      experience_vector: null,
+    },
+    {
+      volunteer_id: volByEmail.get('vol1@willing.com')!,
+      posting_id: postingByTitle.get('Beach Cleanup')!,
+      message: 'I can help with cleanup and carrying supplies.',
+      is_done: false,
+      experience_vector: null,
+    },
+    {
+      volunteer_id: volByEmail.get('vol2@willing.com')!,
+      posting_id: postingByTitle.get('Tutor Kids')!,
+      message: 'I have tutoring experience and enjoy working with children.',
+      is_done: true,
+      experience_vector: null,
+    },
+    {
+      volunteer_id: volByEmail.get('vol3@willing.com')!,
+      posting_id: postingByTitle.get('Community Kitchen')!,
+      message: 'Comfortable helping with cooking and serving.',
+      is_done: false,
+      experience_vector: null,
+    },
+    {
+      volunteer_id: volByEmail.get('vol4@willing.com')!,
+      posting_id: postingByTitle.get('Sort Donations')!,
+      message: 'Good at sorting and keeping things organized.',
+      is_done: true,
+      experience_vector: null,
+    },
+    {
+      volunteer_id: volByEmail.get('vol4@willing.com')!,
+      posting_id: postingByTitle.get('Elder Visit')!,
+      message: 'Patient and happy to spend time with residents.',
+      is_done: false,
+      experience_vector: null,
+    },
   ]).execute();
 
   console.log('✅ Seed complete.');

@@ -96,8 +96,8 @@ async function seed() {
   const volunteers = await database.insertInto('volunteer_account')
     .values([
       {
-        first_name: 'Vol',
-        last_name: 'One',
+        first_name: 'Marc',
+        last_name: 'Hamamji',
         email: 'vol1@willing.com',
         password: passwordHash,
         gender: 'male',
@@ -106,8 +106,8 @@ async function seed() {
         privacy: 'public',
       },
       {
-        first_name: 'Vol',
-        last_name: 'Two',
+        first_name: 'Marca',
+        last_name: 'Hamamjian',
         email: 'vol2@willing.com',
         password: passwordHash,
         gender: 'female',
@@ -116,8 +116,8 @@ async function seed() {
         privacy: 'public',
       },
       {
-        first_name: 'Vol',
-        last_name: 'Three',
+        first_name: 'Marc',
+        last_name: 'Hamamjiany',
         email: 'vol3@willing.com',
         password: passwordHash,
         gender: 'other',
@@ -126,8 +126,8 @@ async function seed() {
         privacy: 'public',
       },
       {
-        first_name: 'Vol',
-        last_name: 'Four',
+        first_name: 'Marc',
+        last_name: 'Mamji',
         email: 'vol4@willing.com',
         password: passwordHash,
         gender: 'female',

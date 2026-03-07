@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext';
+import Navbar from '../components/layout/navbars/EmptyNavbar';
 import Loading from '../components/Loading';
-import Navbar from '../components/Navbar';
 import { loginFormSchema, type LoginFormData } from '../schemas/auth';
 import { executeAndShowError, FormField, FormRootError } from '../utils/formUtils';
 

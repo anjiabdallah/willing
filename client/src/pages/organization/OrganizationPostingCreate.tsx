@@ -5,10 +5,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import CalendarInfo from '../../components/CalendarInfo.tsx';
+import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import LocationPicker from '../../components/LocationPicker';
-import PageHeader from '../../components/PageHeader';
-import SkillsInput from '../../components/SkillsInput';
+import SkillsInput from '../../components/skills/SkillsInput';
 import { ToggleButton } from '../../components/ToggleButton';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/auth';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
@@ -81,7 +81,8 @@ export default function OrganizationPostingCreate() {
       <div className="p-6 md:container mx-auto">
         <PageHeader
           title="Create Posting"
-          backTo="/organization"
+          showBack
+          defaultBackTo="/organization"
         />
 
         <div className="card bg-base-100 w-full shadow-2xl">

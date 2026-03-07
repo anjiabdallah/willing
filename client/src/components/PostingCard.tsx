@@ -1,26 +1,69 @@
-import { Calendar, Cake, MapPin, Users } from 'lucide-react';
+import { Building2, Calendar, Cake, Clock, ExternalLink, LockOpen, MapPin, Users } from 'lucide-react';
+import { Link } from 'react-router';
 
-import SkillsList from './SkillsList';
+import SkillsList from './skills/SkillsList';
 
 import type { OrganizationPosting, PostingSkill } from '../../../server/src/db/tables';
-import type { ReactNode } from 'react';
 
 interface PostingCardProps {
   posting: OrganizationPosting & { skills: PostingSkill[] };
-  footer?: ReactNode;
+  organization?: {
+    name: string;
+    id: number;
+  };
 }
 
-function PostingCard({ posting, footer }: PostingCardProps) {
+function PostingCard({ posting, organization }: PostingCardProps) {
+  const postingDetailsPath = `/posting/${posting.id}`;
+
   return (
     <div className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow">
       <div className="card-body">
-        <h2 className="card-title text-primary text-lg mb-2">{posting.title}</h2>
-        <p className="text-sm opacity-80 mb-4 line-clamp-2">{posting.description}</p>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2">
+            <h2 className="card-title text-primary text-lg">
+              <Link to={postingDetailsPath} className="link link-primary link-hover no-underline hover:underline inline-flex items-center gap-1.5">
+                <span>{posting.title}</span>
+                <ExternalLink size={14} />
+              </Link>
+            </h2>
+          </div>
+          {posting.is_open
+            ? (
+                <span className="badge badge-primary gap-1 shrink-0">
+                  <LockOpen size={12} />
+                  Open
+                </span>
+              )
+            : (
+                <span className="badge badge-secondary gap-1 shrink-0">
+                  <Clock size={12} />
+                  Review Based
+                </span>
+              )}
+        </div>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <p className="text-sm opacity-80 line-clamp-2">{posting.description}</p>
+          {organization && (
+            <Link
+              to={`/organization/${organization.id}`}
+              className="link link-primary link-hover font-medium text-sm inline-flex items-center gap-1.5 shrink-0"
+            >
+              <Building2 size={14} />
+              <span>{organization.name}</span>
+            </Link>
+          )}
+        </div>
 
-        <div className="space-y-3 text-sm mb-4">
+        <div className="divider mt-0 mb-2" />
+
+        <div className="space-y-3 text-sm mb-2">
           <p className="flex items-center gap-2">
             <MapPin size={16} className="text-primary shrink-0" />
-            <span>{posting.location_name}</span>
+            <div>
+              <p className="text-xs opacity-70 font-semibold">LOCATION</p>
+              <span>{posting.location_name}</span>
+            </div>
           </p>
 
           {posting.end_timestamp
@@ -65,30 +108,37 @@ function PostingCard({ posting, footer }: PostingCardProps) {
                 </p>
               )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-4 pt-1">
             {posting.max_volunteers && (
-              <p className="flex items-center gap-1">
+              <p className="flex items-center gap-2 text-sm">
                 <Users size={16} className="text-primary shrink-0" />
-                <span>
-                  0/
-                  {posting.max_volunteers}
-                </span>
+                <div>
+                  <p className="text-xs opacity-70 font-semibold">VOLUNTEERS</p>
+                  <span>
+                    0/
+                    {posting.max_volunteers}
+                  </span>
+                </div>
               </p>
             )}
             {posting.minimum_age && (
-              <p className="flex items-center gap-1">
+              <p className="flex items-center gap-2 text-sm">
                 <Cake size={16} className="text-primary shrink-0" />
-                <span>
-                  {posting.minimum_age}
-                  +
-                </span>
+                <div>
+                  <p className="text-xs opacity-70 font-semibold">MIN AGE</p>
+                  <span>
+                    {posting.minimum_age}
+                    +
+                  </span>
+                </div>
               </p>
             )}
           </div>
         </div>
 
         {posting.skills && posting.skills.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-2">
+            <div className="divider mt-0 mb-2" />
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold opacity-70">REQUIRED SKILLS</p>
             </div>
@@ -98,11 +148,6 @@ function PostingCard({ posting, footer }: PostingCardProps) {
           </div>
         )}
 
-        {footer && (
-          <div className="pt-4 border-t border-base-200">
-            {footer}
-          </div>
-        )}
       </div>
     </div>
   );

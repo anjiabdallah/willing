@@ -1,11 +1,12 @@
 import { ArrowLeft, type LucideIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type PageHeaderProps = {
   title: string;
   subtitle?: string;
-  backTo?: string;
+  showBack?: boolean;
+  defaultBackTo?: string;
   actions?: ReactNode;
   icon?: LucideIcon;
   badge?: ReactNode;
@@ -14,20 +15,33 @@ type PageHeaderProps = {
 export default function PageHeader({
   title,
   subtitle,
-  backTo,
+  showBack = false,
+  defaultBackTo,
   actions,
   icon: Icon,
   badge,
 }: PageHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const onBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+
+    if (defaultBackTo) {
+      navigate(defaultBackTo);
+    }
+  };
 
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap mb-6 bg-base-200 -mx-6 px-6 py-4">
       <div className="flex items-center gap-3">
-        {backTo && (
+        {showBack && (
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => navigate(backTo)}
+            onClick={onBack}
           >
             <ArrowLeft size={20} />
           </button>

@@ -3,8 +3,8 @@ import { useContext } from 'react';
 import { Link } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext';
-import Footer from '../components/Footer';
-import Navbar from '../components/Navbar';
+import Footer from '../components/layout/Footer';
+import Navbar from '../components/layout/navbars/EmptyNavbar';
 
 function HomePage() {
   const auth = useContext(AuthContext);

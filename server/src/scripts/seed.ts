@@ -564,7 +564,7 @@ async function seed() {
     },
   ]).execute();
 
-  console.log('âœ… Seed complete.');
+  console.log('Seed complete.');
   console.log('Login creds (same password for all):', PASSWORD_PLAIN);
   console.log('Admin:', 'admin@willing.com');
   console.log('Orgs:', 'org1@willing.com', 'org2@willing.com', 'org3@willing.com');
@@ -583,7 +583,7 @@ async function seed() {
 }
 
 seed().catch(async (err) => {
-  console.error('âŒ Seed failed:', err);
+  console.error('Seed failed:', err);
   try {
     await database.destroy();
   } catch (_error) {

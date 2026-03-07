@@ -1,27 +1,10 @@
 import { readFile } from 'fs/promises';
-import { createRequire } from 'module';
 
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse') as (dataBuffer: Buffer) => Promise<{ text?: string }>;
+import { PDFParse } from 'pdf-parse';
 
 const MAX_CV_TEXT_CHARS = 12000;
 
-const isHttpUrl = (value: string) => /^https?:\/\//i.test(value);
-
 const normalizeExtractedText = (value: string) => value.trim().replace(/\s+/g, ' ');
-
-const readPdfBuffer = async (cvPath: string) => {
-  if (isHttpUrl(cvPath)) {
-    const response = await fetch(cvPath);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CV (status ${response.status})`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  }
-
-  return readFile(cvPath);
-};
 
 export const extractCvText = async (cvPath?: string | null): Promise<string | null> => {
   const normalizedPath = cvPath?.trim();
@@ -31,8 +14,12 @@ export const extractCvText = async (cvPath?: string | null): Promise<string | nu
   }
 
   try {
-    const pdfBuffer = await readPdfBuffer(normalizedPath);
-    const parsed = await pdfParse(pdfBuffer);
+    const pdfBuffer = await readFile(normalizedPath);
+    const parser = new PDFParse({ data: pdfBuffer });
+    const parsed = await parser.getText()
+      .finally(async () => {
+        await parser.destroy();
+      });
     const cleaned = normalizeExtractedText(parsed.text ?? '');
 
     if (!cleaned) {

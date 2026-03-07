@@ -14,12 +14,11 @@ const organizationRouter = Router();
 const organizationProfileUpdateSchema = organizationAccountSchema.omit({
   id: true,
   password: true,
+  email: true,
   org_vector: true,
   created_at: true,
   updated_at: true,
-}).partial().extend({
-  email: zod.email('Invalid email').transform(val => val.toLowerCase().trim()).optional(),
-});
+}).partial();
 
 const isSameNullableNumber = (left: number | undefined, right: number | undefined) => (left ?? null) === (right ?? null);
 
@@ -168,20 +167,6 @@ organizationRouter.put('/profile', async (req, res) => {
     ])
     .where('id', '=', organizationId)
     .executeTakeFirstOrThrow();
-
-  if (body.email !== undefined) {
-    const duplicateOrganization = await database
-      .selectFrom('organization_account')
-      .select('id')
-      .where('email', '=', body.email)
-      .where('id', '!=', organizationId)
-      .executeTakeFirst();
-
-    if (duplicateOrganization) {
-      res.status(409);
-      throw new Error('Another organization already uses this email');
-    }
-  }
 
   const shouldRecomputeOrganizationVector = (
     (body.name !== undefined && body.name !== existingOrganization.name)

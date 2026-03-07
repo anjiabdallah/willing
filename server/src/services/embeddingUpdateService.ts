@@ -10,7 +10,7 @@ import {
   weightedAverage,
 } from './embeddingService.js';
 import database from '../db/index.js';
-import { Database } from '../db/tables.js';
+import { type Database, type OrganizationAccount, type OrganizationPosting, type VolunteerAccountWithoutPassword } from '../db/tables.js';
 
 type DBExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -19,12 +19,18 @@ const EXPERIENCE_VECTOR_DECAY_LAMBDA = 0.35;
 
 const getRecencyRankWeight = (rank: number) => Math.exp(-EXPERIENCE_VECTOR_DECAY_LAMBDA * rank);
 
+type OrganizationEmbeddingSource = Pick<OrganizationAccount, 'name' | 'url' | 'location_name' | 'latitude' | 'longitude'>;
+type PostingEmbeddingSource = Pick<OrganizationPosting, 'title' | 'description' | 'location_name' | 'start_timestamp' | 'end_timestamp' | 'minimum_age' | 'max_volunteers'>;
+type VolunteerProfileEmbeddingSource = Pick<VolunteerAccountWithoutPassword, 'first_name' | 'last_name' | 'description' | 'gender'>;
+
 const updateOrganizationVector = async (organizationId: number, vector: number[], executor: DBExecutor) => {
-  await sql`
-    UPDATE organization_account
-    SET org_vector = ${vectorToSqlLiteral(vector)}::vector
-    WHERE id = ${organizationId}
-  `.execute(executor);
+  await executor
+    .updateTable('organization_account')
+    .set({
+      org_vector: sql<string>`${vectorToSqlLiteral(vector)}::vector`,
+    })
+    .where('id', '=', organizationId)
+    .execute();
 };
 
 const updatePostingVectors = async (
@@ -33,47 +39,48 @@ const updatePostingVectors = async (
   postingContextVector: number[],
   executor: DBExecutor,
 ) => {
-  await sql`
-    UPDATE organization_posting
-    SET
-      opportunity_vector = ${vectorToSqlLiteral(opportunityVector)}::vector,
-      posting_context_vector = ${vectorToSqlLiteral(postingContextVector)}::vector
-    WHERE id = ${postingId}
-  `.execute(executor);
+  await executor
+    .updateTable('organization_posting')
+    .set({
+      opportunity_vector: sql<string>`${vectorToSqlLiteral(opportunityVector)}::vector`,
+      posting_context_vector: sql<string>`${vectorToSqlLiteral(postingContextVector)}::vector`,
+    })
+    .where('id', '=', postingId)
+    .execute();
 };
 
 const updateVolunteerProfileVector = async (volunteerId: number, profileVector: number[], executor: DBExecutor) => {
-  await sql`
-    UPDATE volunteer_account
-    SET profile_vector = ${vectorToSqlLiteral(profileVector)}::vector
-    WHERE id = ${volunteerId}
-  `.execute(executor);
+  await executor
+    .updateTable('volunteer_account')
+    .set({
+      profile_vector: sql<string>`${vectorToSqlLiteral(profileVector)}::vector`,
+    })
+    .where('id', '=', volunteerId)
+    .execute();
 };
 
 const updateVolunteerExperienceVector = async (volunteerId: number, experienceVector: number[] | null, executor: DBExecutor) => {
   if (!experienceVector) {
-    await sql`
-      UPDATE volunteer_account
-      SET experience_vector = NULL
-      WHERE id = ${volunteerId}
-    `.execute(executor);
+    await executor
+      .updateTable('volunteer_account')
+      .set({
+        experience_vector: sql<string>`NULL`,
+      })
+      .where('id', '=', volunteerId)
+      .execute();
     return;
   }
 
-  await sql`
-    UPDATE volunteer_account
-    SET experience_vector = ${vectorToSqlLiteral(experienceVector)}::vector
-    WHERE id = ${volunteerId}
-  `.execute(executor);
+  await executor
+    .updateTable('volunteer_account')
+    .set({
+      experience_vector: sql<string>`${vectorToSqlLiteral(experienceVector)}::vector`,
+    })
+    .where('id', '=', volunteerId)
+    .execute();
 };
 
-const buildOrganizationText = (organization: {
-  name: string;
-  url: string;
-  location_name: string;
-  latitude: number | undefined;
-  longitude: number | undefined;
-}) => {
+const buildOrganizationText = (organization: OrganizationEmbeddingSource) => {
   return [
     `Organization: ${organization.name}`,
     `Website: ${organization.url}`,
@@ -82,15 +89,7 @@ const buildOrganizationText = (organization: {
   ].join('\n');
 };
 
-const buildPostingText = (posting: {
-  title: string;
-  description: string;
-  location_name: string;
-  start_timestamp: Date;
-  end_timestamp: Date | undefined;
-  minimum_age: number | undefined;
-  max_volunteers: number | undefined;
-}, skills: string[]) => {
+const buildPostingText = (posting: PostingEmbeddingSource, skills: string[]) => {
   return [
     `Title: ${posting.title}`,
     `Description: ${posting.description}`,
@@ -103,12 +102,7 @@ const buildPostingText = (posting: {
   ].join('\n');
 };
 
-const buildVolunteerProfileText = (volunteer: {
-  first_name: string;
-  last_name: string;
-  description: string | undefined;
-  gender: 'male' | 'female' | 'other';
-}, skills: string[], cvText: string | null) => {
+const buildVolunteerProfileText = (volunteer: VolunteerProfileEmbeddingSource, skills: string[], cvText: string | null) => {
   return [
     `Volunteer: ${volunteer.first_name} ${volunteer.last_name}`,
     `Gender: ${volunteer.gender}`,
@@ -316,11 +310,13 @@ export const recomputePostingContextVectorsForOrganization = async (organization
     }
 
     const postingContextVector = combineVectors(opportunityVector, orgVector, 0.7, 0.3);
-    await sql`
-      UPDATE organization_posting
-      SET posting_context_vector = ${vectorToSqlLiteral(postingContextVector)}::vector
-      WHERE id = ${posting.id}
-    `.execute(executor);
+    await executor
+      .updateTable('organization_posting')
+      .set({
+        posting_context_vector: sql<string>`${vectorToSqlLiteral(postingContextVector)}::vector`,
+      })
+      .where('id', '=', posting.id)
+      .execute();
     await recomputeVolunteerExperienceVectorsForPosting(posting.id, executor);
   }
 };

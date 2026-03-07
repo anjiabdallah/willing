@@ -1,8 +1,8 @@
 import { ClipboardCheck, Inbox } from 'lucide-react';
 import { useCallback } from 'react';
 
-import OrganizationRequestReviewCard from './components/OrganizationRequestReviewCard';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/layout/PageHeader';
+import OrganizationRequestReviewCard from '../../components/OrganizationRequestReviewCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 

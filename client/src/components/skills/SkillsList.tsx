@@ -33,7 +33,7 @@ export default function SkillsList({ skills, action: Action, enableLimit = true,
       {displayedSkills.map((skill, index) => (
         <span
           key={skill}
-          className={`badge gap-1 text-white font-medium text-xs ${getSkillColor(skill, index)}`}
+          className={`badge gap-1 font-medium text-xs ${getSkillColor(skill, index)}`}
         >
           {skill}
           {Action && <Action skill={skill} index={index} />}

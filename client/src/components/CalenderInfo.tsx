@@ -1,6 +1,5 @@
 import { FormField } from '../utils/formUtils';
 
-import type { FormEvent } from 'react';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 
 interface CalendarCommonProps {

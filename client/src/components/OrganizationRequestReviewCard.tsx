@@ -9,10 +9,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import LocationPicker from '../../../components/LocationPicker';
-import requestServer from '../../../utils/requestServer';
+import LocationPicker from './LocationPicker';
+import requestServer from '../utils/requestServer';
 
-import type { OrganizationRequest } from '../../../../../server/src/db/tables';
+import type { OrganizationRequest } from '../../../server/src/db/tables';
 
 function OrganizationRequestReviewCard({ request, refreshOrganizationRequests }: {
   request: OrganizationRequest;

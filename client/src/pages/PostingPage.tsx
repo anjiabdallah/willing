@@ -11,20 +11,21 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import CalenderInfo from './CalenderInfo.tsx';
-import ColumnLayout from './ColumnLayout';
-import Loading from './Loading';
-import LocationPicker from './LocationPicker';
-import PageHeader from './PageHeader';
-import PostingApplicationMessageModal from './PostingApplicationMessageModal';
-import SkillsInput from './SkillsInput';
-import SkillsList from './SkillsList';
-import { ToggleButton } from './ToggleButton';
-import VolunteerInfoCollapse from './VolunteerInfoCollapse';
+import AuthContext from '../auth/AuthContext';
+import CalenderInfo from '../components/CalenderInfo';
+import ColumnLayout from '../components/layout/ColumnLayout';
+import PageHeader from '../components/layout/PageHeader';
+import Loading from '../components/Loading';
+import LocationPicker from '../components/LocationPicker';
+import PostingApplicationMessageModal from '../components/PostingApplicationMessageModal';
+import SkillsInput from '../components/skills/SkillsInput';
+import SkillsList from '../components/skills/SkillsList';
+import { ToggleButton } from '../components/ToggleButton';
+import VolunteerInfoCollapse from '../components/VolunteerInfoCollapse';
 import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../schemas/auth';
 import { executeAndShowError, FormField } from '../utils/formUtils';
 import requestServer from '../utils/requestServer';
@@ -44,12 +45,12 @@ const getDateTimeInputValue = (value: Date | string) => {
   return localDate.toISOString().slice(0, 16);
 };
 
-type PostingViewerMode = 'organization' | 'volunteer';
-
-function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
+function PostingPage() {
+  const auth = useContext(AuthContext);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isVolunteerView = mode === 'volunteer';
+
+  const isVolunteerView = auth.user?.role !== 'organization';
   const organizationAccount = useOrganization();
   const account = isVolunteerView ? null : organizationAccount;
 
@@ -937,4 +938,4 @@ function PostingView({ mode = 'organization' }: { mode?: PostingViewerMode }) {
   );
 }
 
-export default PostingView;
+export default PostingPage;

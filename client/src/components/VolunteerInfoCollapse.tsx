@@ -1,7 +1,7 @@
 import { Cake, Mail, Mars, Venus } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 
-import SkillsList from './SkillsList';
+import SkillsList from './skills/SkillsList';
 
 import type { PostingApplication, PostingEnrollment } from '../../../server/src/types';
 

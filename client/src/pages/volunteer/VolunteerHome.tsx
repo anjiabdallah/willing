@@ -2,7 +2,7 @@ import { TextSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import CalenderInfo from '../../components/CalenderInfo.tsx';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/layout/PageHeader';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 

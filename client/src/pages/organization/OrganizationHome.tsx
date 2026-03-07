@@ -1,7 +1,7 @@
 import { Plus, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/layout/PageHeader';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';

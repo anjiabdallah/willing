@@ -1,9 +1,7 @@
 import { Building2, Calendar, Cake, Clock, ExternalLink, LockOpen, MapPin, Users } from 'lucide-react';
-import { useContext } from 'react';
 import { Link } from 'react-router';
 
-import SkillsList from './SkillsList';
-import AuthContext from '../auth/AuthContext';
+import SkillsList from './skills/SkillsList';
 
 import type { OrganizationPosting, PostingSkill } from '../../../server/src/db/tables';
 
@@ -16,10 +14,7 @@ interface PostingCardProps {
 }
 
 function PostingCard({ posting, organization }: PostingCardProps) {
-  const auth = useContext(AuthContext);
-  const postingDetailsPath = auth.user?.role === 'organization'
-    ? `/organization/posting/${posting.id}`
-    : `/volunteer/posting/${posting.id}`;
+  const postingDetailsPath = `/posting/${posting.id}`;
 
   return (
     <div className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow">

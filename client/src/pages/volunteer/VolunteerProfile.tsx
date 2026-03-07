@@ -12,11 +12,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { volunteerAccountSchema } from '../../../../server/src/db/tables';
-import ColumnLayout from '../../components/ColumnLayout';
+import ColumnLayout from '../../components/layout/ColumnLayout';
+import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
-import PageHeader from '../../components/PageHeader';
-import SkillsInput from '../../components/SkillsInput';
-import SkillsList from '../../components/SkillsList';
+import SkillsInput from '../../components/skills/SkillsInput';
+import SkillsList from '../../components/skills/SkillsList';
 import { ToggleButton } from '../../components/ToggleButton';
 import { FormField } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';

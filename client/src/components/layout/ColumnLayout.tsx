@@ -10,7 +10,7 @@ export default function ColumnLayout({ sidebar, children, stickySidebar = true }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-1">
-        <div className={`space-y-6 ${stickySidebar ? 'lg:sticky lg:top-24' : ''}`}>
+        <div className={`space-y-6 ${stickySidebar ? 'lg:sticky lg:top-6' : ''}`}>
           {sidebar}
         </div>
       </div>

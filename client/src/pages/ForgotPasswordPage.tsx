@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
+import Navbar from '../components/layout/navbars/EmptyNavbar';
 import Loading from '../components/Loading';
-import Navbar from '../components/Navbar';
 import {
   forgotPasswordRequestSchema,
   forgotPasswordResetSchema,

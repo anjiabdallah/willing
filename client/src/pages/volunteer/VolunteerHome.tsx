@@ -1,4 +1,4 @@
-import { TextSearch } from 'lucide-react';
+import { Search, TextSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import CalendarInfo from '../../components/CalendarInfo.tsx';
@@ -12,13 +12,11 @@ import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
 function VolunteerHome() {
   const [postings, setPostings] = useState<PostingWithSkillsAndOrgName[]>([]);
   const [filters, setFilters] = useState<{
-    location: string;
-    skill: string;
+    search: string;
     startDate: string;
     endDate: string;
   }>({
-    location: '',
-    skill: '',
+    search: '',
     startDate: '',
     endDate: '',
   });
@@ -27,10 +25,6 @@ function VolunteerHome() {
     const f = useFilters ?? filters;
     const query = new URLSearchParams();
 
-    if (f.location)
-      query.append('location_name', f.location);
-    if (f.skill)
-      query.append('skill', f.skill);
     if (f.startDate)
       query.append('start_timestamp', f.startDate);
     if (f.endDate)
@@ -40,7 +34,45 @@ function VolunteerHome() {
 
     const res = await requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true });
 
-    setPostings(res.postings);
+    const normalizedSearch = f.search.trim().toLowerCase();
+    if (!normalizedSearch) {
+      setPostings(res.postings);
+      return;
+    }
+
+    const andParts = normalizedSearch
+      .split(/\s+and\s+/i)
+      .map(part => part.trim())
+      .filter(Boolean);
+    const orParts = normalizedSearch
+      .split(/\s+or\s+/i)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    const terms = andParts.length > 1
+      ? andParts
+      : orParts.length > 1
+        ? orParts
+        : [normalizedSearch];
+
+    const useAndMode = andParts.length > 1;
+
+    const filtered = res.postings.filter((posting) => {
+      const locationText = posting.location_name.toLowerCase();
+      const skillTexts = posting.skills.map((skill: { name: string }) => skill.name.toLowerCase());
+
+      const matchesTerm = (term: string) => {
+        const locationMatch = locationText.includes(term);
+        const skillMatch = skillTexts.some((skill: string) => skill.includes(term));
+        return locationMatch || skillMatch;
+      };
+
+      return useAndMode
+        ? terms.every(matchesTerm)
+        : terms.some(matchesTerm);
+    });
+
+    setPostings(filtered);
   };
 
   useEffect(() => {
@@ -48,7 +80,7 @@ function VolunteerHome() {
   }, []);
 
   const resetFilters = () => {
-    const reset = { location: '', skill: '', startDate: '', endDate: '' };
+    const reset = { search: '', startDate: '', endDate: '' };
     setFilters(reset);
     fetchPostings(reset);
   };
@@ -60,61 +92,58 @@ function VolunteerHome() {
           title="Find Opportunities"
           subtitle="Browse postings and apply to opportunities that match your interests."
           icon={TextSearch}
-          badge={
-            postings && (
-              <div className="badge badge-primary">
-                {postings.length}
-                {' '}
-                {postings.length === 1 ? 'Opportunity' : 'Opportunities'}
-              </div>
-            )
-          }
         />
 
         <div className="mb-4">
           <h4 className="text-lg font-semibold mb-2">Filter</h4>
-          <div className="flex flex-wrap gap-4 mb-2">
-            <input
-              type="text"
-              placeholder="Location"
-              value={filters.location}
-              onChange={e => setFilters({ ...filters, location: e.target.value })}
-              className="input input-bordered"
-            />
-            <input
-              type="text"
-              placeholder="Skill"
-              value={filters.skill}
-              onChange={e => setFilters({ ...filters, skill: e.target.value })}
-              className="input input-bordered"
-            />
-            <CalendarInfo
-              startValue={filters.startDate}
-              endValue={filters.endDate}
-              onStartChange={(value: string) => setFilters({ ...filters, startDate: value })}
-              onEndChange={(value: string) => setFilters({ ...filters, endDate: value })}
-              inputType="date"
-              startPlaceholder="Start Date"
-              endPlaceholder="End Date"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              className="btn btn-sm btn-primary"
-              disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
-              onClick={() => void fetchPostings()}
-            >
-              Apply Filters
-            </button>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void fetchPostings();
+            }}
+          >
+            <div className="flex flex-wrap gap-4 mb-2">
+              <label className="input input-bordered flex items-center gap-2 w-full md:w-96">
+                <Search className="h-4 w-4 opacity-70" />
+                <input
+                  type="text"
+                  className="grow"
+                  placeholder="Search by location or skill (use AND / OR)"
+                  value={filters.search}
+                  onChange={e => setFilters({ ...filters, search: e.target.value })}
+                />
+              </label>
 
-            <button
-              className="btn btn-sm btn-ghost"
-              disabled={!filters.location && !filters.skill && !filters.startDate && !filters.endDate}
-              onClick={resetFilters}
-            >
-              Reset Filters
-            </button>
-          </div>
+              <CalendarInfo
+                startValue={filters.startDate}
+                endValue={filters.endDate}
+                onStartChange={(value: string) => setFilters({ ...filters, startDate: value })}
+                onEndChange={(value: string) => setFilters({ ...filters, endDate: value })}
+                inputType="date"
+                startPlaceholder="Start Date"
+                endPlaceholder="End Date"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="btn btn-sm btn-primary"
+                disabled={!filters.search && !filters.startDate && !filters.endDate}
+              >
+                Apply Filters
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                disabled={!filters.search && !filters.startDate && !filters.endDate}
+                onClick={resetFilters}
+              >
+                Reset Filters
+              </button>
+            </div>
+          </form>
         </div>
 
         {postings.length === 0

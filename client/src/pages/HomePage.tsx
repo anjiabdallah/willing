@@ -1,13 +1,49 @@
-import { Building2, LayoutDashboard, LogIn, User } from 'lucide-react';
-import { useContext } from 'react';
+import { Building2, Heart, LayoutDashboard, LogIn, Zap, Users } from 'lucide-react';
+import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext';
 import Footer from '../components/layout/Footer';
 import Navbar from '../components/layout/navbars/EmptyNavbar';
+import requestServer from '../utils/requestServer';
+
+import type { UserHomeStatsResponse } from '../../../server/src/api/types';
 
 function HomePage() {
   const auth = useContext(AuthContext);
+  const [totalOpportunities, setTotalOpportunities] = useState(0);
+  const [totalOrganizations, setTotalOrganizations] = useState(0);
+  const [totalVolunteers, setTotalVolunteers] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchStats = async () => {
+      try {
+        const res = await requestServer<UserHomeStatsResponse>('/user/home-stats', {});
+
+        if (!isMounted)
+          return;
+
+        setTotalOpportunities(res.totalOpportunities);
+        setTotalOrganizations(res.totalOrganizations);
+        setTotalVolunteers(res.totalVolunteers);
+      } catch {
+        if (!isMounted)
+          return;
+
+        setTotalOpportunities(0);
+        setTotalOrganizations(0);
+        setTotalVolunteers(0);
+      }
+    };
+
+    void fetchStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-base-100">
@@ -41,8 +77,9 @@ function HomePage() {
         </div>
 
         <div className="flex flex-col md:flex-row w-full gap-4">
+
           <div className="card bg-base-200 rounded-box grid min-h-72 grow place-items-center p-8 text-center border-2 border-transparent hover:border-primary hover:-translate-y-2 transition-all duration-300 shadow-sm hover:shadow-xl">
-            <User className="text-primary mb-4" size={48} />
+            <Users className="text-primary mb-4" size={48} />
             <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">For Individuals</span>
             <h2 className="text-3xl font-bold mb-2">I want to help</h2>
             <p className="mb-6 opacity-80">Discover volunteer opportunities that match your skills.</p>
@@ -135,6 +172,53 @@ function HomePage() {
             </div>
           </div>
         )}
+
+        <div className="mb-10 w-full max-w-3xl space-y-24 mt-16">
+          <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="card border border-primary/20 bg-primary/5 px-10 py-8">
+                <div className="flex items-center gap-4">
+                  <div className="text-8xl font-black text-primary -translate-y-2">{totalVolunteers}</div>
+                  <Heart className="text-primary" size={68} strokeWidth={3.5} />
+                </div>
+              </div>
+              <div className="sm:ml-auto sm:text-right">
+                <p className="text-3xl font-bold text-primary">Number of volunteers</p>
+                <p className="text-lg opacity-60">Making a difference in their communities every day</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-3xl font-bold text-accent">Number of opportunities</p>
+                <p className="text-lg opacity-60">Find the perfect opportunity that matches your skills</p>
+              </div>
+              <div className="card border border-accent/20 bg-accent/5 px-10 py-8 sm:ml-auto">
+                <div className="flex items-center gap-4">
+                  <div className="text-8xl font-black text-accent -translate-y-2">{totalOpportunities}</div>
+                  <Zap className="text-accent" size={68} strokeWidth={3} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="card border border-secondary/20 bg-secondary/5 px-10 py-8">
+                <div className="flex items-center gap-4">
+                  <div className="text-8xl font-black text-secondary -translate-y-2">{totalOrganizations}</div>
+                  <Building2 className="text-secondary" size={68} strokeWidth={2.5} />
+                </div>
+              </div>
+              <div className="sm:ml-auto sm:text-right">
+                <p className="text-3xl font-bold text-secondary">Number of organizations</p>
+                <p className="text-lg opacity-60">Trusted partners working towards social impact</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <Footer />

@@ -5,7 +5,12 @@ import { Router, Response } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
-import { UserForgotPasswordResetResponse, UserForgotPasswordResponse, UserLoginResponse } from './user.types.js';
+import {
+  UserForgotPasswordResetResponse,
+  UserForgotPasswordResponse,
+  UserHomeStatsResponse,
+  UserLoginResponse,
+} from './user.types.js';
 import config from '../../config.js';
 import database from '../../db/index.js';
 import { passwordSchema } from '../../db/tables.js';
@@ -21,6 +26,29 @@ const forgotPasswordRequestSchema = zod.object({
 const forgotPasswordResetSchema = zod.object({
   key: zod.string().min(1),
   password: passwordSchema,
+});
+
+userRouter.get('/home-stats', async (_req, res: Response<UserHomeStatsResponse>) => {
+  const [postings, organizations, volunteers] = await Promise.all([
+    database
+      .selectFrom('organization_posting')
+      .select(['id'])
+      .execute(),
+    database
+      .selectFrom('organization_account')
+      .select(['id'])
+      .execute(),
+    database
+      .selectFrom('volunteer_account')
+      .select(['id'])
+      .execute(),
+  ]);
+
+  res.json({
+    totalOpportunities: postings.length,
+    totalOrganizations: organizations.length,
+    totalVolunteers: volunteers.length,
+  });
 });
 
 userRouter.post('/login', async (req, res: Response<UserLoginResponse>) => {

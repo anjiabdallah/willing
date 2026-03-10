@@ -3,13 +3,13 @@ import { sql } from 'kysely';
 
 import config from '../config.js';
 import database from '../db/index.js';
-import { EMBEDDING_DIMENSIONS } from '../services/embeddingService.js';
+import { EMBEDDING_DIMENSIONS } from '../services/embeddings/embeddingService.js';
 import {
   recomputeOrganizationVector,
   recomputePostingVectors,
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
-} from '../services/embeddingUpdateService.js';
+} from '../services/embeddings/embeddingUpdateService.js';
 
 const TEST_PASSWORD_HASH = await bcrypt.hash('Willing123', 10);
 

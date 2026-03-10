@@ -3,6 +3,7 @@ import { Router, Response } from 'express';
 import * as jose from 'jose';
 import zod from 'zod';
 
+import volunteerCvRouter from './cv.js';
 import { VolunteerCreateResponse, VolunteerMeResponse, VolunteerProfileResponse } from './index.types.js';
 import volunteerPostingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
@@ -12,11 +13,10 @@ import { type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, volunt
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
-} from '../../../services/embeddingUpdateService.js';
+} from '../../../services/embeddings/embeddingUpdateService.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerRouter = Router();
-
 const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
   id: true,
   password: true,
@@ -72,8 +72,8 @@ const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfil
       date_of_birth: volunteer.date_of_birth,
       gender: volunteer.gender,
       privacy: volunteer.privacy,
-      ...(volunteer.cv_path !== undefined ? { cv_path: volunteer.cv_path } : {}),
-      ...(volunteer.description !== undefined ? { description: volunteer.description } : {}),
+      cv_path: volunteer.cv_path,
+      description: volunteer.description ?? '',
     },
     skills: volunteerSkills.map(skill => skill.name),
   };
@@ -152,6 +152,7 @@ volunteerRouter.get('/profile', async (req, res: Response<VolunteerProfileRespon
 volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileResponse>) => {
   const body = volunteerProfileUpdateSchema.parse(req.body);
   const volunteerId = req.userJWT!.id;
+
   const existingVolunteer = await database
     .selectFrom('volunteer_account')
     .select([
@@ -175,6 +176,7 @@ volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileRespon
 
   const normalizedExistingSkills = normalizeSkillList(existingSkills.map(skill => skill.name));
   const normalizedIncomingSkills = body.skills !== undefined ? normalizeSkillList(body.skills) : undefined;
+
   const didSkillsChange = normalizedIncomingSkills !== undefined
     ? !areSkillListsEqual(normalizedIncomingSkills, normalizedExistingSkills)
     : false;
@@ -216,10 +218,12 @@ volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileRespon
       if (normalizedIncomingSkills && normalizedIncomingSkills.length > 0) {
         await trx
           .insertInto('volunteer_skill')
-          .values(normalizedIncomingSkills.map(name => ({
-            volunteer_id: volunteerId,
-            name,
-          })))
+          .values(
+            normalizedIncomingSkills.map(name => ({
+              volunteer_id: volunteerId,
+              name,
+            })),
+          )
           .execute();
       }
     }
@@ -236,5 +240,6 @@ volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileRespon
 volunteerRouter.post('/reset-password', resetPassword);
 
 volunteerRouter.use('/posting', volunteerPostingRouter);
+volunteerRouter.use('/cv', volunteerCvRouter);
 
 export default volunteerRouter;

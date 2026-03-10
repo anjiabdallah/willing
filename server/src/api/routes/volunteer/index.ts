@@ -1,7 +1,3 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 import bcrypt from 'bcrypt';
 import { Router, Response, type Request } from 'express';
 import * as jose from 'jose';
@@ -14,7 +10,6 @@ import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
 import database from '../../../db/index.js';
 import { type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, volunteerAccountSchema } from '../../../db/tables.js';
-import { uploadCv, toPublicCvPath, deleteCvFileIfExists, validateCvPdf } from '../../../services/cv/index.js';
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,

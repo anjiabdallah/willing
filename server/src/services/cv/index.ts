@@ -69,8 +69,8 @@ export const validateCvPdf = async (filePath: string) => {
     const info = await parser.getInfo();
 
     const pageCount = info.total ?? 0;
-    if (pageCount !== 3) {
-      throw new Error('CV must be a PDF with exactly 3 pages.');
+    if (pageCount > 3) {
+      throw new Error('CV must be a PDF with no more than 3 pages.');
     }
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('CV must')) {

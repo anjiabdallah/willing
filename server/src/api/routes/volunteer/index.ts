@@ -154,69 +154,6 @@ volunteerRouter.get('/profile', async (req, res: Response<VolunteerProfileRespon
   res.json(profile);
 });
 
-volunteerRouter.post(
-  '/profile/cv',
-  uploadCv.single('cv'),
-  async (req, res: Response<VolunteerProfileResponse>) => {
-    const volunteerId = req.userJWT!.id;
-
-    if (!req.file) {
-      res.status(400);
-      throw new Error('CV file is required.');
-    }
-
-    try {
-      await validateCvPdf(req.file.path);
-    } catch (error) {
-      await fs.unlink(req.file.path).catch(() => { });
-      res.status(400);
-      throw error;
-    }
-
-    const existingVolunteer = await database
-      .selectFrom('volunteer_account')
-      .select(['cv_path'])
-      .where('id', '=', volunteerId)
-      .executeTakeFirstOrThrow();
-
-    const nextCvPath = toPublicCvPath(req.file.filename);
-
-    await database
-      .updateTable('volunteer_account')
-      .set({ cv_path: nextCvPath })
-      .where('id', '=', volunteerId)
-      .execute();
-
-    await deleteCvFileIfExists(existingVolunteer.cv_path);
-    await recomputeVolunteerProfileVector(volunteerId);
-
-    const profile = await getVolunteerProfile(volunteerId);
-    res.json(profile);
-  },
-);
-
-volunteerRouter.delete('/profile/cv', async (req, res: Response<VolunteerProfileResponse>) => {
-  const volunteerId = req.userJWT!.id;
-
-  const existingVolunteer = await database
-    .selectFrom('volunteer_account')
-    .select(['cv_path'])
-    .where('id', '=', volunteerId)
-    .executeTakeFirstOrThrow();
-
-  await database
-    .updateTable('volunteer_account')
-    .set({ cv_path: undefined })
-    .where('id', '=', volunteerId)
-    .execute();
-
-  await deleteCvFileIfExists(existingVolunteer.cv_path);
-  await recomputeVolunteerProfileVector(volunteerId);
-
-  const profile = await getVolunteerProfile(volunteerId);
-  res.json(profile);
-});
-
 volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileResponse>) => {
   const body = volunteerProfileUpdateSchema.parse(req.body);
   const volunteerId = req.userJWT!.id;

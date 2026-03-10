@@ -1,61 +1,12 @@
-import crypto from 'crypto';
 import fs from 'fs';
 
 import { Router, Request, Response } from 'express';
-import multer from 'multer';
-import { PDFParse } from 'pdf-parse';
 
 import config from '../../../config.js';
 import database from '../../../db/index.js';
+import { uploadCv, validateCvPdf, deleteCvFileIfExists } from '../../../services/cv/index.js';
 
 const volunteerCvRouter = Router();
-
-// ONLY source of truth for where files are stored:
-
-// Ensure folder exists
-fs.mkdirSync(config.CV_UPLOAD_DIR, { recursive: true });
-
-// Always store as random.pdf
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, config.CV_UPLOAD_DIR),
-  filename: (_req, _file, cb) => cb(null, `${crypto.randomBytes(16).toString('hex')}.pdf`),
-});
-
-fs.mkdirSync(config.CV_UPLOAD_DIR, { recursive: true });
-// PDF-only filter
-const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
-  const isPdfMime = file.mimetype === 'application/pdf';
-  const isPdfName = file.originalname.toLowerCase().endsWith('.pdf');
-  if (!isPdfMime || !isPdfName) return cb(new Error('PDF only'));
-  cb(null, true);
-};
-
-const uploadCv = multer({ storage, fileFilter });
-
-const validateCvPdf = async (filePath: string) => {
-  const fileBytes = await fs.promises.readFile(filePath);
-
-  let parser: PDFParse | undefined;
-
-  try {
-    parser = new PDFParse({ data: fileBytes });
-    const info = await parser.getInfo();
-
-    const pageCount = info.total ?? 0;
-
-    if (pageCount > 3) {
-      throw new Error('CV must be a PDF with no more than 3 pages.');
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === 'CV must be a PDF with no more than 3 pages.') {
-      throw error;
-    }
-
-    throw new Error('Uploaded file is not a valid PDF.');
-  } finally {
-    await parser?.destroy();
-  }
-};
 
 // POST /api/volunteer/cv (upload/replace)
 volunteerCvRouter.post(
@@ -63,26 +14,30 @@ volunteerCvRouter.post(
   (req, res, next) => {
     uploadCv.single('cv')(req, res, (err: unknown) => {
       if (err instanceof Error) {
-        return res.status(400).json({ error: err.message });
+        res.status(400);
+        throw new Error(err.message);
       }
 
       if (err) {
-        return res.status(400).json({ error: 'Upload failed' });
+        res.status(400);
+        throw new Error('Upload failed');
       }
 
       next();
     });
   },
   async (req: Request, res: Response) => {
-    if (!req.file) return res.status(400).json({ error: 'Missing file field "cv".' });
+    if (!req.file) {
+      res.status(400);
+      throw new Error('Missing file field "cv".');
+    }
 
     try {
       await validateCvPdf(req.file.path);
     } catch (error) {
       await fs.promises.unlink(req.file.path).catch(() => {});
-      return res.status(400).json({
-        error: error instanceof Error ? error.message : 'Upload failed',
-      });
+      res.status(400);
+      throw error instanceof Error ? error : new Error('Upload failed');
     }
 
     const volunteerId = req.userJWT!.id;
@@ -94,11 +49,7 @@ volunteerCvRouter.post(
       .executeTakeFirst();
 
     if (existing?.cv_path) {
-      try {
-        await fs.promises.unlink(`${config.CV_UPLOAD_DIR}/${existing.cv_path}`);
-      } catch {
-        // ignore
-      }
+      await deleteCvFileIfExists(existing.cv_path);
     }
 
     await database
@@ -152,11 +103,7 @@ volunteerCvRouter.delete('/', async (req, res) => {
     .executeTakeFirst();
 
   if (row?.cv_path) {
-    try {
-      await fs.promises.unlink(`${config.CV_UPLOAD_DIR}/${row.cv_path}`);
-    } catch {
-      // ignore
-    }
+    await deleteCvFileIfExists(row.cv_path);
   }
 
   await database

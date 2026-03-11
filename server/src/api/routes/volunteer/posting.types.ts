@@ -1,6 +1,14 @@
 import { Enrollment, EnrollmentApplication, OrganizationPosting, PostingSkill } from '../../../db/tables.js';
 import { PostingWithSkillsAndOrgName, SuccessResponse } from '../../../types.js';
 
+export type VolunteerEnrollmentEntry = PostingWithSkillsAndOrgName & {
+  status: 'enrolled' | 'pending';
+};
+
+export type VolunteerEnrollmentsResponse = {
+  postings: VolunteerEnrollmentEntry[];
+};
+
 export type VolunteerPostingSearchResponse = {
   postings: PostingWithSkillsAndOrgName[];
 };

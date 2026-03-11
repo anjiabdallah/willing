@@ -17,8 +17,8 @@ function PostingCard({ posting, organization }: PostingCardProps) {
   const postingDetailsPath = `/posting/${posting.id}`;
 
   return (
-    <div className="card bg-base-100 shadow-md border border-base-200 hover:shadow-lg transition-shadow">
-      <div className="card-body">
+    <div className="card h-full min-h-[31rem] border border-base-200 bg-base-100 shadow-md transition-shadow hover:shadow-lg">
+      <div className="card-body flex h-full flex-col">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-center gap-2">
             <h2 className="card-title text-primary text-lg">
@@ -137,7 +137,7 @@ function PostingCard({ posting, organization }: PostingCardProps) {
         </div>
 
         {posting.skills && posting.skills.length > 0 && (
-          <div className="mb-2">
+          <div className="mt-auto mb-2">
             <div className="divider mt-0 mb-2" />
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold opacity-70">REQUIRED SKILLS</p>

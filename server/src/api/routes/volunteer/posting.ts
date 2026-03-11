@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { sql } from 'kysely';
 import zod from 'zod';
 
-import { VolunteerPostingEnrollResponse, VolunteerPostingResponse, VolunteerPostingSearchResponse, VolunteerPostingWithdrawResponse } from './posting.types.js';
+import { VolunteerEnrollmentsResponse, VolunteerPostingEnrollResponse, VolunteerPostingResponse, VolunteerPostingSearchResponse, VolunteerPostingWithdrawResponse } from './posting.types.js';
 import database from '../../../db/index.js';
 import { Enrollment, EnrollmentApplication } from '../../../db/tables.js';
 import { parseVectorLiteral } from '../../../services/embeddings/embeddingService.js';
@@ -160,6 +160,70 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
   }));
 
   res.json({ postings: postingWithSkills });
+});
+
+volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEnrollmentsResponse>) => {
+  const volunteerId = req.userJWT!.id;
+
+  const [enrolledPostings, pendingPostings] = await Promise.all([
+    database
+      .selectFrom('enrollment')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .selectAll('organization_posting')
+      .select(['organization_account.name as organization_name'])
+      .where('enrollment.volunteer_id', '=', volunteerId)
+      .execute(),
+    database
+      .selectFrom('enrollment_application')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .selectAll('organization_posting')
+      .select(['organization_account.name as organization_name'])
+      .where('enrollment_application.volunteer_id', '=', volunteerId)
+      .execute(),
+  ]);
+
+  // Merge: enrolled takes priority over pending for the same posting
+  const statusMap = new Map<number, 'enrolled' | 'pending'>();
+  const postingsMap = new Map<number, typeof enrolledPostings[0]>();
+
+  for (const posting of pendingPostings) {
+    statusMap.set(posting.id, 'pending');
+    postingsMap.set(posting.id, posting);
+  }
+  for (const posting of enrolledPostings) {
+    statusMap.set(posting.id, 'enrolled');
+    postingsMap.set(posting.id, posting);
+  }
+
+  const allPostingIds = Array.from(postingsMap.keys());
+
+  const skills = allPostingIds.length > 0
+    ? await database
+        .selectFrom('posting_skill')
+        .selectAll()
+        .where('posting_id', 'in', allPostingIds)
+        .execute()
+    : [];
+
+  const skillsByPostingId = new Map<number, typeof skills>();
+  skills.forEach((skill) => {
+    if (!skillsByPostingId.has(skill.posting_id)) {
+      skillsByPostingId.set(skill.posting_id, []);
+    }
+    skillsByPostingId.get(skill.posting_id)!.push(skill);
+  });
+
+  const postings = Array.from(postingsMap.values())
+    .sort((a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
+    .map(posting => ({
+      ...posting,
+      skills: skillsByPostingId.get(posting.id) ?? [],
+      status: statusMap.get(posting.id) as 'enrolled' | 'pending',
+    }));
+
+  res.json({ postings });
 });
 
 volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingResponse>) => {

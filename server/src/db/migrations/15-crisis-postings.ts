@@ -14,7 +14,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('organization_posting')
     .addColumn('crisis_id', 'integer', col =>
-      col.references('crisis.id').onDelete('cascade'),
+      col.references('crisis.id').onDelete('set null'),
     )
     .execute();
 }

@@ -12,7 +12,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('organization_account')
     .addColumn('certificate_info_id', 'integer', col =>
-      col.references('organization_table_info.id').onDelete('cascade'),
+      col.references('organization_certificate_info.id').onDelete('set null'),
     )
     .execute();
 }

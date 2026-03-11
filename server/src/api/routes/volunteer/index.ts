@@ -4,7 +4,12 @@ import * as jose from 'jose';
 import zod from 'zod';
 
 import volunteerCvRouter from './cv.js';
-import { VolunteerCreateResponse, VolunteerMeResponse, VolunteerProfileResponse } from './index.types.js';
+import {
+  VolunteerCreateResponse,
+  VolunteerMeResponse,
+  VolunteerPinnedCrisesResponse,
+  VolunteerProfileResponse,
+} from './index.types.js';
 import volunteerPostingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
@@ -108,6 +113,17 @@ volunteerRouter.get('/me', async (req, res: Response<VolunteerMeResponse>) => {
 volunteerRouter.get('/profile', async (req, res: Response<VolunteerProfileResponse>) => {
   const profile = await getVolunteerProfile(req.userJWT!.id);
   res.json(profile);
+});
+
+volunteerRouter.get('/crises/pinned', async (_req, res: Response<VolunteerPinnedCrisesResponse>) => {
+  const crises = await database
+    .selectFrom('crisis')
+    .selectAll()
+    .where('pinned', '=', true)
+    .orderBy('created_at', 'desc')
+    .execute();
+
+  res.json({ crises });
 });
 
 volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileResponse>) => {

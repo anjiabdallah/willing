@@ -35,6 +35,10 @@ export type AdminCrisisUpdateResponse = {
   crisis: Crisis;
 };
 
+export type AdminCrisisPinResponse = {
+  crisis: Crisis;
+};
+
 export type AdminCrisisDeleteResponse = object;
 
 export type AdminResetPasswordResponse = ResetPasswordResponse;

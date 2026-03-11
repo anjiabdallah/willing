@@ -23,6 +23,7 @@ import OrganizationProfile from './pages/OrganizationProfile';
 import OrganizationRequest from './pages/OrganizationRequest';
 import Posting from './pages/Posting';
 import UserLogin from './pages/UserLogin';
+import VolunteerCrisisPostings from './pages/volunteer/VolunteerCrisisPostings';
 import VolunteerEnrollments from './pages/volunteer/VolunteerEnrollments';
 import VolunteerHome from './pages/volunteer/VolunteerHome';
 import VolunteerProfile from './pages/volunteer/VolunteerProfile';
@@ -64,6 +65,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="volunteer" element={<VolunteerPage />}>
             <Route index element={<VolunteerHome />} />
             <Route path="enrollments" element={<VolunteerEnrollments />} />
+            <Route path="crises/:crisisId/postings" element={<VolunteerCrisisPostings />} />
             <Route path="profile" element={<VolunteerProfile />} />
             <Route path="search" element={<VolunteerSearch />} />
             <Route path="settings" element={<VolunteerSettings />} />

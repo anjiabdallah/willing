@@ -8,7 +8,11 @@ import HorizontalScrollSection from '../../components/postings/HorizontalScrollS
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { VolunteerEnrollmentsResponse, VolunteerPostingSearchResponse } from '../../../../server/src/api/types';
+import type {
+  VolunteerEnrollmentsResponse,
+  VolunteerPinnedCrisesResponse,
+  VolunteerPostingSearchResponse,
+} from '../../../../server/src/api/types';
 import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
 
 const PostingRailCard = ({ posting }: { posting: PostingWithSkillsAndOrgName }) => (
@@ -51,14 +55,27 @@ function VolunteerHome() {
     true,
   );
 
+  const {
+    data: pinnedCrises,
+    loading: crisesLoading,
+    error: crisesError,
+  } = useAsync<VolunteerPinnedCrisesResponse['crises'], []>(
+    async () => {
+      const res = await requestServer<VolunteerPinnedCrisesResponse>('/volunteer/crises/pinned', { includeJwt: true });
+      return res.crises;
+    },
+    true,
+  );
+
   const forYouPostings = (allPostings ?? []).slice(0, 8);
+  const featuredCrises = (pinnedCrises ?? []).slice(0, 8);
 
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
         <PageHeader
           title="Home"
-          subtitle="Your enrollments and personalised picks - all in one place."
+          subtitle="Your enrollments, pinned crises, and personalised picks - all in one place."
           icon={House}
         />
 
@@ -89,6 +106,37 @@ function VolunteerHome() {
               ))}
             </HorizontalScrollSection>
           )}
+
+          {crisesLoading && <RailLoadingState />}
+
+          {crisesError && (
+            <div className="alert alert-error">
+              <span>{crisesError.message}</span>
+            </div>
+          )}
+
+          {!crisesLoading && !crisesError && featuredCrises.map(crisis => (
+            <HorizontalScrollSection
+              key={crisis.id}
+              title={crisis.name}
+              subtitle={crisis.description || 'No description provided.'}
+              hasItems={false}
+              action={(
+                <Link
+                  to={`/volunteer/crises/${crisis.id}/postings`}
+                  state={{ crisis }}
+                  className="btn btn-sm btn-primary"
+                >
+                  View All
+                </Link>
+              )}
+              emptyState={(
+                <div className="alert bg-base-100 shadow-sm">
+                  <span>No postings are tagged to this crisis yet.</span>
+                </div>
+              )}
+            />
+          ))}
 
           <HorizontalScrollSection
             title="For You"

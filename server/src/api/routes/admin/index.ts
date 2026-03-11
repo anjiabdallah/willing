@@ -6,6 +6,7 @@ import zod from 'zod';
 import {
   AdminCrisisCreateResponse,
   AdminCrisisDeleteResponse,
+  AdminCrisisPinResponse,
   AdminCrisisUpdateResponse,
   AdminCrisesResponse,
   AdminLoginResponse,
@@ -29,6 +30,9 @@ const createCrisisBodySchema = newCrisisSchema.pick({
 });
 const crisisParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
+});
+const crisisPinBodySchema = zod.object({
+  pinned: zod.boolean(),
 });
 
 adminRouter.post('/login', async (req, res: Response<AdminLoginResponse>) => {
@@ -205,6 +209,25 @@ adminRouter.put('/crises/:id', async (req, res: Response<AdminCrisisUpdateRespon
       name: body.name,
       description: body.description,
     })
+    .where('id', '=', id)
+    .returningAll()
+    .executeTakeFirst();
+
+  if (!crisis) {
+    res.status(404);
+    throw new Error('Crisis not found');
+  }
+
+  res.json({ crisis });
+});
+
+adminRouter.patch('/crises/:id/pin', async (req, res: Response<AdminCrisisPinResponse>) => {
+  const { id } = crisisParamsSchema.parse(req.params);
+  const { pinned } = crisisPinBodySchema.parse(req.body);
+
+  const crisis = await database
+    .updateTable('crisis')
+    .set({ pinned })
     .where('id', '=', id)
     .returningAll()
     .executeTakeFirst();

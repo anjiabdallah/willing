@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, FileText, Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, FileText, Pencil, Pin, PinOff, PlusCircle, Trash2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import zod from 'zod';
@@ -13,6 +13,7 @@ import useAsync from '../../utils/useAsync';
 import type {
   AdminCrisisCreateResponse,
   AdminCrisisDeleteResponse,
+  AdminCrisisPinResponse,
   AdminCrisisUpdateResponse,
   AdminCrisesResponse,
 } from '../../../../server/src/api/types';
@@ -142,6 +143,27 @@ function AdminCrises() {
       await refreshCrises();
     } catch (error) {
       setEditingError(error instanceof Error ? error.message : 'Failed to delete crisis');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const onTogglePin = async (crisisId: number, pinned: boolean) => {
+    setActionBusyId(crisisId);
+    setEditingError(null);
+
+    try {
+      await requestServer<AdminCrisisPinResponse>(`/admin/crises/${crisisId}/pin`, {
+        method: 'PATCH',
+        includeJwt: true,
+        body: {
+          pinned: !pinned,
+        },
+      });
+
+      await refreshCrises();
+    } catch (error) {
+      setEditingError(error instanceof Error ? error.message : 'Failed to update pin status');
     } finally {
       setActionBusyId(null);
     }
@@ -298,6 +320,17 @@ function AdminCrises() {
                                           {crisis.description || 'No description set'}
                                         </p>
                                         <div className="card-actions justify-end mt-2">
+                                          <button
+                                            type="button"
+                                            className="btn btn-outline btn-sm"
+                                            onClick={() => onTogglePin(crisis.id, crisis.pinned)}
+                                            disabled={actionBusyId === crisis.id}
+                                          >
+                                            {crisis.pinned
+                                              ? <PinOff size={14} />
+                                              : <Pin size={14} />}
+                                            {crisis.pinned ? 'Unpin' : 'Pin'}
+                                          </button>
                                           <button
                                             type="button"
                                             className="btn btn-outline btn-sm"

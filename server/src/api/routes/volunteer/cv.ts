@@ -8,48 +8,9 @@ import config from '../../../config.js';
 import database from '../../../db/index.js';
 import { uploadCv, validateCvPdf, deleteCvFileIfExists } from '../../../services/cv/index.js';
 import { recomputeVolunteerProfileVector } from '../../../services/embeddings/embeddingUpdateService.js';
+import { getVolunteerProfile } from '../../../services/volunteer/index.js';
 
 const volunteerCvRouter = Router();
-
-const getVolunteerProfile = async (volunteerId: number): Promise<UploadVolunteerCvResponse> => {
-  const volunteer = await database
-    .selectFrom('volunteer_account')
-    .select([
-      'id',
-      'first_name',
-      'last_name',
-      'email',
-      'date_of_birth',
-      'gender',
-      'cv_path',
-      'description',
-      'privacy',
-    ])
-    .where('id', '=', volunteerId)
-    .executeTakeFirstOrThrow();
-
-  const volunteerSkills = await database
-    .selectFrom('volunteer_skill')
-    .select('name')
-    .where('volunteer_id', '=', volunteerId)
-    .orderBy('id', 'asc')
-    .execute();
-
-  return {
-    volunteer: {
-      id: volunteer.id,
-      first_name: volunteer.first_name,
-      last_name: volunteer.last_name,
-      email: volunteer.email,
-      date_of_birth: volunteer.date_of_birth,
-      gender: volunteer.gender,
-      privacy: volunteer.privacy,
-      cv_path: volunteer.cv_path,
-      description: volunteer.description ?? '',
-    },
-    skills: volunteerSkills.map(skill => skill.name),
-  };
-};
 
 volunteerCvRouter.post(
   '/',

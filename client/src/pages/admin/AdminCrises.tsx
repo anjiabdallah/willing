@@ -186,180 +186,175 @@ function AdminCrises() {
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">
-        <div className="card bg-base-100 shadow-md">
-          <div className="card-body">
-            <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-base-100 to-secondary/10 p-6">
-              <PageHeader
-                title="Crisis Management"
-                subtitle="Create, edit, delete, and pin crises according to the current situation."
-                icon={AlertCircle}
-                badge={crisisCountBadge}
-              />
+        <PageHeader
+          title="Crisis Management"
+          subtitle="Create, edit, delete, and pin crises according to the current situation."
+          icon={AlertCircle}
+          badge={crisisCountBadge}
+          variant="gradient"
+        />
+
+        <div className="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          <section className="xl:col-span-4">
+            <div className="card border border-primary/20 bg-base-100 shadow-sm xl:sticky xl:top-24">
+              <div className="card-body">
+                <h3 className="card-title text-base">Create Crisis</h3>
+                <p className="text-sm opacity-70">Add a new crisis entry.</p>
+
+                <form className="mt-2 space-y-4" onSubmit={onCreateCrisis}>
+                  <FormField
+                    form={crisisForm}
+                    name="name"
+                    label="Crisis Name"
+                    placeholder="Crisis name"
+                    Icon={AlertCircle}
+                  />
+                  <FormField
+                    form={crisisForm}
+                    name="description"
+                    label="Description (Optional)"
+                    type="textarea"
+                    Icon={FileText}
+                  />
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary w-full"
+                    disabled={isCreatingCrisis}
+                  >
+                    <PlusCircle size={16} />
+                    {isCreatingCrisis ? 'Adding...' : 'Add Crisis'}
+                  </button>
+                </form>
+
+                <FormRootError form={crisisForm} />
+              </div>
+            </div>
+          </section>
+
+          <section className="xl:col-span-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Existing Crises</h3>
+              {crisisCountBadge}
             </div>
 
-            <div className="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              <section className="xl:col-span-4">
-                <div className="card border border-primary/20 bg-base-100 shadow-sm xl:sticky xl:top-24">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Create Crisis</h3>
-                    <p className="text-sm opacity-70">Add a new crisis entry.</p>
+            {editingError && (
+              <div role="alert" className="alert alert-error mb-3">
+                <span>{editingError}</span>
+              </div>
+            )}
 
-                    <form className="mt-2 space-y-4" onSubmit={onCreateCrisis}>
-                      <FormField
-                        form={crisisForm}
-                        name="name"
-                        label="Crisis Name"
-                        placeholder="Crisis name"
-                        Icon={AlertCircle}
-                      />
-                      <FormField
-                        form={crisisForm}
-                        name="description"
-                        label="Description (Optional)"
-                        type="textarea"
-                        Icon={FileText}
-                      />
-
-                      <button
-                        type="submit"
-                        className="btn btn-primary w-full"
-                        disabled={isCreatingCrisis}
-                      >
-                        <PlusCircle size={16} />
-                        {isCreatingCrisis ? 'Adding...' : 'Add Crisis'}
-                      </button>
-                    </form>
-
-                    <FormRootError form={crisisForm} />
+            {!crises
+              ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="skeleton h-24 rounded-box" />
+                    <div className="skeleton h-24 rounded-box" />
                   </div>
-                </div>
-              </section>
-
-              <section className="xl:col-span-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Existing Crises</h3>
-                  {crisisCountBadge}
-                </div>
-
-                {editingError && (
-                  <div role="alert" className="alert alert-error mb-3">
-                    <span>{editingError}</span>
-                  </div>
-                )}
-
-                {!crises
-                  ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="skeleton h-24 rounded-box" />
-                        <div className="skeleton h-24 rounded-box" />
-                      </div>
-                    )
-                  : crises.length === 0
-                    ? (
-                        <div className="alert alert-soft">
-                          <span>No crises added yet.</span>
-                        </div>
-                      )
-                    : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          {crises.map(crisis => (
-                            <div
-                              key={crisis.id}
-                              className="card border border-base-300 bg-base-100 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                            >
-                              <div className="card-body">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-                                      <AlertCircle size={16} />
-                                    </div>
-                                    <h4 className="font-bold text-lg leading-tight">{crisis.name}</h4>
-                                  </div>
-                                  {crisis.pinned && <span className="badge badge-secondary">Pinned</span>}
+                )
+              : crises.length === 0
+                ? (
+                    <div className="alert alert-soft">
+                      <span>No crises added yet.</span>
+                    </div>
+                  )
+                : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {crises.map(crisis => (
+                        <div
+                          key={crisis.id}
+                          className="card border border-base-300 bg-base-100 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                        >
+                          <div className="card-body">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                                  <AlertCircle size={16} />
                                 </div>
-
-                                {editingCrisisId === crisis.id
-                                  ? (
-                                      <div className="space-y-3 mt-2">
-                                        <input
-                                          value={editingName}
-                                          onChange={event => setEditingName(event.target.value)}
-                                          className="input input-bordered w-full"
-                                          placeholder="Crisis name"
-                                        />
-                                        <textarea
-                                          value={editingDescription}
-                                          onChange={event => setEditingDescription(event.target.value)}
-                                          className="textarea textarea-bordered w-full"
-                                          placeholder="Description (optional)"
-                                          rows={3}
-                                        />
-                                        <div className="flex flex-wrap gap-2">
-                                          <button
-                                            type="button"
-                                            className="btn btn-primary btn-sm"
-                                            onClick={() => onSaveEdit(crisis.id)}
-                                            disabled={actionBusyId === crisis.id}
-                                          >
-                                            Save
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn btn-ghost btn-sm"
-                                            onClick={onCancelEdit}
-                                            disabled={actionBusyId === crisis.id}
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )
-                                  : (
-                                      <>
-                                        <p className="text-sm opacity-70 mt-2 whitespace-pre-wrap break-words">
-                                          {crisis.description || 'No description set'}
-                                        </p>
-                                        <div className="card-actions justify-end mt-2">
-                                          <button
-                                            type="button"
-                                            className="btn btn-outline btn-sm"
-                                            onClick={() => onTogglePin(crisis.id, crisis.pinned)}
-                                            disabled={actionBusyId === crisis.id}
-                                          >
-                                            {crisis.pinned
-                                              ? <PinOff size={14} />
-                                              : <Pin size={14} />}
-                                            {crisis.pinned ? 'Unpin' : 'Pin'}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn btn-outline btn-sm"
-                                            onClick={() => onStartEdit(crisis.id, crisis.name, crisis.description)}
-                                            disabled={actionBusyId === crisis.id}
-                                          >
-                                            <Pencil size={14} />
-                                            Edit
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn btn-error btn-outline btn-sm"
-                                            onClick={() => onDelete(crisis.id, crisis.name)}
-                                            disabled={actionBusyId === crisis.id}
-                                          >
-                                            <Trash2 size={14} />
-                                            Delete
-                                          </button>
-                                        </div>
-                                      </>
-                                    )}
+                                <h4 className="font-bold text-lg leading-tight">{crisis.name}</h4>
                               </div>
+                              {crisis.pinned && <span className="badge badge-secondary">Pinned</span>}
                             </div>
-                          ))}
+
+                            {editingCrisisId === crisis.id
+                              ? (
+                                  <div className="space-y-3 mt-2">
+                                    <input
+                                      value={editingName}
+                                      onChange={event => setEditingName(event.target.value)}
+                                      className="input input-bordered w-full"
+                                      placeholder="Crisis name"
+                                    />
+                                    <textarea
+                                      value={editingDescription}
+                                      onChange={event => setEditingDescription(event.target.value)}
+                                      className="textarea textarea-bordered w-full"
+                                      placeholder="Description (optional)"
+                                      rows={3}
+                                    />
+                                    <div className="flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => onSaveEdit(crisis.id)}
+                                        disabled={actionBusyId === crisis.id}
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={onCancelEdit}
+                                        disabled={actionBusyId === crisis.id}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              : (
+                                  <>
+                                    <p className="text-sm opacity-70 mt-2 whitespace-pre-wrap break-words">
+                                      {crisis.description || 'No description set'}
+                                    </p>
+                                    <div className="card-actions justify-end mt-2">
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => onTogglePin(crisis.id, crisis.pinned)}
+                                        disabled={actionBusyId === crisis.id}
+                                      >
+                                        {crisis.pinned
+                                          ? <PinOff size={14} />
+                                          : <Pin size={14} />}
+                                        {crisis.pinned ? 'Unpin' : 'Pin'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => onStartEdit(crisis.id, crisis.name, crisis.description)}
+                                        disabled={actionBusyId === crisis.id}
+                                      >
+                                        <Pencil size={14} />
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-error btn-outline btn-sm"
+                                        onClick={() => onDelete(crisis.id, crisis.name)}
+                                        disabled={actionBusyId === crisis.id}
+                                      >
+                                        <Trash2 size={14} />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                          </div>
                         </div>
-                      )}
-              </section>
-            </div>
-          </div>
+                      ))}
+                    </div>
+                  )}
+          </section>
         </div>
       </div>
     </div>

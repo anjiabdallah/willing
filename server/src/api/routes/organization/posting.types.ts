@@ -1,4 +1,4 @@
-import { OrganizationPostingWithoutVectors, PostingSkill } from '../../../db/tables.js';
+import { Crisis, OrganizationPostingWithoutVectors, PostingSkill } from '../../../db/tables.js';
 import { PostingWithSkills, PostingEnrollment, SuccessResponse, PostingApplication } from '../../../types.js';
 
 export type OrganizationPostingCreateResponse = {
@@ -13,6 +13,7 @@ export type OrganizationPostingListResponse = {
 export type OrganizationPostingResponse = {
   posting: OrganizationPostingWithoutVectors;
   skills: PostingSkill[];
+  crisis?: Crisis;
 };
 
 export type OrganizationPostingEnrollmentsResponse = {
@@ -22,6 +23,7 @@ export type OrganizationPostingEnrollmentsResponse = {
 export type OrganizationPostingUpdateResponse = {
   posting: OrganizationPostingWithoutVectors;
   skills: PostingSkill[];
+  crisis?: Crisis;
 };
 
 export type OrganizationPostingDeleteResponse = SuccessResponse;

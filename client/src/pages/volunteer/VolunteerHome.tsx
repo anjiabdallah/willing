@@ -31,8 +31,7 @@ const RailLoadingState = () => (
 );
 
 const getPostingCrisisId = (posting: PostingWithSkillsAndOrgName): number | undefined => {
-  const maybePosting = posting as PostingWithSkillsAndOrgName & { crisis_id?: unknown };
-  return typeof maybePosting.crisis_id === 'number' ? maybePosting.crisis_id : undefined;
+  return posting.crisis_id;
 };
 
 function VolunteerHome() {

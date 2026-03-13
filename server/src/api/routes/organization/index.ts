@@ -1,7 +1,13 @@
 import { Router, Response } from 'express';
 import zod from 'zod';
 
-import { OrganizationMeResponse, OrganizationProfileResponse, OrganizationRequestResponse } from './index.types.js';
+import {
+  OrganizationCrisisResponse,
+  OrganizationMeResponse,
+  OrganizationPinnedCrisesResponse,
+  OrganizationProfileResponse,
+  OrganizationRequestResponse,
+} from './index.types.js';
 import postingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import database from '../../../db/index.js';
@@ -169,6 +175,36 @@ organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResp
 
 // Protected organization routes
 organizationRouter.use(authorizeOnly('organization'));
+
+organizationRouter.get('/crises/pinned', async (_req, res: Response<OrganizationPinnedCrisesResponse>) => {
+  const crises = await database
+    .selectFrom('crisis')
+    .selectAll()
+    .where('pinned', '=', true)
+    .orderBy('created_at', 'desc')
+    .execute();
+
+  res.json({ crises });
+});
+
+organizationRouter.get('/crises/:id', async (req, res: Response<OrganizationCrisisResponse>) => {
+  const { id } = zod.object({
+    id: zod.coerce.number().int().positive('ID must be a positive number'),
+  }).parse(req.params);
+
+  const crisis = await database
+    .selectFrom('crisis')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirst();
+
+  if (!crisis) {
+    res.status(404);
+    throw new Error('Crisis not found');
+  }
+
+  res.json({ crisis });
+});
 
 organizationRouter.get('/me', async (req, res: Response<OrganizationMeResponse>) => {
   const organization = await database

@@ -175,9 +175,10 @@ interface LocationPickerProps {
   position: [number, number];
   setPosition: (pos: [number, number], name?: string) => void;
   readOnly?: boolean;
+  className?: string;
 }
 
-export default function LocationPicker({ position, setPosition, readOnly = false }: LocationPickerProps) {
+export default function LocationPicker({ position, setPosition, readOnly = false, className }: LocationPickerProps) {
   const [darkTheme, setDarkTheme] = useState(false);
 
   useEffect(() => {
@@ -185,7 +186,7 @@ export default function LocationPicker({ position, setPosition, readOnly = false
   }, []);
 
   return (
-    <div className="h-96 border border-base-content/20 rounded-lg overflow-hidden relative shadow-inner">
+    <div className={`border border-base-content/20 rounded-lg overflow-hidden relative shadow-inner ${className ?? 'h-96'}`}>
       <MapContainer
         center={position}
         zoom={15}

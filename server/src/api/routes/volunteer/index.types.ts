@@ -18,4 +18,8 @@ export type VolunteerPinnedCrisesResponse = {
   crises: Crisis[];
 };
 
+export type VolunteerCrisisResponse = {
+  crisis: Crisis;
+};
+
 export type VolunteerResetPasswordResponse = ResetPasswordResponse;

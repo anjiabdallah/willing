@@ -219,6 +219,7 @@ export type NewCrisis = zod.infer<typeof newCrisisSchema>;
 export const organizationPostingSchema = zod.object({
   id: zod.number(),
   organization_id: zod.number().min(1, 'Organization ID is required'),
+  crisis_id: zod.number().int().positive().optional(),
   title: zod.string().min(1, 'Title is required'),
   description: zod.string().min(1, 'Description is required'),
   latitude: zod

@@ -5,6 +5,7 @@ import zod from 'zod';
 
 import volunteerCvRouter from './cv.js';
 import {
+  VolunteerCrisisResponse,
   VolunteerCreateResponse,
   VolunteerMeResponse,
   VolunteerPinnedCrisesResponse,
@@ -130,6 +131,25 @@ volunteerRouter.get('/crises/pinned', async (_req, res: Response<VolunteerPinned
     .execute();
 
   res.json({ crises });
+});
+
+volunteerRouter.get('/crises/:id', async (req, res: Response<VolunteerCrisisResponse>) => {
+  const { id } = zod.object({
+    id: zod.coerce.number().int().positive('ID must be a positive number'),
+  }).parse(req.params);
+
+  const crisis = await database
+    .selectFrom('crisis')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirst();
+
+  if (!crisis) {
+    res.status(404);
+    throw new Error('Crisis not found');
+  }
+
+  res.json({ crisis });
 });
 
 volunteerRouter.put('/profile', async (req, res: Response<VolunteerProfileResponse>) => {

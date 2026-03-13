@@ -8,6 +8,7 @@ import {
   LockOpen,
   MapPin,
   ShieldCheck,
+  Tag,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -31,7 +32,17 @@ import { executeAndShowError, FormField } from '../utils/formUtils.tsx';
 import requestServer from '../utils/requestServer.ts';
 import { useOrganization } from '../utils/useUsers.ts';
 
-import type { OrganizationPostingApplicationsReponse, OrganizationPostingEnrollmentsResponse, OrganizationPostingResponse, OrganizationProfileResponse, VolunteerPostingResponse } from '../../../server/src/api/types.ts';
+import type {
+  OrganizationCrisisResponse,
+  OrganizationPinnedCrisesResponse,
+  OrganizationPostingApplicationsReponse,
+  OrganizationPostingEnrollmentsResponse,
+  OrganizationPostingResponse,
+  OrganizationProfileResponse,
+  VolunteerCrisisResponse,
+  VolunteerPostingResponse,
+} from '../../../server/src/api/types.ts';
+import type { Crisis } from '../../../server/src/db/tables.ts';
 import type { PostingApplication, PostingEnrollment, PostingWithSkills } from '../../../server/src/types.ts';
 
 const getDateTimeInputValue = (value: Date | string) => {
@@ -57,6 +68,11 @@ function PostingPage() {
   const [hasPendingApplication, setHasPendingApplication] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
+  const [selectedCrisisId, setSelectedCrisisId] = useState<number | undefined>(undefined);
+  const [pinnedCrises, setPinnedCrises] = useState<OrganizationPinnedCrisesResponse['crises']>([]);
+  const [currentPostingCrisis, setCurrentPostingCrisis] = useState<Crisis | undefined>(undefined);
+  const [loadingPinnedCrises, setLoadingPinnedCrises] = useState(false);
+  const [pinnedCrisesError, setPinnedCrisesError] = useState<string | null>(null);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
 
   const [loading, setLoading] = useState(true);
@@ -89,6 +105,90 @@ function PostingPage() {
     defaultValue: true,
   });
 
+  const selectedCrisisName = useMemo(() => {
+    if (selectedCrisisId == null) return null;
+    return pinnedCrises.find(crisis => crisis.id === selectedCrisisId)?.name
+      ?? (currentPostingCrisis?.id === selectedCrisisId ? currentPostingCrisis.name : `Crisis #${selectedCrisisId}`);
+  }, [currentPostingCrisis, pinnedCrises, selectedCrisisId]);
+
+  const selectedCrisis = useMemo(() => {
+    if (selectedCrisisId == null) return null;
+    return pinnedCrises.find(crisis => crisis.id === selectedCrisisId)
+      ?? (currentPostingCrisis?.id === selectedCrisisId ? currentPostingCrisis : null);
+  }, [currentPostingCrisis, pinnedCrises, selectedCrisisId]);
+
+  const canKeepCurrentUnpinnedTag = useMemo(() => {
+    return posting?.crisis_id != null
+      && currentPostingCrisis?.id === posting.crisis_id
+      && !pinnedCrises.some(crisis => crisis.id === posting.crisis_id);
+  }, [currentPostingCrisis?.id, pinnedCrises, posting?.crisis_id]);
+
+  useEffect(() => {
+    if (isVolunteerView) return;
+
+    const loadPinnedCrises = async () => {
+      try {
+        setLoadingPinnedCrises(true);
+        setPinnedCrisesError(null);
+        const response = await requestServer<OrganizationPinnedCrisesResponse>('/organization/crises/pinned', {
+          includeJwt: true,
+        });
+        setPinnedCrises(response.crises);
+      } catch (error) {
+        setPinnedCrisesError(error instanceof Error ? error.message : 'Failed to load pinned crises');
+      } finally {
+        setLoadingPinnedCrises(false);
+      }
+    };
+
+    loadPinnedCrises();
+  }, [isVolunteerView]);
+
+  useEffect(() => {
+    if (selectedCrisisId == null) {
+      setCurrentPostingCrisis(undefined);
+      return;
+    }
+
+    const pinnedMatch = pinnedCrises.find(crisis => crisis.id === selectedCrisisId);
+    if (pinnedMatch) {
+      setCurrentPostingCrisis(pinnedMatch);
+      return;
+    }
+
+    if (currentPostingCrisis?.id === selectedCrisisId) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadCurrentCrisis = async () => {
+      try {
+        const response = isVolunteerView
+          ? await requestServer<VolunteerCrisisResponse>(`/volunteer/crises/${selectedCrisisId}`, {
+              includeJwt: true,
+            })
+          : await requestServer<OrganizationCrisisResponse>(`/organization/crises/${selectedCrisisId}`, {
+              includeJwt: true,
+            });
+
+        if (!isCancelled) {
+          setCurrentPostingCrisis(response.crisis);
+        }
+      } catch {
+        if (!isCancelled) {
+          setCurrentPostingCrisis(undefined);
+        }
+      }
+    };
+
+    loadCurrentCrisis();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentPostingCrisis?.id, isVolunteerView, pinnedCrises, selectedCrisisId]);
+
   const loadPosting = useCallback(async () => {
     if (!id) return;
 
@@ -108,10 +208,12 @@ function PostingPage() {
         };
 
         setPosting(postingWithSkills);
+        setCurrentPostingCrisis(undefined);
         setEnrollments([]);
         setHasPendingApplication(postingResponse.hasPendingApplication);
         setIsEnrolled(postingResponse.isEnrolled);
         setSkills(postingResponse.skills.map(s => s.name));
+        setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
         setPosition([
           postingResponse.posting.latitude ?? 33.90192863620578,
           postingResponse.posting.longitude ?? 35.477959277880416,
@@ -161,6 +263,7 @@ function PostingPage() {
       };
 
       setPosting(postingWithSkills);
+      setCurrentPostingCrisis(postingResponse.crisis);
       setEnrollments(enrollmentsResponse.enrollments);
 
       if (!postingResponse.posting.is_open) {
@@ -174,6 +277,7 @@ function PostingPage() {
       setIsEnrolled(false);
       setHasPendingApplication(false);
       setSkills(postingResponse.skills.map(s => s.name));
+      setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
       setPosition([
         postingResponse.posting.latitude ?? 33.90192863620578,
         postingResponse.posting.longitude ?? 35.477959277880416,
@@ -252,6 +356,7 @@ function PostingPage() {
           minimum_age: data.minimum_age ? Number(data.minimum_age) : undefined,
           is_open: data.is_open,
           skills: skills.length > 0 ? skills : undefined,
+          crisis_id: selectedCrisisId ?? null,
         };
 
         const response = await requestServer<OrganizationPostingResponse>(
@@ -269,7 +374,9 @@ function PostingPage() {
         };
 
         setPosting(updatedPosting);
+        setCurrentPostingCrisis(response.crisis);
         setSkills(response.skills.map(s => s.name));
+        setSelectedCrisisId(response.posting.crisis_id ?? undefined);
         setSaveMessage('Posting updated successfully.');
         setIsEditMode(false);
       } catch (error) {
@@ -293,6 +400,7 @@ function PostingPage() {
       is_open: posting.is_open,
     });
     setSkills(posting.skills.map(s => s.name));
+    setSelectedCrisisId(posting.crisis_id ?? undefined);
     setPosition([
       posting.latitude ?? 33.90192863620578,
       posting.longitude ?? 35.477959277880416,
@@ -709,6 +817,73 @@ function PostingPage() {
                                 </div>
                               )}
                             </div>
+                          </div>
+                        )}
+                  </div>
+                </div>
+
+                <div className="card bg-base-100 shadow-md">
+                  <div className="card-body">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <h5 className="font-bold text-lg inline-flex items-center gap-2">
+                          <Tag size={17} className="text-accent" />
+                          Crisis Tag
+                        </h5>
+                        {!isVolunteerView && (
+                          <p className="text-sm opacity-70">
+                            Add a crisis tag to this posting.
+                          </p>
+                        )}
+                      </div>
+                      {!isEditMode && selectedCrisisName && (
+                        <span className="badge badge-accent badge-outline">Tagged</span>
+                      )}
+                    </div>
+
+                    {isEditMode
+                      ? (
+                          <fieldset className="fieldset">
+                            <label className="label">
+                              <span className="label-text font-medium">Selected Crisis</span>
+                            </label>
+                            <select
+                              className="select select-bordered w-full"
+                              value={selectedCrisisId?.toString() ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setSelectedCrisisId(value ? Number(value) : undefined);
+                              }}
+                              disabled={saving || loadingPinnedCrises}
+                            >
+                              <option value="">No crisis tag</option>
+                              {canKeepCurrentUnpinnedTag && (
+                                <option value={posting?.crisis_id?.toString() ?? ''}>
+                                  {currentPostingCrisis?.name}
+                                  {' '}
+                                  (unpinned)
+                                </option>
+                              )}
+                              {pinnedCrises.map(crisis => (
+                                <option key={crisis.id} value={crisis.id.toString()}>{crisis.name}</option>
+                              ))}
+                            </select>
+                            {loadingPinnedCrises && <span className="label-text-alt opacity-70">Loading pinned crises...</span>}
+                            {pinnedCrisesError && <span className="label-text-alt text-error">{pinnedCrisesError}</span>}
+                          </fieldset>
+                        )
+                      : (
+                          <div className="rounded-box border border-base-300 bg-base-200/50 px-4 py-3">
+                            {selectedCrisisName
+                              ? (
+                                  <>
+                                    <div className="badge badge-accent mb-2">{selectedCrisisName}</div>
+                                    <p className="text-sm opacity-70">
+                                      {selectedCrisis?.description?.trim() || 'No crisis description provided.'}
+                                    </p>
+                                  </>
+                                )
+                              : <p className="text-sm opacity-70">This posting is not tagged with any crisis.</p>}
                           </div>
                         )}
                   </div>

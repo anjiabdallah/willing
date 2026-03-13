@@ -7,9 +7,24 @@ import database from '../../../db/index.js';
 import { Enrollment, EnrollmentApplication } from '../../../db/tables.js';
 import { recomputeVolunteerExperienceVector } from '../../../services/embeddings/embeddingUpdateService.js';
 import { authorizeOnly } from '../../authorization.js';
-import { organizationPostingResponseColumns } from '../../responseColumns.js';
 
 const volunteerPostingRouter = Router();
+const organizationPostingResponseColumns = [
+  'organization_posting.id',
+  'organization_posting.organization_id',
+  'organization_posting.title',
+  'organization_posting.description',
+  'organization_posting.latitude',
+  'organization_posting.longitude',
+  'organization_posting.max_volunteers',
+  'organization_posting.start_timestamp',
+  'organization_posting.end_timestamp',
+  'organization_posting.minimum_age',
+  'organization_posting.is_open',
+  'organization_posting.location_name',
+  'organization_posting.created_at',
+  'organization_posting.updated_at',
+] as const;
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),

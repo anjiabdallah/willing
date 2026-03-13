@@ -11,9 +11,18 @@ import { recomputeOrganizationVector } from '../../../services/embeddings/embedd
 import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail } from '../../../SMTP/emails.js';
 import { loginInfoSchema } from '../../../types.js';
 import { authorizeOnly } from '../../authorization.js';
-import { organizationPrivateResponseColumns } from '../../responseColumns.js';
 
 const adminRouter = Router();
+const organizationPrivateResponseColumns = [
+  'id',
+  'name',
+  'email',
+  'phone_number',
+  'url',
+  'latitude',
+  'longitude',
+  'location_name',
+] as const;
 
 adminRouter.post('/login', async (req, res: Response<AdminLoginResponse>) => {
   const body = loginInfoSchema.parse(req.body);

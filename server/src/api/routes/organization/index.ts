@@ -9,13 +9,49 @@ import { newOrganizationRequestSchema, organizationAccountSchema, PostingSkill }
 import { recomputeOrganizationVector } from '../../../services/embeddings/embeddingUpdateService.js';
 import { sendAdminOrganizationRequestEmail } from '../../../SMTP/emails.js';
 import { authorizeOnly } from '../../authorization.js';
-import {
-  organizationPostingResponseColumns,
-  organizationPrivateResponseColumns,
-  organizationProfileResponseColumns,
-} from '../../responseColumns.js';
 
 const organizationRouter = Router();
+const organizationProfileResponseColumns = [
+  'id',
+  'name',
+  'email',
+  'phone_number',
+  'url',
+  'latitude',
+  'longitude',
+  'location_name',
+  'created_at',
+  'updated_at',
+] as const;
+
+const organizationPrivateResponseColumns = [
+  'id',
+  'name',
+  'email',
+  'phone_number',
+  'url',
+  'latitude',
+  'longitude',
+  'location_name',
+] as const;
+
+const organizationPostingResponseColumns = [
+  'organization_posting.id',
+  'organization_posting.organization_id',
+  'organization_posting.title',
+  'organization_posting.description',
+  'organization_posting.latitude',
+  'organization_posting.longitude',
+  'organization_posting.max_volunteers',
+  'organization_posting.start_timestamp',
+  'organization_posting.end_timestamp',
+  'organization_posting.minimum_age',
+  'organization_posting.is_open',
+  'organization_posting.location_name',
+  'organization_posting.created_at',
+  'organization_posting.updated_at',
+] as const;
+
 const organizationProfileUpdateSchema = organizationAccountSchema.omit({
   id: true,
   password: true,

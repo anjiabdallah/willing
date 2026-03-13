@@ -152,11 +152,11 @@ export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSche
 export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, org_vector: true, created_at: true, updated_at: true });
 export type OrganizationAccountWithoutPassword = zod.infer<typeof organizationAccountUpdate>;
 
-export const organizationAccountWithoutPasswordWithTimestampsSchema = organizationAccountSchema.omit({
+export const organizationAccountWithoutPasswordAndVectorSchema = organizationAccountSchema.omit({
   password: true,
   org_vector: true,
 });
-export type OrganizationAccountWithoutPasswordWithTimestamps = zod.infer<typeof organizationAccountWithoutPasswordWithTimestampsSchema>;
+export type OrganizationAccountWithoutPasswordAndVector = zod.infer<typeof organizationAccountWithoutPasswordAndVectorSchema>;
 
 // admin_account
 

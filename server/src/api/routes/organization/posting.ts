@@ -27,10 +27,25 @@ import {
   sendVolunteerApplicationAcceptedEmail,
   sendVolunteerApplicationRejectedEmail,
 } from '../../../SMTP/emails.js';
-import { organizationPostingResponseColumns } from '../../responseColumns.js';
 
 const postingRouter = Router();
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial();
+const organizationPostingResponseColumns = [
+  'organization_posting.id',
+  'organization_posting.organization_id',
+  'organization_posting.title',
+  'organization_posting.description',
+  'organization_posting.latitude',
+  'organization_posting.longitude',
+  'organization_posting.max_volunteers',
+  'organization_posting.start_timestamp',
+  'organization_posting.end_timestamp',
+  'organization_posting.minimum_age',
+  'organization_posting.is_open',
+  'organization_posting.location_name',
+  'organization_posting.created_at',
+  'organization_posting.updated_at',
+] as const;
 
 const normalizeSkillList = (skills: string[]) => Array.from(new Set(skills.map(skill => skill.trim()).filter(Boolean))).sort();
 const areSkillListsEqual = (left: string[], right: string[]) => {

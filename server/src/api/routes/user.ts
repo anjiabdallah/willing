@@ -15,9 +15,32 @@ import database from '../../db/index.js';
 import { passwordSchema } from '../../db/tables.js';
 import { sendPasswordResetEmail } from '../../SMTP/emails.js';
 import { loginInfoSchema } from '../../types.js';
-import { organizationLoginColumns, volunteerLoginColumns } from '../responseColumns.js';
 
 const userRouter = Router();
+const organizationLoginColumns = [
+  'id',
+  'name',
+  'email',
+  'phone_number',
+  'url',
+  'latitude',
+  'longitude',
+  'location_name',
+  'password',
+] as const;
+
+const volunteerLoginColumns = [
+  'id',
+  'first_name',
+  'last_name',
+  'email',
+  'password',
+  'date_of_birth',
+  'gender',
+  'cv_path',
+  'description',
+  'privacy',
+] as const;
 
 const forgotPasswordRequestSchema = zod.object({
   email: zod.email(),

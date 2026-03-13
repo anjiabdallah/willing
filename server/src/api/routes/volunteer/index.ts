@@ -16,9 +16,20 @@ import {
 } from '../../../services/embeddings/embeddingUpdateService.js';
 import { getVolunteerProfile } from '../../../services/volunteer/index.js';
 import { authorizeOnly } from '../../authorization.js';
-import { volunteerResponseColumns } from '../../responseColumns.js';
 
 const volunteerRouter = Router();
+const volunteerResponseColumns = [
+  'id',
+  'first_name',
+  'last_name',
+  'email',
+  'date_of_birth',
+  'gender',
+  'cv_path',
+  'description',
+  'privacy',
+] as const;
+
 const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
   id: true,
   password: true,

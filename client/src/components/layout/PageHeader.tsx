@@ -38,7 +38,7 @@ export default function PageHeader({
   };
 
   const wrapperClasses = variant === 'gradient'
-    ? 'mb-6 rounded-2xl border border-base-300/80 bg-gradient-to-r from-primary/10 via-base-100 to-secondary/10 shadow-sm px-5 py-5 md:px-6'
+    ? 'mb-6 rounded-2xl border border-base-300/80 bg-gradient-to-r from-primary/10 to-secondary/10 shadow-sm px-5 py-5 md:px-6'
     : 'mb-6 bg-base-200 -mx-6 px-6 py-4';
 
   return (
@@ -53,7 +53,7 @@ export default function PageHeader({
           </button>
         )}
         <div className="flex gap-4">
-          {Icon && <Icon className="text-primary mt-0.5" size={32} />}
+          {Icon && <Icon className="text-primary mt-0.5 shrink-0" size={32} />}
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-3xl font-extrabold tracking-tight">{title}</h3>

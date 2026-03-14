@@ -26,6 +26,8 @@ const organizationPostingResponseColumns = [
   'organization_posting.location_name',
   'organization_posting.created_at',
   'organization_posting.updated_at',
+  'organization_posting.crisis_id',
+  'crisis.name as crisis_name',
 ] as const;
 
 const postingIdParamsSchema = zod.object({
@@ -77,6 +79,11 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
       'organization_account',
       'organization_account.id',
       'organization_posting.organization_id',
+    )
+    .leftJoin(
+      'crisis',
+      'crisis.id',
+      'organization_posting.crisis_id',
     )
     .select(organizationPostingResponseColumns)
     .select(['organization_account.name as organization_name'])
@@ -189,9 +196,27 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
     skillsByPostingId.get(skillRow.posting_id)!.push(skillRow);
   });
 
+  const enrollmentCounts = postingIds.length > 0
+    ? await database
+        .selectFrom('enrollment')
+        .select([
+          'posting_id',
+          sql<number>`count(enrollment.id)`.as('count'),
+        ])
+        .where('posting_id', 'in', postingIds)
+        .groupBy('posting_id')
+        .execute()
+    : [];
+
+  const countsByPostingId = new Map<number, number>();
+  enrollmentCounts.forEach((r) => {
+    countsByPostingId.set(r.posting_id, Number(r.count ?? 0));
+  });
+
   const postingWithSkills = postings.map(posting => ({
     ...posting,
     skills: skillsByPostingId.get(posting.id) || [],
+    enrollment_count: countsByPostingId.get(posting.id) ?? 0,
   }));
 
   res.json({ postings: postingWithSkills });
@@ -205,6 +230,7 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .selectFrom('enrollment')
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
       .select(organizationPostingResponseColumns)
       .select(['organization_account.name as organization_name'])
       .where('enrollment.volunteer_id', '=', volunteerId)
@@ -213,6 +239,7 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .selectFrom('enrollment_application')
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
       .select(organizationPostingResponseColumns)
       .select(['organization_account.name as organization_name'])
       .where('enrollment_application.volunteer_id', '=', volunteerId)
@@ -250,12 +277,31 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
     skillsByPostingId.get(skill.posting_id)!.push(skill);
   });
 
+  const enrollmentCounts = allPostingIds.length > 0
+    ? await database
+        .selectFrom('enrollment')
+        .select([
+          'posting_id',
+          sql<number>`count(enrollment.id)`.as('count'),
+        ])
+        .where('posting_id', 'in', allPostingIds)
+        .groupBy('posting_id')
+        .execute()
+    : [];
+
+  const countsByPostingId = new Map<number, number>();
+  enrollmentCounts.forEach((r) => {
+    countsByPostingId.set(r.posting_id, Number(r.count ?? 0));
+  });
+
   const postings = Array.from(postingsMap.values())
     .sort((a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
     .map(posting => ({
       ...posting,
       skills: skillsByPostingId.get(posting.id) ?? [],
       status: statusMap.get(posting.id) as 'enrolled' | 'pending',
+      enrollment_count: countsByPostingId.get(posting.id) ?? 0,
+      crisis_name: posting.crisis_name ?? null,
     }));
 
   res.json({ postings });
@@ -267,6 +313,11 @@ volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingRes
 
   const posting = await database
     .selectFrom('organization_posting')
+    .leftJoin(
+      'crisis',
+      'crisis.id',
+      'organization_posting.crisis_id',
+    )
     .select(organizationPostingResponseColumns)
     .where('organization_posting.id', '=', id)
     .executeTakeFirst();

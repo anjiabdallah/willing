@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { sql } from 'kysely';
 import zod from 'zod';
 
 import {
@@ -177,9 +178,27 @@ postingRouter.get('/', async (req, res: Response<OrganizationPostingListResponse
     skillsByPostingId.get(skill.posting_id)!.push(skill);
   });
 
+  const enrollmentCounts = postingIds.length > 0
+    ? await database
+        .selectFrom('enrollment')
+        .select([
+          'posting_id',
+          sql<number>`count(enrollment.id)`.as('count'),
+        ])
+        .where('posting_id', 'in', postingIds)
+        .groupBy('posting_id')
+        .execute()
+    : [];
+
+  const countsByPostingId = new Map<number, number>();
+  enrollmentCounts.forEach((row) => {
+    countsByPostingId.set(row.posting_id, Number(row.count ?? 0));
+  });
+
   const postingsWithSkills = postings.map(posting => ({
     ...posting,
     skills: skillsByPostingId.get(posting.id) || [],
+    enrollment_count: countsByPostingId.get(posting.id) ?? 0,
   }));
 
   res.json({ postings: postingsWithSkills });

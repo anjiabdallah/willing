@@ -13,16 +13,21 @@ import type {
   VolunteerPinnedCrisesResponse,
   VolunteerPostingSearchResponse,
 } from '../../../../server/src/api/types';
-import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
+import type { PostingWithContext } from '../../../../server/src/types';
 
-const PostingRailCard = ({ posting }: { posting: PostingWithSkillsAndOrgName }) => (
-  <div className="w-[320px] shrink-0 snap-start md:w-[380px]">
-    <PostingCard
-      posting={posting}
-      organization={{ name: posting.organization_name, id: posting.organization_id }}
-    />
-  </div>
-);
+const PostingRailCard = ({ posting, showCrisis = false }: { posting: PostingWithContext & { status?: 'enrolled' | 'pending' }; showCrisis?: boolean }) => {
+  const applicationStatus = posting.status === 'enrolled' ? 'registered' : posting.status === 'pending' ? 'pending' : 'none';
+
+  return (
+    <div className="shrink-0 snap-start md:w-md w-sm">
+      <PostingCard
+        posting={posting}
+        applicationStatus={applicationStatus}
+        showCrisis={showCrisis}
+      />
+    </div>
+  );
+};
 
 const RailLoadingState = () => (
   <div className="flex justify-center rounded-box border border-base-300 bg-base-100 px-6 py-12">
@@ -30,8 +35,9 @@ const RailLoadingState = () => (
   </div>
 );
 
-const getPostingCrisisId = (posting: PostingWithSkillsAndOrgName): number | undefined => {
-  return posting.crisis_id;
+const getPostingCrisisId = (posting: PostingWithContext): number | undefined => {
+  const maybePosting = posting as PostingWithContext & { crisis_id?: unknown };
+  return typeof maybePosting.crisis_id === 'number' ? maybePosting.crisis_id : undefined;
 };
 
 function VolunteerHome() {
@@ -39,7 +45,7 @@ function VolunteerHome() {
     data: enrolledPostings,
     loading: enrolledLoading,
     error: enrolledError,
-  } = useAsync<PostingWithSkillsAndOrgName[], []>(
+  } = useAsync<PostingWithContext[], []>(
     async () => {
       const res = await requestServer<VolunteerEnrollmentsResponse>('/volunteer/posting/enrollments', { includeJwt: true });
       return res.postings;
@@ -51,7 +57,7 @@ function VolunteerHome() {
     data: allPostings,
     loading: allLoading,
     error: allError,
-  } = useAsync<PostingWithSkillsAndOrgName[], []>(
+  } = useAsync<PostingWithContext[], []>(
     async () => {
       const res = await requestServer<VolunteerPostingSearchResponse>('/volunteer/posting', { includeJwt: true });
       return res.postings;
@@ -73,7 +79,7 @@ function VolunteerHome() {
 
   const forYouPostings = (allPostings ?? []).slice(0, 8);
   const featuredCrises = (pinnedCrises ?? []).slice(0, 8);
-  const postingsByCrisisId = new Map<number, PostingWithSkillsAndOrgName[]>();
+  const postingsByCrisisId = new Map<number, PostingWithContext[]>();
 
   (allPostings ?? []).forEach((posting) => {
     const crisisId = getPostingCrisisId(posting);
@@ -153,7 +159,7 @@ function VolunteerHome() {
               )}
             >
               {postings.map(posting => (
-                <PostingRailCard key={posting.id} posting={posting} />
+                <PostingRailCard key={posting.id} posting={posting} showCrisis />
               ))}
             </HorizontalScrollSection>
           ))}

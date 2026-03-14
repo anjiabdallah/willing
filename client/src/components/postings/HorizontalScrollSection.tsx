@@ -97,20 +97,20 @@ function HorizontalScrollSection({
             <div className="relative">
               <div
                 ref={scrollContainerRef}
-                className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex gap-4 overflow-x-scroll overflow-y-hidden py-3 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
                 {children}
               </div>
 
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute inset-y-0 left-0 w-14 bg-gradient-to-r from-base-200 via-base-200/80 to-transparent transition-opacity duration-200 ${
+                className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-linear-to-r from-base-200 via-base-200/80 to-transparent transition-opacity duration-200 ${
                   showLeftFade ? 'opacity-100' : 'opacity-0'
                 }`}
               />
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute inset-y-0 right-0 w-14 bg-gradient-to-l from-base-200 via-base-200/80 to-transparent transition-opacity duration-200 ${
+                className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-base-200 via-base-200/80 to-transparent transition-opacity duration-200 ${
                   showRightFade ? 'opacity-100' : 'opacity-0'
                 }`}
               />

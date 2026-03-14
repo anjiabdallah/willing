@@ -20,10 +20,10 @@ Willing connects volunteers with organizations that publish real-world help oppo
 - **Volunteer**: End-user who creates a profile, adds skills, discovers postings, applies, enrolls, and may later be marked as attended by organizations.
 - **Organization**: Account type that creates and manages volunteer postings after being approved by an admin.
 - **Admin**: Platform moderator who reviews organization onboarding requests and manages crisis definitions.
-- **Posting**: A volunteer opportunity created by an organization (title, description, time window, location, requirements, skills, optional maximum number of volunteers, opptional minimum age, optional tag (crisis), either open (anyone that applies is accepted) or review-based (requires acceptance from the organization)).
+- **Posting**: A volunteer opportunity created by an organization (title, description, time window, location, requirements, skills, optional maximum number of volunteers, optional minimum age, optional linked crisis event, either open (anyone that applies is accepted) or review-based (requires acceptance from the organization)).
 - **Enrollment application**: A volunteer's application to a posting (optional message included).
 - **Enrollment**: Accepted application record; later can be marked attended.
-- **Crisis**: A major event/context (for example, flood, conflict escalation, wildfire response) used to classify and surface urgent opportunities. Crises can be pinned to highlight priority contexts.
+- **Crisis**: A specific real-world event bounded in time (for example, Beirut Port Explosion 2020, Lebanon War 2026), not a generic type or tag. Crises can be pinned to highlight priority events and surface urgent opportunities.
 
 ### High-Level User Journey
 
@@ -38,7 +38,7 @@ Willing connects volunteers with organizations that publish real-world help oppo
 ### Crisis Flow
 
 1. Admin creates crisis entries and may pin active/important crises.
-2. Organizations can tag postings with a crisis where relevant.
+2. Organizations can link postings to a specific crisis event where relevant.
 3. Volunteer-facing discovery can prioritize/filter opportunities related to current crises.
 4. Pinned crises communicate urgency across the platform and guide organization posting context.
 
@@ -46,7 +46,7 @@ Willing connects volunteers with organizations that publish real-world help oppo
 
 - Volunteers only manage their own profile, applications, and enrollments.
 - Organizations only manage their own postings and related applicant/enrollment decisions.
-- Admin does not run postings; admin governs organization access and crisis taxonomy.
+- Admin does not run postings; admin governs organization access and the crisis event catalog.
 
 ## Repository Map
 

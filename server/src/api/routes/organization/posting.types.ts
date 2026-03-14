@@ -7,7 +7,7 @@ export type OrganizationPostingCreateResponse = {
 };
 
 export type OrganizationPostingListResponse = {
-  postings: PostingWithSkills[];
+  postings: (PostingWithSkills & { enrollment_count: number })[];
 };
 
 export type OrganizationPostingResponse = {

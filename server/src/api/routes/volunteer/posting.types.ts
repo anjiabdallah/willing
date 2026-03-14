@@ -1,7 +1,7 @@
 import { Enrollment, EnrollmentApplication, OrganizationPostingWithoutVectors, PostingSkill } from '../../../db/tables.js';
-import { PostingWithSkillsAndOrgName, SuccessResponse } from '../../../types.js';
+import { PostingWithContext, SuccessResponse } from '../../../types.js';
 
-export type VolunteerEnrollmentEntry = PostingWithSkillsAndOrgName & {
+export type VolunteerEnrollmentEntry = PostingWithContext & {
   status: 'enrolled' | 'pending';
 };
 
@@ -10,7 +10,7 @@ export type VolunteerEnrollmentsResponse = {
 };
 
 export type VolunteerPostingSearchResponse = {
-  postings: PostingWithSkillsAndOrgName[];
+  postings: (PostingWithContext & { enrollment_count: number })[];
 };
 
 export type VolunteerPostingResponse = {

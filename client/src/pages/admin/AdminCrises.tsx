@@ -312,7 +312,7 @@ function AdminCrises() {
                                 )
                               : (
                                   <>
-                                    <p className="text-sm opacity-70 mt-2 whitespace-pre-wrap break-words">
+                                    <p className="text-sm opacity-70 mt-2 whitespace-pre-wrap wrap-break-word">
                                       {crisis.description || 'No description set'}
                                     </p>
                                     <div className="card-actions justify-end mt-2">

@@ -8,7 +8,7 @@ import Loading from '../Loading.tsx';
 import PostingCard from '../PostingCard.tsx';
 
 import type { VolunteerPostingSearchResponse } from '../../../../server/src/api/types.ts';
-import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types.ts';
+import type { PostingWithContext } from '../../../../server/src/types.ts';
 
 export type PostingSearchFilters = {
   search: string;
@@ -25,12 +25,12 @@ type PostingSearchViewProps = {
   defaultBackTo?: string;
   initialFilters?: Partial<PostingSearchFilters>;
   emptyMessage?: string;
-  filterPostings?: (postings: PostingWithSkillsAndOrgName[]) => PostingWithSkillsAndOrgName[];
+  filterPostings?: (postings: PostingWithContext[]) => PostingWithContext[];
   fetchUrl?: string;
 };
 
 const applyDateFilter = (
-  postings: PostingWithSkillsAndOrgName[],
+  postings: PostingWithContext[],
   startDate: string,
   endDate: string,
 ) => {
@@ -48,7 +48,7 @@ const applyDateFilter = (
 };
 
 const applyTextSearch = (
-  postings: PostingWithSkillsAndOrgName[],
+  postings: PostingWithContext[],
   normalizedSearch: string,
 ) => {
   if (!normalizedSearch) {
@@ -107,7 +107,7 @@ function PostingSearchView({
     ...initialFilters,
   };
 
-  const [postings, setPostings] = useState<PostingWithSkillsAndOrgName[]>([]);
+  const [postings, setPostings] = useState<PostingWithContext[]>([]);
   const [filters, setFilters] = useState<PostingSearchFilters>(defaultFilters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -244,10 +244,6 @@ function PostingSearchView({
                   <PostingCard
                     key={posting.id}
                     posting={posting}
-                    organization={{
-                      name: posting.organization_name,
-                      id: posting.organization_id,
-                    }}
                   />
                 ))}
               </div>

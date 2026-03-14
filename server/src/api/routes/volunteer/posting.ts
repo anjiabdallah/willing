@@ -34,6 +34,23 @@ const applyBodySchema = zod.object({
   message: zod.string().trim().min(1, 'Message cannot be empty').optional(),
 });
 
+function calculateAge(dateOfBirth: string, at: Date = new Date()): number | null {
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) {
+    return null;
+  }
+
+  let age = at.getUTCFullYear() - dob.getUTCFullYear();
+  const monthDiff = at.getUTCMonth() - dob.getUTCMonth();
+  const dayDiff = at.getUTCDate() - dob.getUTCDate();
+
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+
+  return age;
+}
+
 volunteerPostingRouter.use(authorizeOnly('volunteer'));
 
 volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearchResponse>) => {
@@ -289,15 +306,41 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPo
   const { id } = postingIdParamsSchema.parse(req.params);
   const { message } = applyBodySchema.parse(req.body ?? {});
 
-  const posting = await database
-    .selectFrom('organization_posting')
-    .select(['id', 'is_open'])
-    .where('id', '=', id)
-    .executeTakeFirst();
+  const [posting, volunteer] = await Promise.all([
+    database
+      .selectFrom('organization_posting')
+      .select(['id', 'is_open', 'minimum_age'])
+      .where('id', '=', id)
+      .executeTakeFirst(),
+    database
+      .selectFrom('volunteer_account')
+      .select('date_of_birth')
+      .where('id', '=', volunteerId)
+      .executeTakeFirst(),
+  ]);
 
   if (!posting) {
     res.status(404);
     throw new Error('Posting not found');
+  }
+
+  if (!volunteer) {
+    res.status(404);
+    throw new Error('Volunteer not found');
+  }
+
+  if (posting.minimum_age !== undefined && posting.minimum_age !== null) {
+    const volunteerAge = calculateAge(volunteer.date_of_birth);
+
+    if (volunteerAge === null) {
+      res.status(400);
+      throw new Error('Volunteer date of birth is invalid');
+    }
+
+    if (volunteerAge < posting.minimum_age) {
+      res.status(403);
+      throw new Error(`You must be at least ${posting.minimum_age} years old to apply for this posting`);
+    }
   }
 
   const [existingApplication, existingEnrollment] = await Promise.all([

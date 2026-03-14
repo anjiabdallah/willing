@@ -10,6 +10,7 @@ import {
   AdminOrganizationRequestReviewResponse,
   AdminOrganizationRequestsResponse,
 } from './index.types.js';
+import removePassword from '../../../auth/removePassword.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import config from '../../../config.js';
 import database from '../../../db/index.js';
@@ -59,12 +60,9 @@ adminRouter.post('/login', async (req, res: Response<AdminLoginResponse>) => {
     .setExpirationTime('7d')
     .sign(new TextEncoder().encode(config.JWT_SECRET));
 
-  // @ts-expect-error: Do not return the password
-  delete account.password;
-
   res.json({
     token,
-    admin: account,
+    admin: removePassword(account),
   });
 });
 
@@ -77,10 +75,7 @@ adminRouter.get('/me', async (req, res: Response<AdminMeResponse>) => {
     .where('id', '=', req.userJWT!.id)
     .executeTakeFirstOrThrow();
 
-  // @ts-expect-error: Do not return the password
-  delete admin.password;
-
-  res.json({ admin });
+  res.json({ admin: removePassword(admin) });
 });
 
 adminRouter.get('/getOrganizationRequests', async (_req, res: Response<AdminOrganizationRequestsResponse>) => {

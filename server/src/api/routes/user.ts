@@ -10,6 +10,7 @@ import {
   UserForgotPasswordResponse,
   UserLoginResponse,
 } from './user.types.js';
+import removePassword from '../../auth/removePassword.js';
 import config from '../../config.js';
 import database from '../../db/index.js';
 import { passwordSchema } from '../../db/tables.js';
@@ -97,15 +98,11 @@ userRouter.post('/login', async (req, res: Response<UserLoginResponse>) => {
     .setExpirationTime('7d')
     .sign(new TextEncoder().encode(config.JWT_SECRET));
 
-  // @ts-expect-error: Do not return the password
-  delete organizationAccount?.password;
-  // @ts-expect-error: Do not return the password
-  delete volunteerAccount?.password;
-
   res.json({
     token,
     role: organizationAccount ? 'organization' : 'volunteer',
-    [organizationAccount ? 'organization' : 'volunteer']: organizationAccount || volunteerAccount,
+    [organizationAccount ? 'organization' : 'volunteer']:
+        organizationAccount ? removePassword(organizationAccount) : removePassword(volunteerAccount!),
   });
 });
 

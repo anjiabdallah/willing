@@ -17,6 +17,10 @@ export type OrganizationPinnedCrisesResponse = {
   crises: Crisis[];
 };
 
+export type OrganizationCrisesResponse = {
+  crises: Crisis[];
+};
+
 export type OrganizationCrisisResponse = {
   crisis: Crisis;
 };

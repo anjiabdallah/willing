@@ -64,16 +64,16 @@ const attendanceUpdateBodySchema = zod.object({
   attended: zod.boolean(),
 });
 
-const assertPinnedCrisis = async (crisisId: number, res: Response) => {
+const assertCrisisExists = async (crisisId: number, res: Response) => {
   const crisis = await database
     .selectFrom('crisis')
-    .select(['id', 'pinned'])
+    .select(['id'])
     .where('id', '=', crisisId)
     .executeTakeFirst();
 
-  if (!crisis || !crisis.pinned) {
+  if (!crisis) {
     res.status(400);
-    throw new Error('Selected crisis tag must be pinned');
+    throw new Error('Selected crisis tag does not exist');
   }
 };
 
@@ -92,7 +92,7 @@ postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateRespo
   const orgId = req.userJWT!.id;
 
   if (body.crisis_id !== undefined) {
-    await assertPinnedCrisis(body.crisis_id, res);
+    await assertCrisisExists(body.crisis_id, res);
   }
 
   const result = await database.transaction().execute(async (trx) => {
@@ -343,7 +343,7 @@ postingRouter.put('/:id', async (req, res: Response<OrganizationPostingUpdateRes
   }
 
   if (body.crisis_id !== undefined && body.crisis_id !== null && body.crisis_id !== posting.crisis_id) {
-    await assertPinnedCrisis(body.crisis_id, res);
+    await assertCrisisExists(body.crisis_id, res);
   }
 
   const existingSkills = await database

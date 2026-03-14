@@ -34,7 +34,7 @@ import { useOrganization } from '../utils/useUsers.ts';
 
 import type {
   OrganizationCrisisResponse,
-  OrganizationPinnedCrisesResponse,
+  OrganizationCrisesResponse,
   OrganizationPostingApplicationsReponse,
   OrganizationPostingEnrollmentsResponse,
   OrganizationPostingResponse,
@@ -69,10 +69,10 @@ function PostingPage() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [selectedCrisisId, setSelectedCrisisId] = useState<number | undefined>(undefined);
-  const [pinnedCrises, setPinnedCrises] = useState<OrganizationPinnedCrisesResponse['crises']>([]);
+  const [availableCrises, setAvailableCrises] = useState<OrganizationCrisesResponse['crises']>([]);
   const [currentPostingCrisis, setCurrentPostingCrisis] = useState<Crisis | undefined>(undefined);
-  const [loadingPinnedCrises, setLoadingPinnedCrises] = useState(false);
-  const [pinnedCrisesError, setPinnedCrisesError] = useState<string | null>(null);
+  const [loadingCrises, setLoadingCrises] = useState(false);
+  const [crisesError, setCrisesError] = useState<string | null>(null);
   const [position, setPosition] = useState<[number, number]>([33.90192863620578, 35.477959277880416]);
 
   const [loading, setLoading] = useState(true);
@@ -107,41 +107,35 @@ function PostingPage() {
 
   const selectedCrisisName = useMemo(() => {
     if (selectedCrisisId == null) return null;
-    return pinnedCrises.find(crisis => crisis.id === selectedCrisisId)?.name
+    return availableCrises.find(crisis => crisis.id === selectedCrisisId)?.name
       ?? (currentPostingCrisis?.id === selectedCrisisId ? currentPostingCrisis.name : `Crisis #${selectedCrisisId}`);
-  }, [currentPostingCrisis, pinnedCrises, selectedCrisisId]);
+  }, [availableCrises, currentPostingCrisis, selectedCrisisId]);
 
   const selectedCrisis = useMemo(() => {
     if (selectedCrisisId == null) return null;
-    return pinnedCrises.find(crisis => crisis.id === selectedCrisisId)
+    return availableCrises.find(crisis => crisis.id === selectedCrisisId)
       ?? (currentPostingCrisis?.id === selectedCrisisId ? currentPostingCrisis : null);
-  }, [currentPostingCrisis, pinnedCrises, selectedCrisisId]);
-
-  const canKeepCurrentUnpinnedTag = useMemo(() => {
-    return posting?.crisis_id != null
-      && currentPostingCrisis?.id === posting.crisis_id
-      && !pinnedCrises.some(crisis => crisis.id === posting.crisis_id);
-  }, [currentPostingCrisis?.id, pinnedCrises, posting?.crisis_id]);
+  }, [availableCrises, currentPostingCrisis, selectedCrisisId]);
 
   useEffect(() => {
     if (isVolunteerView) return;
 
-    const loadPinnedCrises = async () => {
+    const loadCrises = async () => {
       try {
-        setLoadingPinnedCrises(true);
-        setPinnedCrisesError(null);
-        const response = await requestServer<OrganizationPinnedCrisesResponse>('/organization/crises/pinned', {
+        setLoadingCrises(true);
+        setCrisesError(null);
+        const response = await requestServer<OrganizationCrisesResponse>('/organization/crises', {
           includeJwt: true,
         });
-        setPinnedCrises(response.crises);
+        setAvailableCrises(response.crises);
       } catch (error) {
-        setPinnedCrisesError(error instanceof Error ? error.message : 'Failed to load pinned crises');
+        setCrisesError(error instanceof Error ? error.message : 'Failed to load crisis tags');
       } finally {
-        setLoadingPinnedCrises(false);
+        setLoadingCrises(false);
       }
     };
 
-    loadPinnedCrises();
+    loadCrises();
   }, [isVolunteerView]);
 
   useEffect(() => {
@@ -150,9 +144,9 @@ function PostingPage() {
       return;
     }
 
-    const pinnedMatch = pinnedCrises.find(crisis => crisis.id === selectedCrisisId);
-    if (pinnedMatch) {
-      setCurrentPostingCrisis(pinnedMatch);
+    const existingMatch = availableCrises.find(crisis => crisis.id === selectedCrisisId);
+    if (existingMatch) {
+      setCurrentPostingCrisis(existingMatch);
       return;
     }
 
@@ -187,7 +181,7 @@ function PostingPage() {
     return () => {
       isCancelled = true;
     };
-  }, [currentPostingCrisis?.id, isVolunteerView, pinnedCrises, selectedCrisisId]);
+  }, [availableCrises, currentPostingCrisis?.id, isVolunteerView, selectedCrisisId]);
 
   const loadPosting = useCallback(async () => {
     if (!id) return;
@@ -854,22 +848,18 @@ function PostingPage() {
                                 const value = event.target.value;
                                 setSelectedCrisisId(value ? Number(value) : undefined);
                               }}
-                              disabled={saving || loadingPinnedCrises}
+                              disabled={saving || loadingCrises}
                             >
                               <option value="">No crisis tag</option>
-                              {canKeepCurrentUnpinnedTag && (
-                                <option value={posting?.crisis_id?.toString() ?? ''}>
-                                  {currentPostingCrisis?.name}
-                                  {' '}
-                                  (unpinned)
+                              {availableCrises.map(crisis => (
+                                <option key={crisis.id} value={crisis.id.toString()}>
+                                  {crisis.name}
+                                  {!crisis.pinned ? ' (Unpinned)' : ''}
                                 </option>
-                              )}
-                              {pinnedCrises.map(crisis => (
-                                <option key={crisis.id} value={crisis.id.toString()}>{crisis.name}</option>
                               ))}
                             </select>
-                            {loadingPinnedCrises && <span className="label-text-alt opacity-70">Loading pinned crises...</span>}
-                            {pinnedCrisesError && <span className="label-text-alt text-error">{pinnedCrisesError}</span>}
+                            {loadingCrises && <span className="label-text-alt opacity-70">Loading crisis tags...</span>}
+                            {crisesError && <span className="label-text-alt text-error">{crisesError}</span>}
                           </fieldset>
                         )
                       : (

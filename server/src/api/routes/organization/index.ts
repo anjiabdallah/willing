@@ -3,6 +3,7 @@ import zod from 'zod';
 
 import {
   OrganizationCrisisResponse,
+  OrganizationCrisesResponse,
   OrganizationMeResponse,
   OrganizationPinnedCrisesResponse,
   OrganizationProfileResponse,
@@ -181,6 +182,17 @@ organizationRouter.get('/crises/pinned', async (_req, res: Response<Organization
     .selectFrom('crisis')
     .selectAll()
     .where('pinned', '=', true)
+    .orderBy('created_at', 'desc')
+    .execute();
+
+  res.json({ crises });
+});
+
+organizationRouter.get('/crises', async (_req, res: Response<OrganizationCrisesResponse>) => {
+  const crises = await database
+    .selectFrom('crisis')
+    .selectAll()
+    .orderBy('pinned', 'desc')
     .orderBy('created_at', 'desc')
     .execute();
 

@@ -11,6 +11,43 @@ Willing is a full-stack TypeScript app:
 
 The server runs DB migrations automatically on startup in development mode.
 
+## Product Purpose and Flow
+
+Willing connects volunteers with organizations that publish real-world help opportunities.
+
+### Core Domain Concepts
+
+- **Volunteer**: End-user who creates a profile, adds skills, discovers postings, applies, enrolls, and may later be marked as attended by organizations.
+- **Organization**: Account type that creates and manages volunteer postings after being approved by an admin.
+- **Admin**: Platform moderator who reviews organization onboarding requests and manages crisis definitions.
+- **Posting**: A volunteer opportunity created by an organization (title, description, time window, location, requirements, skills).
+- **Enrollment application**: A volunteer's application to a posting (optional message included).
+- **Enrollment**: Accepted application record; later can be marked attended.
+- **Crisis**: A major event/context (for example, flood, conflict escalation, wildfire response) used to classify and surface urgent opportunities. Crises can be pinned to highlight priority contexts.
+
+### High-Level User Journey
+
+1. Users land on the public home page and choose a role path.
+2. Volunteers sign up/login, complete profile data and skills, then browse/search postings.
+3. Organizations submit an onboarding request with location and contact details.
+4. Admin reviews each organization request and approves or rejects.
+5. Approved organizations log in, create/edit/open/close postings, and review applications.
+6. Volunteers apply to postings; organizations accept/reject applications.
+7. Accepted volunteers become enrollments and can be marked attended after participation.
+
+### Crisis Flow
+
+1. Admin creates crisis entries and may pin active/important crises.
+2. Organizations can tag postings with a crisis where relevant.
+3. Volunteer-facing discovery can prioritize/filter opportunities related to current crises.
+4. Pinned crises communicate urgency across the platform and guide organization posting context.
+
+### Access and Ownership Model
+
+- Volunteers only manage their own profile, applications, and enrollments.
+- Organizations only manage their own postings and related applicant/enrollment decisions.
+- Admin does not run postings; admin governs organization access and crisis taxonomy.
+
 ## Repository Map
 
 - `client/src/main.tsx`: route tree and page wiring
@@ -109,46 +146,45 @@ Useful client scripts:
 
 All components are in `client/src/components/`. **Use these instead of recreating similar logic.**
 
-### Layout & Navigation
+### Layout Components (`client/src/components/layout/`)
 
-- **`ColumnLayout`**: Responsive column layout with a sidebar and main content. Sidebar can be made sticky via `stickySidebar` prop (prefer true for most pages). Use for pages with side panels.
-- **`Navbar`**: Standard top navbar with logo on left, optional `center` and `right` content slots. Sticky positioned. Use for all page headers.
-- **`PageHeader`**: Reusable page header component with title, optional subtitle, optional back button, and optional action buttons. Props:
-  - `title` (required): Main page title
-  - `subtitle` (optional): Description text below title
-  - `backTo` (optional): Navigation path for back button. Only include for pages not directly linked from navbar (e.g., posting detail pages)
-  - `actions` (optional): ReactNode for action buttons (Edit, Save, Delete, etc.) displayed on the right
-  - `icon` (optional): Lucide icon component to display before the title
-  - `badge` (optional): ReactNode to display as a badge (e.g., counts, status) to the right of title section
-  - Use for all pages with consistent title layouts. Omit `backTo` for navbar-linked pages (home, settings, profile).
-- **`Footer`**: Standard footer with company info, contact email, and GitHub link. Use at bottom of main pages.
+- **`ColumnLayout`**: Responsive column layout with a sidebar and main content. Required props: `sidebar`, `children`. Optional prop: `stickySidebar` (default `true`).
+- **`PageHeader`**: Reusable page header for page-level titles and actions. Required prop: `title`. Optional props: `subtitle`, `showBack`, `defaultBackTo`, `actions`, `icon`, `badge`, `variant`.
+- **`Footer`**: Standard footer with company/contact/GitHub info.
 
-### Display Components
+### Navbar Components (`client/src/components/layout/navbars/`)
 
-- **`Loading`**: DaisyUI loading spinner with configurable size (`xs`, `sm`, `md`, `lg`, `xl`). Use for loading states in buttons and pages.
-- **`PostingCard`**: Display card for volunteer opportunity postings. Shows title, description, location, start/end dates, max volunteers, minimum age, and required skills. Accepts optional `footer` ReactNode for action buttons. Use for listing volunteer postings.
-- **`SkillsList`**: Display skills as colored badges. Supports expandable view when more than `limit` skills (default 5). Can accept optional `action` render prop for per-skill actions (e.g., remove button). Use `enableLimit={false}` to show all skills.
+- **`Navbar`**: Base shared navbar primitive with left logo. Optional props: `center`, `right`.
+- **`LoggedOutNavbar`**: Navbar variant for unauthenticated/public pages.
+- **`UserNavbar`**: Navbar variant for shared authenticated user pages.
+- **`VolunteerNavbar`**: Navbar variant for volunteer dashboard pages.
+- **`OrganizationNavbar`**: Navbar variant for organization dashboard pages.
+- **`AdminNavbar`**: Navbar variant for admin dashboard pages.
 
-### Form Components
+### Skill Components (`client/src/components/skills/`)
 
-- **`PasswordResetCard`**: Complete password reset form with current/new/confirm password fields. Integrates with `AuthContext`. Handles validation and success/error states. Use in settings pages.
-- **`SkillsInput`**: Input field with add button for building a skill list. Supports Enter key to add. Displays current skills using `SkillsList` with remove buttons. Controlled via `skills` and `setSkills` props.
-- **`ToggleButton`**: Form-integrated toggle button group for react-hook-form. Supports two modes:
-  - **Compact mode** (`compact={true}`): Horizontal joined buttons, minimal styling
-  - **Full mode** (default): Larger cards with icons and descriptions
-  - Each option can have `value`, `label`, `description`, `Icon`, and `btnColor` properties
-  - Automatically integrates with form state via `form` and `name` props
+- **`SkillsList`**: Skill badge list. Required prop: `skills`. Optional props: `action`, `enableLimit` (default `true`), `limit` (default `5`).
+- **`SkillsInput`**: Controlled skill-entry input with add/remove behavior. Required props: `skills`, `setSkills`.
 
-### Interactive Components
+### Posting Components (`client/src/components/postings/` + shared posting cards)
 
-- **`LocationPicker`**: Interactive map with Leaflet and React-Leaflet for selecting geographic locations. Features:
-  - Draggable marker for precise positioning
-  - Search bar with geocoding (limited to Lebanon)
-  - Click-to-place marker (when not `readOnly`)
-  - Custom zoom controls
-  - Dark theme support
-  - Accepts `position` ([lat, lng]), `setPosition` callback, and optional `readOnly` flag
-  - The `setPosition` callback receives optional `name` parameter when location selected via search
+- **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional prop: `organization`.
+- **`PostingSearchView`**: Reusable posting discovery shell with page header, search, date filters, and result states. Required props: `title`, `subtitle`. Optional props: `icon`, `badge`, `showBack`, `defaultBackTo`, `initialFilters`, `emptyMessage`, `filterPostings`, `fetchUrl`.
+- **`HorizontalScrollSection`**: Horizontal carousel-style section with scroll controls, edge fades, and empty state. Required props: `title`, `hasItems`. Optional props: `subtitle`, `action`, `emptyState`, `children`.
+
+### Form and Input Components
+
+- **`PasswordResetCard`**: Self-contained password reset form integrated with auth context and validation/error handling.
+- **`ToggleButton`**: React-hook-form-friendly toggle group. Required props: `form`, `name`, `label`, `options`. Optional props: `disabled` (default `false`), `compact` (default `false`). Option-level optional fields: `description`, `Icon`, `btnColor`.
+- **`CalendarInfo`**: Shared date/date-time input abstraction supporting form mode and controlled mode. Optional common props: `startLabel`, `endLabel`, `className`, `inputType`.
+
+### Interaction and Workflow Components
+
+- **`Loading`**: DaisyUI loading spinner. Optional prop: `size` (`xs`, `sm`, `md`, `lg`, `xl`; default `md`).
+- **`LocationPicker`**: Leaflet map picker with draggable marker, click-to-place, Lebanon geocoding search, and read-only mode. Required props: `position`, `setPosition`. Optional props: `readOnly` (default `false`), `className`.
+- **`OrganizationRequestReviewCard`**: Admin review card for organization onboarding requests. Required props: `request`, `refreshOrganizationRequests`.
+- **`VolunteerInfoCollapse`**: Expandable volunteer info block for applications/enrollments. Required prop: `volunteer`. Optional prop: `actions`.
+- **`CustomMessageModal`** and **`PostingApplicationMessageModal`**: Application-message modals with max-length validation and submission states. Required props: `open`, `onClose`, `onSubmit`. Optional props: `submitting` (default `false`), `errorMessage`.
 
 ## Backend Conventions
 

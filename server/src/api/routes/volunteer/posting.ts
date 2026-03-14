@@ -12,6 +12,7 @@ const volunteerPostingRouter = Router();
 const organizationPostingResponseColumns = [
   'organization_posting.id',
   'organization_posting.organization_id',
+  'organization_posting.crisis_id',
   'organization_posting.title',
   'organization_posting.description',
   'organization_posting.latitude',

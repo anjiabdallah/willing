@@ -2,10 +2,14 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
-import PageHeader from '../../components/layout/PageHeader';
+import PostingSearchView from '../../components/postings/PostingSearchView.tsx';
 import requestServer from '../../utils/requestServer';
 
-import type { VolunteerPinnedCrisesResponse } from '../../../../server/src/api/types';
+import type {
+  VolunteerCrisisResponse,
+  VolunteerPinnedCrisesResponse,
+} from '../../../../server/src/api/types';
+import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
 
 type CrisisState = {
   crisis?: VolunteerPinnedCrisesResponse['crises'][number];
@@ -37,12 +41,13 @@ function VolunteerCrisisPostings() {
 
     let cancelled = false;
 
-    const loadPinnedCrisis = async () => {
+    const loadCrisis = async () => {
       try {
-        const response = await requestServer<VolunteerPinnedCrisesResponse>('/volunteer/crises/pinned', { includeJwt: true });
-        const match = response.crises.find(item => item.id === parsedCrisisId);
+        const response = await requestServer<VolunteerCrisisResponse>(`/volunteer/crises/${parsedCrisisId}`, {
+          includeJwt: true,
+        });
         if (!cancelled) {
-          setResolvedCrisis(match);
+          setResolvedCrisis(response.crisis);
         }
       } catch {
         if (!cancelled) {
@@ -51,28 +56,36 @@ function VolunteerCrisisPostings() {
       }
     };
 
-    loadPinnedCrisis();
+    loadCrisis();
 
     return () => {
       cancelled = true;
     };
   }, [crisis, parsedCrisisId]);
 
+  const subtitle = resolvedCrisis?.description
+    || 'Browse and filter postings tagged under this crisis.';
+
+  const filterPostingsByCrisis = (postings: PostingWithSkillsAndOrgName[]) => {
+    if (parsedCrisisId == null) {
+      return [];
+    }
+
+    return postings.filter(posting => posting.crisis_id === parsedCrisisId);
+  };
+
   return (
     <div className="grow bg-base-200">
-      <div className="p-6 md:container mx-auto">
-        <PageHeader
-          title={resolvedCrisis?.name ?? 'Crisis'}
-          subtitle={resolvedCrisis?.description ?? 'Postings for this crisis will appear here once crisis tagging is implemented.'}
-          icon={AlertCircle}
-          showBack
-          defaultBackTo="/volunteer"
-        />
-
-        <div className="mt-6 alert bg-base-100 shadow-sm">
-          <span>This page is gonna be empty for now, i'll implement this later</span>
-        </div>
-      </div>
+      <PostingSearchView
+        title={resolvedCrisis?.name ?? 'Crisis'}
+        subtitle={subtitle}
+        icon={AlertCircle}
+        showBack
+        defaultBackTo="/volunteer"
+        fetchUrl="/volunteer/posting"
+        filterPostings={filterPostingsByCrisis}
+        emptyMessage="No postings found for this crisis yet."
+      />
     </div>
   );
 }

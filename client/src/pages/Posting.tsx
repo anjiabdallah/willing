@@ -906,20 +906,17 @@ function PostingPage() {
                                   <Link
                                     to={`/volunteer/crises/${selectedCrisisId}/postings`}
                                     state={{ crisis: selectedCrisis }}
-                                    className="-m-4 rounded-box px-4 py-4 flex items-start justify-between gap-3 hover:bg-base-200/50 transition-colors group"
+                                    className="-m-2 rounded-box border border-base-300 bg-base-100 px-3 py-3 flex items-start justify-between gap-3 hover:border-accent/40 hover:bg-base-200/40 transition-colors group"
                                   >
                                     <div className="flex-1 min-w-0">
                                       <h5 className="font-bold text-lg inline-flex items-center gap-2 text-accent mb-1">
-                                        <AlertTriangle size={17} />
+                                        <AlertTriangle size={16} />
                                         {selectedCrisisName}
+                                        <ExternalLink size={13} className="opacity-60 group-hover:opacity-100 transition-opacity" />
                                       </h5>
                                       <p className="text-sm opacity-70">
                                         {selectedCrisis?.description?.trim() || 'No crisis description provided.'}
                                       </p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1 shrink-0 pt-1">
-                                      <ExternalLink size={15} className="text-accent opacity-60 group-hover:opacity-100 transition-opacity" />
-                                      <span className="text-xs text-accent font-medium opacity-70 group-hover:opacity-100 transition-opacity">All postings</span>
                                     </div>
                                   </Link>
                                 )

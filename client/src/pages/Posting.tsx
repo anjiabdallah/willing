@@ -5,6 +5,7 @@ import {
   Calendar,
   Cake,
   Edit3,
+  ExternalLink,
   Lock,
   LockOpen,
   MapPin,
@@ -824,64 +825,91 @@ function PostingPage() {
 
                 <div className="card bg-base-100 shadow-md">
                   <div className="card-body">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div>
-                        <h5 className="font-bold text-lg inline-flex items-center gap-2">
-                          <AlertTriangle size={17} className="text-accent" />
-                          Crisis Tag
-                        </h5>
-                        {!isVolunteerView && (
-                          <p className="text-sm opacity-70">
-                            Add a crisis tag to this posting.
-                          </p>
-                        )}
-                      </div>
-                      {!isEditMode && selectedCrisisName && (
-                        <span className="badge badge-accent badge-outline">Tagged</span>
-                      )}
-                    </div>
-
                     {isEditMode
                       ? (
-                          <fieldset className="fieldset">
-                            <label className="label">
-                              <span className="label-text font-medium">Selected Crisis</span>
-                            </label>
-                            <select
-                              className="select select-bordered w-full"
-                              value={selectedCrisisId?.toString() ?? ''}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                setSelectedCrisisId(value ? Number(value) : undefined);
-                              }}
-                              disabled={saving || loadingCrises}
-                            >
-                              <option value="">No crisis tag</option>
-                              {availableCrises.map(crisis => (
-                                <option key={crisis.id} value={crisis.id.toString()}>
-                                  {crisis.name}
-                                  {!crisis.pinned ? ' (Unpinned)' : ''}
-                                </option>
-                              ))}
-                            </select>
-                            {loadingCrises && <span className="label-text-alt opacity-70">Loading crisis tags...</span>}
-                            {crisesError && <span className="label-text-alt text-error">{crisesError}</span>}
-                          </fieldset>
+                          <>
+                            <div className="mb-2">
+                              <h5 className="font-bold text-lg inline-flex items-center gap-2">
+                                <AlertTriangle size={17} className="text-accent" />
+                                Crisis Tag
+                              </h5>
+                              {!isVolunteerView && (
+                                <p className="text-sm opacity-70">
+                                  Add a crisis tag to this posting.
+                                </p>
+                              )}
+                            </div>
+                            <fieldset className="fieldset">
+                              <label className="label">
+                                <span className="label-text font-medium">Selected Crisis</span>
+                              </label>
+                              <select
+                                className="select select-bordered w-full"
+                                value={selectedCrisisId?.toString() ?? ''}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setSelectedCrisisId(value ? Number(value) : undefined);
+                                }}
+                                disabled={saving || loadingCrises}
+                              >
+                                <option value="">No crisis tag</option>
+                                {availableCrises.map(crisis => (
+                                  <option key={crisis.id} value={crisis.id.toString()}>
+                                    {crisis.name}
+                                    {!crisis.pinned ? ' (Unpinned)' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                              {loadingCrises && <span className="label-text-alt opacity-70">Loading crisis tags...</span>}
+                              {crisesError && <span className="label-text-alt text-error">{crisesError}</span>}
+                            </fieldset>
+                          </>
                         )
-                      : (
-                          <div className="rounded-box border border-base-300 bg-base-200/50 px-4 py-3">
-                            {selectedCrisisName
+                      : selectedCrisisName
+                        ? (
+                            isVolunteerView && selectedCrisisId
                               ? (
-                                  <>
-                                    <div className="badge badge-accent mb-2">{selectedCrisisName}</div>
+                                  <Link
+                                    to={`/volunteer/crises/${selectedCrisisId}/postings`}
+                                    state={{ crisis: selectedCrisis }}
+                                    className="-m-4 rounded-box px-4 py-4 flex items-start justify-between gap-3 hover:bg-base-200/50 transition-colors group"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-bold text-lg inline-flex items-center gap-2 text-accent mb-1">
+                                        <AlertTriangle size={17} />
+                                        {selectedCrisisName}
+                                      </h5>
+                                      <p className="text-sm opacity-70">
+                                        {selectedCrisis?.description?.trim() || 'No crisis description provided.'}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 shrink-0 pt-1">
+                                      <ExternalLink size={15} className="text-accent opacity-60 group-hover:opacity-100 transition-opacity" />
+                                      <span className="text-xs text-accent font-medium opacity-70 group-hover:opacity-100 transition-opacity">All postings</span>
+                                    </div>
+                                  </Link>
+                                )
+                              : (
+                                  <div>
+                                    <h5 className="font-bold text-lg inline-flex items-center gap-2 text-accent mb-1">
+                                      <AlertTriangle size={17} />
+                                      {selectedCrisisName}
+                                    </h5>
                                     <p className="text-sm opacity-70">
                                       {selectedCrisis?.description?.trim() || 'No crisis description provided.'}
                                     </p>
-                                  </>
+                                  </div>
                                 )
-                              : <p className="text-sm opacity-70">This posting is not tagged with any crisis.</p>}
-                          </div>
-                        )}
+                          )
+                        : (
+                            <div>
+                              <h5 className="font-bold text-lg inline-flex items-center gap-2 mb-1">
+                                <AlertTriangle size={17} className="text-accent" />
+                                Crisis Tag
+                              </h5>
+                              <p className="text-sm opacity-70">This posting is not tagged with any crisis.</p>
+                            </div>
+                          )}
                   </div>
                 </div>
 

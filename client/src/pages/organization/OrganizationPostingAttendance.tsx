@@ -89,24 +89,15 @@ function OrganizationPostingAttendance() {
         },
       )));
 
-      setData(current => (
-        current
-          ? {
-              ...current,
-              enrollments: current.enrollments.map(enrollment => ({
-                ...enrollment,
-                attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended,
-              })),
-            }
-          : current
-      ));
-      setMessage(`Attendance submitted for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`);
+      await loadAttendance();
+      setMessage(`Attendance saved for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit attendance');
+      await loadAttendance();
     } finally {
       setSaving(false);
     }
-  }, [data, draftAttendance, id, saving]);
+  }, [data, draftAttendance, id, loadAttendance, saving]);
 
   const undoAttendanceChanges = useCallback(() => {
     if (!data || saving) return;

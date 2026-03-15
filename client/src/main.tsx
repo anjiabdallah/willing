@@ -17,6 +17,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrganizationHome from './pages/organization/OrganizationHome';
+import OrganizationPostingAttendance from './pages/organization/OrganizationPostingAttendance';
 import OrganizationPostingCreate from './pages/organization/OrganizationPostingCreate';
 import OrganizationSettings from './pages/organization/VolunteerSettings';
 import OrganizationProfile from './pages/OrganizationProfile';
@@ -59,6 +60,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="organization" element={<OrganizationPage />}>
             <Route index element={<OrganizationHome />} />
             <Route path="posting" element={<OrganizationPostingCreate />} />
+            <Route path="posting/:id/attendance" element={<OrganizationPostingAttendance />} />
             <Route path="settings" element={<OrganizationSettings />} />
           </Route>
 

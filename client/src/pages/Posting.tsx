@@ -6,6 +6,7 @@ import {
   Cake,
   Edit3,
   ExternalLink,
+  ListChecks,
   Lock,
   LockOpen,
   MapPin,
@@ -619,6 +620,11 @@ function PostingPage() {
     };
   }, [hasPendingApplication, isEnrolled]);
 
+  const canOpenAttendancePage = useMemo(() => {
+    if (isVolunteerView || !posting) return false;
+    return new Date() >= new Date(posting.start_timestamp);
+  }, [isVolunteerView, posting]);
+
   if (loading) {
     return (
       <div className="grow bg-base-200">
@@ -694,6 +700,15 @@ function PostingPage() {
                   >
                     {posting?.is_closed ? <LockOpen size={16} /> : <Lock size={16} />}
                     {togglingClosed ? '...' : posting?.is_closed ? 'Reopen' : 'Close'}
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => navigate(`/organization/posting/${posting.id}/attendance`)}
+                    disabled={!canOpenAttendancePage}
+                    title={canOpenAttendancePage ? 'Manage attendance' : 'Attendance opens when the posting starts'}
+                  >
+                    <ListChecks size={16} />
+                    Attendance
                   </button>
                   <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
                     <Edit3 size={16} />

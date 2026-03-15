@@ -431,7 +431,7 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPo
         volunteer_id: volunteerId,
         posting_id: id,
         message: message ?? undefined,
-        attended: false,
+        attended: true,
       })
       .returningAll()
       .executeTakeFirst();

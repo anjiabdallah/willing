@@ -3,8 +3,11 @@ import { sql } from 'kysely';
 import zod from 'zod';
 
 import {
+  AttendanceStatus,
   OrganizationPostingApplicationAcceptanceResponse,
   OrganizationPostingApplicationRejectionResponse,
+  OrganizationPostingAttendanceBulkUpdateResponse,
+  OrganizationPostingAttendanceResponse,
   OrganizationPostingEnrollmentAttendanceUpdateResponse,
   OrganizationPostingApplicationsReponse,
   OrganizationPostingCreateResponse,
@@ -28,6 +31,7 @@ import {
   sendVolunteerApplicationAcceptedEmail,
   sendVolunteerApplicationRejectedEmail,
 } from '../../../SMTP/emails.js';
+import { type PostingEnrollment } from '../../../types.js';
 
 const postingRouter = Router();
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial().extend({
@@ -65,6 +69,124 @@ const postingIdParamsSchema = zod.object({
 const attendanceUpdateBodySchema = zod.object({
   attended: zod.boolean(),
 });
+const attendanceBulkUpdateBodySchema = zod.object({
+  attended: zod.boolean(),
+});
+const ATTENDANCE_EDIT_WINDOW_DAYS = 14;
+
+const toCsvCell = (value: string | number | boolean | null | undefined) => {
+  const stringValue = String(value ?? '');
+  return `"${stringValue.replace(/"/g, '""')}"`;
+};
+
+const toCsv = (
+  rows: Array<Record<string, string | number | boolean | null | undefined>>,
+  headers: string[],
+) => {
+  if (headers.length === 0) return '';
+  const headerLine = headers.map(toCsvCell).join(',');
+  const bodyLines = rows.map(row => headers.map(header => toCsvCell(row[header])).join(','));
+  return [headerLine, ...bodyLines].join('\n');
+};
+
+const getAttendanceWindow = (posting: { start_timestamp: Date; end_timestamp: Date | undefined }) => {
+  const attendanceEditStartsAt = posting.start_timestamp;
+  const baseEnd = posting.end_timestamp && posting.end_timestamp >= posting.start_timestamp
+    ? posting.end_timestamp
+    : posting.start_timestamp;
+  const attendanceEditEndsAt = new Date(baseEnd.getTime() + ATTENDANCE_EDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  return { attendanceEditStartsAt, attendanceEditEndsAt };
+};
+
+const getAttendanceStatus = (posting: { start_timestamp: Date; end_timestamp: Date | undefined }): {
+  status: AttendanceStatus;
+  canEditAttendance: boolean;
+  attendanceEditStartsAt: Date;
+  attendanceEditEndsAt: Date;
+} => {
+  const now = new Date();
+  const { attendanceEditStartsAt, attendanceEditEndsAt } = getAttendanceWindow(posting);
+
+  if (now < attendanceEditStartsAt) {
+    return {
+      status: 'not_started',
+      canEditAttendance: false,
+      attendanceEditStartsAt,
+      attendanceEditEndsAt,
+    };
+  }
+
+  if (now > attendanceEditEndsAt) {
+    return {
+      status: 'closed',
+      canEditAttendance: false,
+      attendanceEditStartsAt,
+      attendanceEditEndsAt,
+    };
+  }
+
+  return {
+    status: 'open',
+    canEditAttendance: true,
+    attendanceEditStartsAt,
+    attendanceEditEndsAt,
+  };
+};
+
+const assertAttendanceEditable = (posting: { start_timestamp: Date; end_timestamp: Date | undefined }, res: Response) => {
+  const status = getAttendanceStatus(posting);
+  if (!status.canEditAttendance) {
+    res.status(403);
+    throw new Error(
+      status.status === 'not_started'
+        ? 'Attendance can only be edited after the posting start time.'
+        : `Attendance editing window is closed. It closes ${ATTENDANCE_EDIT_WINDOW_DAYS} days after posting end.`,
+    );
+  }
+};
+
+const getPostingEnrollments = async (postingId: number): Promise<PostingEnrollment[]> => {
+  const enrollments = await database
+    .selectFrom('enrollment')
+    .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+    .select([
+      'enrollment.id as enrollment_id',
+      'enrollment.volunteer_id',
+      'enrollment.message',
+      'enrollment.attended',
+      'volunteer_account.first_name',
+      'volunteer_account.last_name',
+      'volunteer_account.email',
+      'volunteer_account.date_of_birth',
+      'volunteer_account.gender',
+    ])
+    .where('enrollment.posting_id', '=', postingId)
+    .orderBy('volunteer_account.last_name', 'asc')
+    .orderBy('volunteer_account.first_name', 'asc')
+    .execute();
+
+  const volunteerIds = enrollments.map(enrollment => enrollment.volunteer_id);
+  const skills = volunteerIds.length > 0
+    ? await database
+        .selectFrom('volunteer_skill')
+        .selectAll()
+        .where('volunteer_id', 'in', volunteerIds)
+        .execute()
+    : [];
+
+  const skillsByVolunteerId = new Map<number, typeof skills>();
+  skills.forEach((skill) => {
+    if (!skillsByVolunteerId.has(skill.volunteer_id)) {
+      skillsByVolunteerId.set(skill.volunteer_id, []);
+    }
+    skillsByVolunteerId.get(skill.volunteer_id)!.push(skill);
+  });
+
+  return enrollments.map(enrollment => ({
+    ...enrollment,
+    skills: skillsByVolunteerId.get(enrollment.volunteer_id) || [],
+  }));
+};
 
 const assertCrisisExists = async (crisisId: number, res: Response) => {
   const crisis = await database
@@ -242,7 +364,7 @@ postingRouter.get('/:id/enrollments', async (req, res: Response<OrganizationPost
 
   const posting = await database
     .selectFrom('organization_posting')
-    .select(['id'])
+    .select(['id', 'start_timestamp', 'end_timestamp'])
     .where('organization_posting.id', '=', postingId)
     .where('organization_posting.organization_id', '=', orgId)
     .executeTakeFirst();
@@ -251,47 +373,120 @@ postingRouter.get('/:id/enrollments', async (req, res: Response<OrganizationPost
     res.status(404);
     throw new Error('Posting not found');
   }
+  const enrollments = await getPostingEnrollments(postingId);
+  res.json({ enrollments });
+});
 
-  const enrollments = await database
-    .selectFrom('enrollment')
-    .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
-    .select([
-      'enrollment.id as enrollment_id',
-      'enrollment.volunteer_id',
-      'enrollment.message',
-      'enrollment.attended',
-      'volunteer_account.first_name',
-      'volunteer_account.last_name',
-      'volunteer_account.email',
-      'volunteer_account.date_of_birth',
-      'volunteer_account.gender',
-    ])
-    .where('enrollment.posting_id', '=', postingId)
+postingRouter.get('/:id/attendance', async (req, res: Response<OrganizationPostingAttendanceResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'title', 'location_name', 'start_timestamp', 'end_timestamp'])
+    .where('id', '=', postingId)
+    .where('organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  const attendanceStatus = getAttendanceStatus(posting);
+  const enrollments = await getPostingEnrollments(postingId);
+
+  res.json({
+    posting,
+    enrollments,
+    attendance_status: attendanceStatus.status,
+    can_edit_attendance: attendanceStatus.canEditAttendance,
+    attendance_edit_starts_at: attendanceStatus.attendanceEditStartsAt,
+    attendance_edit_ends_at: attendanceStatus.attendanceEditEndsAt,
+  });
+});
+
+postingRouter.patch('/:id/attendance', async (req, res: Response<OrganizationPostingAttendanceBulkUpdateResponse>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+  const body = attendanceBulkUpdateBodySchema.parse(req.body);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'start_timestamp', 'end_timestamp'])
+    .where('id', '=', postingId)
+    .where('organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  assertAttendanceEditable(posting, res);
+
+  const changed = await database
+    .updateTable('enrollment')
+    .set({ attended: body.attended })
+    .where('posting_id', '=', postingId)
+    .where('attended', '!=', body.attended)
+    .returning('volunteer_id')
     .execute();
 
-  const volunteerIds = enrollments.map(e => e.volunteer_id);
-  const skills = volunteerIds.length > 0
-    ? await database
-        .selectFrom('volunteer_skill')
-        .selectAll()
-        .where('volunteer_id', 'in', volunteerIds)
-        .execute()
-    : [];
+  const volunteerIds = Array.from(new Set(changed.map(row => row.volunteer_id)));
+  await Promise.all(volunteerIds.map(volunteerId => recomputeVolunteerExperienceVector(volunteerId)));
 
-  const skillsByVolunteerId = new Map<number, typeof skills>();
-  skills.forEach((skill) => {
-    if (!skillsByVolunteerId.has(skill.volunteer_id)) {
-      skillsByVolunteerId.set(skill.volunteer_id, []);
-    }
-    skillsByVolunteerId.get(skill.volunteer_id)!.push(skill);
-  });
+  res.json({ updated_count: changed.length });
+});
 
-  const enrollmentsWithSkills = enrollments.map(enrollment => ({
-    ...enrollment,
-    skills: skillsByVolunteerId.get(enrollment.volunteer_id) || [],
+postingRouter.get('/:id/attendance/export', async (req, res: Response<string>) => {
+  const orgId = req.userJWT!.id;
+  const { id: postingId } = postingIdParamsSchema.parse(req.params);
+
+  const posting = await database
+    .selectFrom('organization_posting')
+    .select(['id', 'title'])
+    .where('id', '=', postingId)
+    .where('organization_id', '=', orgId)
+    .executeTakeFirst();
+
+  if (!posting) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
+
+  const enrollments = await getPostingEnrollments(postingId);
+  const rows = enrollments.map(enrollment => ({
+    enrollment_id: enrollment.enrollment_id,
+    volunteer_id: enrollment.volunteer_id,
+    first_name: enrollment.first_name,
+    last_name: enrollment.last_name,
+    email: enrollment.email,
+    date_of_birth: enrollment.date_of_birth,
+    gender: enrollment.gender,
+    attended: enrollment.attended,
+    message: enrollment.message ?? '',
+    skills: enrollment.skills.map(skill => skill.name).join('|'),
   }));
+  const csvHeaders = [
+    'enrollment_id',
+    'volunteer_id',
+    'first_name',
+    'last_name',
+    'email',
+    'date_of_birth',
+    'gender',
+    'attended',
+    'message',
+    'skills',
+  ];
 
-  res.json({ enrollments: enrollmentsWithSkills });
+  const csv = toCsv(rows, csvHeaders);
+  const safeTitle = posting.title.replace(/[^a-z0-9-_]+/gi, '_');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'posting'}-attendance.csv"`);
+  res.send(csv);
 });
 
 postingRouter.patch('/:id/enrollments/:enrollmentId/attendance', async (req, res: Response<OrganizationPostingEnrollmentAttendanceUpdateResponse>) => {
@@ -304,7 +499,7 @@ postingRouter.patch('/:id/enrollments/:enrollmentId/attendance', async (req, res
 
   const posting = await database
     .selectFrom('organization_posting')
-    .select(['id'])
+    .select(['id', 'start_timestamp', 'end_timestamp'])
     .where('organization_posting.id', '=', postingId)
     .where('organization_posting.organization_id', '=', orgId)
     .executeTakeFirst();
@@ -314,15 +509,22 @@ postingRouter.patch('/:id/enrollments/:enrollmentId/attendance', async (req, res
     throw new Error('Posting not found');
   }
 
+  assertAttendanceEditable(posting, res);
+
   const enrollment = await database
     .selectFrom('enrollment')
-    .select(['id', 'volunteer_id', 'posting_id'])
+    .select(['id', 'volunteer_id', 'posting_id', 'attended'])
     .where('id', '=', enrollmentId)
     .executeTakeFirst();
 
   if (!enrollment || enrollment.posting_id !== postingId) {
     res.status(404);
     throw new Error('Enrollment not found');
+  }
+
+  if (enrollment.attended === body.attended) {
+    res.json({});
+    return;
   }
 
   await database
@@ -634,7 +836,7 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
         volunteer_id: application.volunteer_id,
         posting_id: application.posting_id,
         message: application.message ?? undefined,
-        attended: false,
+        attended: true,
       })
       .returningAll()
       .executeTakeFirst();

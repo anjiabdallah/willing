@@ -504,7 +504,7 @@ postingRouter.get('/:id/applications', async (req, res: Response<OrganizationPos
 
   const posting = await database
     .selectFrom('organization_posting')
-    .select(['id', 'automatic_acceptance'])
+    .select(['id', 'automatic_acceptance', 'is_closed', 'max_volunteers'])
     .where('organization_posting.id', '=', postingId)
     .where('organization_posting.organization_id', '=', orgId)
     .executeTakeFirst();
@@ -571,7 +571,7 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
 
   const posting = await database
     .selectFrom('organization_posting')
-    .select(['id', 'automatic_acceptance'])
+    .select(['id', 'automatic_acceptance', 'is_closed', 'max_volunteers'])
     .where('organization_posting.id', '=', postingId)
     .where('organization_posting.organization_id', '=', orgId)
     .executeTakeFirst();
@@ -584,6 +584,11 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
   if (posting.automatic_acceptance) {
     res.status(400);
     throw new Error('Cannot accept applications for open postings');
+  }
+
+  if (posting.is_closed) {
+    res.status(403);
+    throw new Error('This posting is closed and no longer accepting applications');
   }
 
   const application = await database
@@ -628,6 +633,47 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
     throw new Error('Application not found');
   }
   await database.transaction().execute(async (trx) => {
+    const lockedPosting = await trx
+      .selectFrom('organization_posting')
+      .select(['id', 'is_closed', 'max_volunteers'])
+      .where('id', '=', postingId)
+      .where('organization_id', '=', orgId)
+      .forUpdate()
+      .executeTakeFirst();
+
+    if (!lockedPosting) {
+      res.status(404);
+      throw new Error('Posting not found');
+    }
+
+    if (lockedPosting.is_closed) {
+      res.status(403);
+      throw new Error('This posting is closed and no longer accepting applications');
+    }
+
+    let currentEnrollmentCount = 0;
+    if (lockedPosting.max_volunteers !== undefined && lockedPosting.max_volunteers !== null) {
+      const enrollmentCountRow = await trx
+        .selectFrom('enrollment')
+        .select(sql<number>`count(enrollment.id)`.as('count'))
+        .where('posting_id', '=', postingId)
+        .executeTakeFirst();
+
+      currentEnrollmentCount = Number(enrollmentCountRow?.count ?? 0);
+
+      if (currentEnrollmentCount >= lockedPosting.max_volunteers) {
+        await trx
+          .updateTable('organization_posting')
+          .set({ is_closed: true })
+          .where('id', '=', postingId)
+          .where('is_closed', '=', false)
+          .execute();
+
+        res.status(403);
+        throw new Error('This posting has reached the maximum number of volunteers');
+      }
+    }
+
     const enrollment = await trx
       .insertInto('enrollment')
       .values({
@@ -647,6 +693,19 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
       .deleteFrom('enrollment_application')
       .where('id', '=', applicationId)
       .execute();
+
+    if (
+      lockedPosting.max_volunteers !== undefined
+      && lockedPosting.max_volunteers !== null
+      && currentEnrollmentCount + 1 >= lockedPosting.max_volunteers
+    ) {
+      await trx
+        .updateTable('organization_posting')
+        .set({ is_closed: true })
+        .where('id', '=', postingId)
+        .where('is_closed', '=', false)
+        .execute();
+    }
   });
   if (emailContext) {
     try {

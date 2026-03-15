@@ -363,7 +363,7 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPo
   const [posting, volunteer] = await Promise.all([
     database
       .selectFrom('organization_posting')
-      .select(['id', 'automatic_acceptance', 'is_closed', 'minimum_age'])
+      .select(['id', 'automatic_acceptance', 'is_closed', 'minimum_age', 'max_volunteers'])
       .where('id', '=', id)
       .executeTakeFirst(),
     database
@@ -386,6 +386,26 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPo
   if (!volunteer) {
     res.status(404);
     throw new Error('Volunteer not found');
+  }
+
+  if (posting.max_volunteers !== undefined && posting.max_volunteers !== null) {
+    const enrollmentCountRow = await database
+      .selectFrom('enrollment')
+      .select(sql<number>`count(enrollment.id)`.as('count'))
+      .where('posting_id', '=', id)
+      .executeTakeFirst();
+
+    if (Number(enrollmentCountRow?.count ?? 0) >= posting.max_volunteers) {
+      await database
+        .updateTable('organization_posting')
+        .set({ is_closed: true })
+        .where('id', '=', id)
+        .where('is_closed', '=', false)
+        .execute();
+
+      res.status(403);
+      throw new Error('This posting has reached the maximum number of volunteers');
+    }
   }
 
   if (posting.minimum_age !== undefined && posting.minimum_age !== null) {
@@ -425,26 +445,132 @@ volunteerPostingRouter.post('/:id/enroll', async (req, res: Response<VolunteerPo
   let enrollment: Enrollment | EnrollmentApplication | undefined;
 
   if (posting.automatic_acceptance) {
-    enrollment = await database
-      .insertInto('enrollment')
-      .values({
-        volunteer_id: volunteerId,
-        posting_id: id,
-        message: message ?? undefined,
-        attended: false,
-      })
-      .returningAll()
-      .executeTakeFirst();
+    enrollment = await database.transaction().execute(async (trx) => {
+      const lockedPosting = await trx
+        .selectFrom('organization_posting')
+        .select(['id', 'is_closed', 'max_volunteers'])
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (!lockedPosting) {
+        res.status(404);
+        throw new Error('Posting not found');
+      }
+
+      if (lockedPosting.is_closed) {
+        res.status(403);
+        throw new Error('This posting is closed and no longer accepting applications');
+      }
+
+      let currentEnrollmentCount = 0;
+      if (lockedPosting.max_volunteers !== undefined && lockedPosting.max_volunteers !== null) {
+        const enrollmentCountRow = await trx
+          .selectFrom('enrollment')
+          .select(sql<number>`count(enrollment.id)`.as('count'))
+          .where('posting_id', '=', id)
+          .executeTakeFirst();
+
+        currentEnrollmentCount = Number(enrollmentCountRow?.count ?? 0);
+
+        if (currentEnrollmentCount >= lockedPosting.max_volunteers) {
+          await trx
+            .updateTable('organization_posting')
+            .set({ is_closed: true })
+            .where('id', '=', id)
+            .where('is_closed', '=', false)
+            .execute();
+
+          res.status(403);
+          throw new Error('This posting has reached the maximum number of volunteers');
+        }
+      }
+
+      const createdEnrollment = await trx
+        .insertInto('enrollment')
+        .values({
+          volunteer_id: volunteerId,
+          posting_id: id,
+          message: message ?? undefined,
+          attended: false,
+        })
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!createdEnrollment) {
+        throw new Error('Failed to create enrollment');
+      }
+
+      if (
+        lockedPosting.max_volunteers !== undefined
+        && lockedPosting.max_volunteers !== null
+        && currentEnrollmentCount + 1 >= lockedPosting.max_volunteers
+      ) {
+        await trx
+          .updateTable('organization_posting')
+          .set({ is_closed: true })
+          .where('id', '=', id)
+          .where('is_closed', '=', false)
+          .execute();
+      }
+
+      return createdEnrollment;
+    });
   } else {
-    enrollment = await database
-      .insertInto('enrollment_application')
-      .values({
-        volunteer_id: volunteerId,
-        posting_id: id,
-        message: message ?? undefined,
-      })
-      .returningAll()
-      .executeTakeFirst();
+    enrollment = await database.transaction().execute(async (trx) => {
+      const lockedPosting = await trx
+        .selectFrom('organization_posting')
+        .select(['id', 'is_closed', 'max_volunteers'])
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (!lockedPosting) {
+        res.status(404);
+        throw new Error('Posting not found');
+      }
+
+      if (lockedPosting.is_closed) {
+        res.status(403);
+        throw new Error('This posting is closed and no longer accepting applications');
+      }
+
+      if (lockedPosting.max_volunteers !== undefined && lockedPosting.max_volunteers !== null) {
+        const enrollmentCountRow = await trx
+          .selectFrom('enrollment')
+          .select(sql<number>`count(enrollment.id)`.as('count'))
+          .where('posting_id', '=', id)
+          .executeTakeFirst();
+
+        if (Number(enrollmentCountRow?.count ?? 0) >= lockedPosting.max_volunteers) {
+          await trx
+            .updateTable('organization_posting')
+            .set({ is_closed: true })
+            .where('id', '=', id)
+            .where('is_closed', '=', false)
+            .execute();
+
+          res.status(403);
+          throw new Error('This posting has reached the maximum number of volunteers');
+        }
+      }
+
+      const createdApplication = await trx
+        .insertInto('enrollment_application')
+        .values({
+          volunteer_id: volunteerId,
+          posting_id: id,
+          message: message ?? undefined,
+        })
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!createdApplication) {
+        throw new Error('Failed to create enrollment');
+      }
+
+      return createdApplication;
+    });
   }
 
   if (!enrollment) {

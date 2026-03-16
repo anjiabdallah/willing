@@ -7,12 +7,13 @@ export type OrganizationPostingCreateResponse = {
 };
 
 export type OrganizationPostingListResponse = {
-  postings: (PostingWithSkills & { enrollment_count: number })[];
+  postings: (PostingWithSkills & { enrollment_count: number; is_full: boolean })[];
 };
 
 export type OrganizationPostingResponse = {
   posting: OrganizationPostingWithoutVectors;
   skills: PostingSkill[];
+  is_full: boolean;
   crisis?: Crisis;
 };
 

@@ -59,6 +59,9 @@ const areSkillListsEqual = (left: string[], right: string[]) => {
   return left.every((value, index) => value === right[index]);
 };
 const areDatesEqual = (left: Date | undefined, right: Date | undefined) => (left?.getTime() ?? null) === (right?.getTime() ?? null);
+const isPostingFull = (maxVolunteers: number | undefined, enrollmentCount: number) => maxVolunteers !== undefined
+  && maxVolunteers !== null
+  && enrollmentCount >= maxVolunteers;
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
@@ -193,11 +196,16 @@ postingRouter.get('/', async (req, res: Response<OrganizationPostingListResponse
     countsByPostingId.set(row.posting_id, Number(row.count ?? 0));
   });
 
-  const postingsWithSkills = postings.map(posting => ({
-    ...posting,
-    skills: skillsByPostingId.get(posting.id) || [],
-    enrollment_count: countsByPostingId.get(posting.id) ?? 0,
-  }));
+  const postingsWithSkills = postings.map((posting) => {
+    const enrollmentCount = countsByPostingId.get(posting.id) ?? 0;
+
+    return {
+      ...posting,
+      skills: skillsByPostingId.get(posting.id) || [],
+      enrollment_count: enrollmentCount,
+      is_full: isPostingFull(posting.max_volunteers, enrollmentCount),
+    };
+  });
 
   res.json({ postings: postingsWithSkills });
 });
@@ -218,18 +226,26 @@ postingRouter.get('/:id', async (req, res: Response<OrganizationPostingResponse>
     throw new Error('Posting not found');
   }
 
-  const [skills, crisis] = await Promise.all([
+  const [skills, crisis, enrollmentCountRow] = await Promise.all([
     database
       .selectFrom('posting_skill')
       .selectAll()
       .where('posting_id', '=', postingId)
       .execute(),
     getPostingCrisis(posting.crisis_id),
+    database
+      .selectFrom('enrollment')
+      .select(sql<number>`count(enrollment.id)`.as('count'))
+      .where('posting_id', '=', postingId)
+      .executeTakeFirst(),
   ]);
+
+  const enrollmentCount = Number(enrollmentCountRow?.count ?? 0);
 
   res.json({
     posting,
     skills,
+    is_full: isPostingFull(posting.max_volunteers, enrollmentCount),
     ...(crisis ? { crisis } : {}),
   });
 });
@@ -503,11 +519,6 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
     throw new Error('Cannot accept applications for open postings');
   }
 
-  if (posting.is_closed) {
-    res.status(403);
-    throw new Error('This posting is closed and no longer accepting applications');
-  }
-
   const application = await database
     .selectFrom('enrollment_application')
     .select([
@@ -563,34 +574,6 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
       throw new Error('Posting not found');
     }
 
-    if (lockedPosting.is_closed) {
-      res.status(403);
-      throw new Error('This posting is closed and no longer accepting applications');
-    }
-
-    let currentEnrollmentCount = 0;
-    if (lockedPosting.max_volunteers !== undefined && lockedPosting.max_volunteers !== null) {
-      const enrollmentCountRow = await trx
-        .selectFrom('enrollment')
-        .select(sql<number>`count(enrollment.id)`.as('count'))
-        .where('posting_id', '=', postingId)
-        .executeTakeFirst();
-
-      currentEnrollmentCount = Number(enrollmentCountRow?.count ?? 0);
-
-      if (currentEnrollmentCount >= lockedPosting.max_volunteers) {
-        await trx
-          .updateTable('organization_posting')
-          .set({ is_closed: true })
-          .where('id', '=', postingId)
-          .where('is_closed', '=', false)
-          .execute();
-
-        res.status(403);
-        throw new Error('This posting has reached the maximum number of volunteers');
-      }
-    }
-
     const enrollment = await trx
       .insertInto('enrollment')
       .values({
@@ -610,19 +593,6 @@ postingRouter.post('/:id/applications/:applicationId/accept', async (req, res: R
       .deleteFrom('enrollment_application')
       .where('id', '=', applicationId)
       .execute();
-
-    if (
-      lockedPosting.max_volunteers !== undefined
-      && lockedPosting.max_volunteers !== null
-      && currentEnrollmentCount + 1 >= lockedPosting.max_volunteers
-    ) {
-      await trx
-        .updateTable('organization_posting')
-        .set({ is_closed: true })
-        .where('id', '=', postingId)
-        .where('is_closed', '=', false)
-        .execute();
-    }
   });
   if (emailContext) {
     try {

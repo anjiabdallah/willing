@@ -3,6 +3,7 @@ import { PostingWithContext, SuccessResponse } from '../../../types.js';
 
 export type VolunteerEnrollmentEntry = PostingWithContext & {
   status: 'enrolled' | 'pending';
+  is_full: boolean;
 };
 
 export type VolunteerEnrollmentsResponse = {
@@ -10,7 +11,7 @@ export type VolunteerEnrollmentsResponse = {
 };
 
 export type VolunteerPostingSearchResponse = {
-  postings: (PostingWithContext & { enrollment_count: number })[];
+  postings: (PostingWithContext & { is_full: boolean })[];
 };
 
 export type VolunteerPostingResponse = {
@@ -18,6 +19,7 @@ export type VolunteerPostingResponse = {
   posting: OrganizationPostingWithoutVectors;
   skills: PostingSkill[];
   isEnrolled: boolean;
+  is_full: boolean;
 };
 
 export type VolunteerPostingEnrollResponse = {

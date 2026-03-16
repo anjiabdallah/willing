@@ -14,7 +14,7 @@ import resetPassword from '../../../auth/resetPassword.js';
 import database from '../../../db/index.js';
 import { newOrganizationRequestSchema, organizationAccountSchema, PostingSkill } from '../../../db/tables.js';
 import { recomputeOrganizationVector } from '../../../services/embeddings/embeddingUpdateService.js';
-import { sendAdminOrganizationRequestEmail } from '../../../SMTP/emails.js';
+import { sendAdminOrganizationRequestEmail } from '../../../services/smtp/emails.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const organizationRouter = Router();

@@ -28,7 +28,7 @@ import {
 import {
   sendVolunteerApplicationAcceptedEmail,
   sendVolunteerApplicationRejectedEmail,
-} from '../../../SMTP/emails.js';
+} from '../../../services/smtp/emails.js';
 
 const postingRouter = Router();
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial().extend({

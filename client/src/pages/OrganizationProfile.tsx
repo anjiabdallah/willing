@@ -35,7 +35,7 @@ function OrganizationProfile() {
         <div className="grow">
           <div className="p-6 md:container mx-auto">
             <Alert color="error">
-              <p>Invalid organization ID</p>
+              Invalid organization ID
             </Alert>
           </div>
         </div>
@@ -56,7 +56,7 @@ function OrganizationProfile() {
 
           {error && (
             <Alert color="error" className="mb-4">
-              <p>{error.message}</p>
+              {error.message}
             </Alert>
           )}
 

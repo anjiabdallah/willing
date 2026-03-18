@@ -124,7 +124,7 @@ function VolunteerHome() {
                 : enrolledError
                   ? (
                       <Alert color="error">
-                        <p>{enrolledError.message}</p>
+                        {enrolledError.message}
                       </Alert>
                     )
                   : null}
@@ -139,7 +139,7 @@ function VolunteerHome() {
 
           {crisesError && (
             <Alert color="error">
-              <p>{crisesError.message}</p>
+              {crisesError.message}
             </Alert>
           )}
 
@@ -179,12 +179,12 @@ function VolunteerHome() {
               : allError
                 ? (
                     <Alert color="error">
-                      <p>{allError.message}</p>
+                      {allError.message}
                     </Alert>
                   )
                 : (
                     <Alert>
-                      <p>No recommended postings are available yet.</p>
+                      No recommended postings are available yet.
                     </Alert>
                   )}
           >

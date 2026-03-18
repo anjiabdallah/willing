@@ -340,7 +340,7 @@ function VolunteerProfile() {
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
           <Alert color="error">
-            <p>{fetchError}</p>
+            {fetchError}
           </Alert>
           <button className="btn btn-outline mt-4" onClick={loadProfile}>
             Retry
@@ -355,7 +355,7 @@ function VolunteerProfile() {
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
           <Alert color="warning">
-            <p>Profile not found.</p>
+            Profile not found.
           </Alert>
         </div>
       </div>
@@ -403,13 +403,13 @@ function VolunteerProfile() {
                 : 'opacity-0 -translate-y-1'
             }`}
           >
-            <p>{saveMessage}</p>
+            {saveMessage}
           </Alert>
         )}
 
         {saveError && (
           <Alert color="error" className="mt-4">
-            <p>{saveError}</p>
+            {saveError}
           </Alert>
         )}
 
@@ -568,7 +568,7 @@ function VolunteerProfile() {
                   This section will show your past volunteering experiences completed through the platform.
                 </p>
                 <Alert style="soft" className="mt-4">
-                  <p className="text-sm">No experiences to show yet.</p>
+                  No experiences to show yet.
                 </Alert>
               </div>
             </div>
@@ -611,7 +611,7 @@ function VolunteerProfile() {
                       )
                     : (
                         <Alert style="soft">
-                          <p className="text-sm">No CV uploaded yet.</p>
+                          No CV uploaded yet.
                         </Alert>
                       )}
 

@@ -143,9 +143,7 @@ export function FormRootError<T extends FieldValues>({
       style="soft"
       className="mt-2 py-3 transition-all animate-in fade-in slide-in-from-top-1"
     >
-      <p className="text-sm font-medium">
-        {error.message as string}
-      </p>
+      {error.message as string}
     </Alert>
   );
 }

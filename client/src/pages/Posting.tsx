@@ -652,7 +652,7 @@ function PostingPage() {
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
           <Alert color="error">
-            <p>{fetchError}</p>
+            {fetchError}
           </Alert>
           <button className="btn btn-outline mt-4" onClick={loadPosting}>Retry</button>
         </div>
@@ -665,7 +665,7 @@ function PostingPage() {
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
           <Alert color="warning">
-            <p>Posting not found.</p>
+            Posting not found.
           </Alert>
           <button className="btn btn-outline mt-4" onClick={() => navigate('/organization')}>
             Back to Home
@@ -747,13 +747,13 @@ function PostingPage() {
                   : 'opacity-0 -translate-y-1'
               }`}
             >
-              <p>{saveMessage}</p>
+              {saveMessage}
             </Alert>
           )}
 
           {saveError && (
             <Alert color="error" className="mb-4">
-              <p>{saveError}</p>
+              {saveError}
             </Alert>
           )}
 
@@ -1139,7 +1139,7 @@ function PostingPage() {
                   {applications.length === 0
                     ? (
                         <Alert>
-                          <p className="text-sm">No pending applications.</p>
+                          No pending applications.
                         </Alert>
                       )
                     : (
@@ -1186,7 +1186,7 @@ function PostingPage() {
                   {enrollments.length === 0
                     ? (
                         <Alert>
-                          <p className="text-sm">No volunteers have enrolled yet.</p>
+                          No volunteers have enrolled yet.
                         </Alert>
                       )
                     : (

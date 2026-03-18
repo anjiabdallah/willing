@@ -53,7 +53,7 @@ function OrganizationHome() {
 
         {error && (
           <Alert color="error" className="mb-4">
-            <p>{error.message}</p>
+            {error.message}
           </Alert>
         )}
 
@@ -65,7 +65,7 @@ function OrganizationHome() {
 
         {!loading && (!postings || postings.length === 0) && (
           <Alert>
-            <p>No postings yet. Create your first posting to get started!</p>
+            No postings yet. Create your first posting to get started!
           </Alert>
         )}
 

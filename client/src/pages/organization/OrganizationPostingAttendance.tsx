@@ -230,7 +230,7 @@ function OrganizationPostingAttendance() {
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
           <Alert color="error" className="mb-4">
-            <p>{error}</p>
+            {error}
           </Alert>
           <button className="btn btn-outline" onClick={() => void loadAttendance()}>
             Retry
@@ -299,13 +299,13 @@ function OrganizationPostingAttendance() {
 
         {error && (
           <Alert color="error" className="mt-4">
-            <p>{error}</p>
+            {error}
           </Alert>
         )}
 
         {message && (
           <Alert color="success" className="mt-4">
-            <p>{message}</p>
+            {message}
           </Alert>
         )}
 
@@ -338,13 +338,13 @@ function OrganizationPostingAttendance() {
 
             {data.enrollments.length === 0 && (
               <Alert>
-                <p className="text-sm">No enrolled volunteers to track yet.</p>
+                No enrolled volunteers to track yet.
               </Alert>
             )}
 
             {data.enrollments.length > 0 && filteredAndSortedEnrollments.length === 0 && (
               <Alert>
-                <p className="text-sm">No volunteers match this search.</p>
+                No volunteers match this search.
               </Alert>
             )}
 

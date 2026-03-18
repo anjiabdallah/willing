@@ -78,7 +78,7 @@ function PostingApplicationMessageModal({ open, submitting = false, onClose, onS
 
           {errorMessage && (
             <Alert color="error">
-              <p className="text-sm">{errorMessage}</p>
+              {errorMessage}
             </Alert>
           )}
 

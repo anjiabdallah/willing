@@ -223,7 +223,7 @@ function PostingSearchView({
 
       {error && (
         <Alert color="error" className="mb-4">
-          <p>{error}</p>
+          {error}
         </Alert>
       )}
 
@@ -236,7 +236,7 @@ function PostingSearchView({
         : postings.length === 0
           ? (
               <Alert>
-                <p>{emptyMessage}</p>
+                {emptyMessage}
               </Alert>
             )
           : (

@@ -240,7 +240,7 @@ function AdminCrises() {
 
             {editingError && (
               <Alert color="error" className="mb-3">
-                <p>{editingError}</p>
+                {editingError}
               </Alert>
             )}
 
@@ -254,7 +254,7 @@ function AdminCrises() {
               : crises.length === 0
                 ? (
                     <Alert style="soft">
-                      <p>No crises added yet.</p>
+                      No crises added yet.
                     </Alert>
                   )
                 : (

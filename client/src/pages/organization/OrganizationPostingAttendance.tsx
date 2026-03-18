@@ -229,8 +229,8 @@ function OrganizationPostingAttendance() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <Alert role="alert" color="error" className="mb-4">
-            <span>{error}</span>
+          <Alert color="error" className="mb-4">
+            <p>{error}</p>
           </Alert>
           <button className="btn btn-outline" onClick={() => void loadAttendance()}>
             Retry
@@ -298,14 +298,14 @@ function OrganizationPostingAttendance() {
         />
 
         {error && (
-          <Alert role="alert" color="error" className="mt-4">
-            <span>{error}</span>
+          <Alert color="error" className="mt-4">
+            <p>{error}</p>
           </Alert>
         )}
 
         {message && (
-          <Alert role="alert" color="success" className="mt-4">
-            <span>{message}</span>
+          <Alert color="success" className="mt-4">
+            <p>{message}</p>
           </Alert>
         )}
 
@@ -338,13 +338,13 @@ function OrganizationPostingAttendance() {
 
             {data.enrollments.length === 0 && (
               <Alert>
-                <span className="text-sm">No enrolled volunteers to track yet.</span>
+                <p className="text-sm">No enrolled volunteers to track yet.</p>
               </Alert>
             )}
 
             {data.enrollments.length > 0 && filteredAndSortedEnrollments.length === 0 && (
               <Alert>
-                <span className="text-sm">No volunteers match this search.</span>
+                <p className="text-sm">No volunteers match this search.</p>
               </Alert>
             )}
 

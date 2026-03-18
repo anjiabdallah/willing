@@ -651,8 +651,8 @@ function PostingPage() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <Alert role="alert" color="error">
-            <span>{fetchError}</span>
+          <Alert color="error">
+            <p>{fetchError}</p>
           </Alert>
           <button className="btn btn-outline mt-4" onClick={loadPosting}>Retry</button>
         </div>
@@ -664,8 +664,8 @@ function PostingPage() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <Alert role="alert" color="warning">
-            <span>Posting not found.</span>
+          <Alert color="warning">
+            <p>Posting not found.</p>
           </Alert>
           <button className="btn btn-outline mt-4" onClick={() => navigate('/organization')}>
             Back to Home
@@ -740,7 +740,6 @@ function PostingPage() {
         <div className="mt-6">
           {saveMessage && (
             <Alert
-              role="alert"
               color="success"
               className={`mb-4 transition-all duration-500 ${
                 isSaveMessageVisible
@@ -748,13 +747,13 @@ function PostingPage() {
                   : 'opacity-0 -translate-y-1'
               }`}
             >
-              <span>{saveMessage}</span>
+              <p>{saveMessage}</p>
             </Alert>
           )}
 
           {saveError && (
-            <Alert role="alert" color="error" className="mb-4">
-              <span>{saveError}</span>
+            <Alert color="error" className="mb-4">
+              <p>{saveError}</p>
             </Alert>
           )}
 
@@ -1140,7 +1139,7 @@ function PostingPage() {
                   {applications.length === 0
                     ? (
                         <Alert>
-                          <span className="text-sm">No pending applications.</span>
+                          <p className="text-sm">No pending applications.</p>
                         </Alert>
                       )
                     : (
@@ -1187,7 +1186,7 @@ function PostingPage() {
                   {enrollments.length === 0
                     ? (
                         <Alert>
-                          <span className="text-sm">No volunteers have enrolled yet.</span>
+                          <p className="text-sm">No volunteers have enrolled yet.</p>
                         </Alert>
                       )
                     : (

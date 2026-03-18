@@ -77,8 +77,8 @@ function CustomMessageModal({ open, submitting = false, onClose, onSubmit, error
           </div>
 
           {errorMessage && (
-            <Alert role="alert" color="error">
-              <span className="text-sm">{errorMessage}</span>
+            <Alert color="error">
+              <p className="text-sm">{errorMessage}</p>
             </Alert>
           )}
 

@@ -141,11 +141,11 @@ export function FormRootError<T extends FieldValues>({
       color="error"
       icon={AlertCircle}
       style="soft"
-      className="mt-2 shadow-sm py-3 transition-all animate-in fade-in slide-in-from-top-1"
+      className="mt-2 py-3 transition-all animate-in fade-in slide-in-from-top-1"
     >
-      <span className="text-sm font-medium">
+      <p className="text-sm font-medium">
         {error.message as string}
-      </span>
+      </p>
     </Alert>
   );
 }

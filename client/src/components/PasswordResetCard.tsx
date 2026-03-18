@@ -66,8 +66,8 @@ function PasswordResetCard() {
 
           {form.formState.isSubmitSuccessful
             && (
-              <Alert role="alert" color="success" style="soft" icon={CheckCircle2} className="mt-2">
-                <span>Your password was successfully updated</span>
+              <Alert color="success" style="soft" icon={CheckCircle2} className="mt-2">
+                <p>Your password was successfully updated</p>
               </Alert>
             )}
 

@@ -4,12 +4,26 @@ import { SuccessResponse } from '../../../types.js';
 
 export type OrganizationRequestResponse = SuccessResponse;
 
+export type OrganizationGetLogoFileResponse = never;
+
 export type OrganizationProfileResponse = {
   organization: OrganizationAccountWithoutPasswordAndVector;
   postings: (OrganizationPostingWithoutVectors & { skills: PostingSkill[] })[];
 };
 
-export type OrganizationMeResponse = {
+export type OrganizationGetMeResponse = {
+  organization: OrganizationAccountWithoutPassword;
+};
+
+export type OrganizationUpdateProfileResponse = {
+  organization: OrganizationAccountWithoutPassword;
+};
+
+export type OrganizationUploadLogoResponse = {
+  organization: OrganizationAccountWithoutPassword;
+};
+
+export type OrganizationDeleteLogoResponse = {
   organization: OrganizationAccountWithoutPassword;
 };
 

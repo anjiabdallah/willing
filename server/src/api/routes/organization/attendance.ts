@@ -8,7 +8,7 @@ import {
 } from './attendance.types.js';
 import { getPostingEnrollments } from './postingEnrollments.js';
 import database from '../../../db/index.js';
-import { recomputeVolunteerExperienceVector } from '../../../services/embeddings/embeddingUpdateService.js';
+import { recomputeVolunteerExperienceVector } from '../../../services/embeddings/updates.js';
 
 const attendanceRouter = Router();
 

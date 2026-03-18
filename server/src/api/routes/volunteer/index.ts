@@ -19,7 +19,7 @@ import { type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, volunt
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
-} from '../../../services/embeddings/embeddingUpdateService.js';
+} from '../../../services/embeddings/updates.js';
 import { getVolunteerProfile } from '../../../services/volunteer/index.js';
 import { authorizeOnly } from '../../authorization.js';
 

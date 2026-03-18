@@ -1,20 +1,33 @@
+import fs from 'fs';
+import path from 'path';
+
 import { Router, Response } from 'express';
+import { sql } from 'kysely';
 import zod from 'zod';
 
+import certificateInfoRouter from './certificateInfo.js';
 import {
+  OrganizationGetLogoFileResponse,
+  OrganizationDeleteLogoResponse,
   OrganizationCrisisResponse,
   OrganizationCrisesResponse,
-  OrganizationMeResponse,
+  OrganizationGetMeResponse,
   OrganizationPinnedCrisesResponse,
   OrganizationProfileResponse,
   OrganizationRequestResponse,
+  OrganizationResetPasswordResponse,
+  OrganizationUpdateProfileResponse,
+  OrganizationUploadLogoResponse,
 } from './index.types.js';
 import postingRouter from './posting.js';
 import resetPassword from '../../../auth/resetPassword.js';
 import database from '../../../db/index.js';
 import { newOrganizationRequestSchema, organizationAccountSchema, PostingSkill } from '../../../db/tables.js';
-import { recomputeOrganizationVector } from '../../../services/embeddings/embeddingUpdateService.js';
-import { sendAdminOrganizationRequestEmail } from '../../../SMTP/emails.js';
+import { recomputeOrganizationVector } from '../../../services/embeddings/updates.js';
+import { sendAdminOrganizationRequestEmail } from '../../../services/smtp/emails.js';
+import { orgLogoMulter } from '../../../services/uploads/orgLogo.js';
+import { ORG_LOGO_UPLOAD_DIR } from '../../../services/uploads/paths.js';
+import uploadSingle from '../../../services/uploads/uploadSingle.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const organizationRouter = Router();
@@ -40,6 +53,7 @@ const organizationPrivateResponseColumns = [
   'latitude',
   'longitude',
   'location_name',
+  'logo_path',
 ] as const;
 
 const organizationPostingResponseColumns = [
@@ -117,6 +131,36 @@ organizationRouter.post('/request', async (req, res: Response<OrganizationReques
     await sendAdminOrganizationRequestEmail(organization);
     res.json({});
   }
+});
+
+organizationRouter.get('/:id/logo', async (req, res: Response<OrganizationGetLogoFileResponse>, next) => {
+  const { id } = zod.object({
+    id: zod.coerce.number().int().positive('ID must be a positive number'),
+  }).parse(req.params);
+
+  const organization = await database
+    .selectFrom('organization_account')
+    .select(['logo_path'])
+    .where('id', '=', id)
+    .executeTakeFirst();
+
+  if (!organization?.logo_path) {
+    res.status(404);
+    throw new Error('Organization logo not found');
+  }
+
+  const ext = path.extname(organization.logo_path).toLowerCase();
+  if (ext === '.png') {
+    res.setHeader('Content-Type', 'image/png');
+  } else {
+    res.setHeader('Content-Type', 'image/jpeg');
+  }
+  res.setHeader('Content-Disposition', 'inline; filename="organization-logo"');
+
+  res.sendFile(organization.logo_path, { root: ORG_LOGO_UPLOAD_DIR }, (error) => {
+    if (!error) return;
+    next(error);
+  });
 });
 
 organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResponse>, next) => {
@@ -219,7 +263,7 @@ organizationRouter.get('/crises/:id', async (req, res: Response<OrganizationCris
   res.json({ crisis });
 });
 
-organizationRouter.get('/me', async (req, res: Response<OrganizationMeResponse>) => {
+organizationRouter.get('/me', async (req, res: Response<OrganizationGetMeResponse>) => {
   const organization = await database
     .selectFrom('organization_account')
     .select(organizationPrivateResponseColumns)
@@ -229,7 +273,7 @@ organizationRouter.get('/me', async (req, res: Response<OrganizationMeResponse>)
   res.json({ organization });
 });
 
-organizationRouter.put('/profile', async (req, res) => {
+organizationRouter.put('/profile', async (req, res: Response<OrganizationUpdateProfileResponse>) => {
   const body = organizationProfileUpdateSchema.parse(req.body);
   const organizationId = req.userJWT!.id;
   const existingOrganization = await database
@@ -273,8 +317,78 @@ organizationRouter.put('/profile', async (req, res) => {
   res.json({ organization });
 });
 
-organizationRouter.post('/reset-password', resetPassword);
+organizationRouter.post('/logo', uploadSingle(orgLogoMulter, 'logo'), async (req, res: Response<OrganizationUploadLogoResponse>) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('No logo file provided');
+  }
+
+  const organizationId = req.userJWT!.id;
+  const existingOrganization = await database
+    .selectFrom('organization_account')
+    .select(['logo_path'])
+    .where('id', '=', organizationId)
+    .executeTakeFirstOrThrow();
+
+  if (existingOrganization.logo_path) {
+    try {
+      await fs.promises.unlink(path.join(ORG_LOGO_UPLOAD_DIR, existingOrganization.logo_path));
+    } catch {
+      // ignore missing old logo file
+    }
+  }
+
+  await database
+    .updateTable('organization_account')
+    .set({ logo_path: req.file.filename })
+    .where('id', '=', organizationId)
+    .execute();
+
+  const organization = await database
+    .selectFrom('organization_account')
+    .select(organizationPrivateResponseColumns)
+    .where('id', '=', organizationId)
+    .executeTakeFirstOrThrow();
+
+  res.json({ organization });
+});
+
+organizationRouter.delete('/logo', async (req, res: Response<OrganizationDeleteLogoResponse>) => {
+  const organizationId = req.userJWT!.id;
+  const existingOrganization = await database
+    .selectFrom('organization_account')
+    .select(['logo_path'])
+    .where('id', '=', organizationId)
+    .executeTakeFirstOrThrow();
+
+  if (existingOrganization.logo_path) {
+    try {
+      await fs.promises.unlink(path.join(ORG_LOGO_UPLOAD_DIR, existingOrganization.logo_path));
+    } catch {
+      // ignore missing old logo file
+    }
+  }
+
+  await database
+    .updateTable('organization_account')
+    .set({ logo_path: sql`NULL` })
+    .where('id', '=', organizationId)
+    .execute();
+
+  const organization = await database
+    .selectFrom('organization_account')
+    .select(organizationPrivateResponseColumns)
+    .where('id', '=', organizationId)
+    .executeTakeFirstOrThrow();
+
+  res.json({ organization });
+});
+
+organizationRouter.post('/reset-password', async (req, res: Response<OrganizationResetPasswordResponse>) => {
+  await resetPassword(req, res);
+});
 
 organizationRouter.use('/posting', postingRouter);
+organizationRouter.use('/certificate-info', certificateInfoRouter);
 
 export default organizationRouter;

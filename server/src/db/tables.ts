@@ -137,6 +137,8 @@ export const organizationAccountSchema = zod.object({
     .optional(),
   location_name: zod.string().min(2, 'Location must be longer than 2 characters'),
   password: passwordSchema,
+  logo_path: zod.string().optional(),
+  certificate_info_id: zod.number().nullable().optional(),
   org_vector: zod.string().optional(),
   updated_at: zod.date(),
   created_at: zod.date(),
@@ -146,14 +148,15 @@ export type OrganizationAccount = zod.infer<typeof organizationAccountSchema>;
 
 export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<OrganizationAccount>;
 
-export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, org_vector: true, created_at: true, updated_at: true });
+export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, certificate_info_id: true, org_vector: true, created_at: true, updated_at: true });
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
 
-export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, org_vector: true, created_at: true, updated_at: true });
+export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, certificate_info_id: true, org_vector: true, created_at: true, updated_at: true });
 export type OrganizationAccountWithoutPassword = zod.infer<typeof organizationAccountUpdate>;
 
 export const organizationAccountWithoutPasswordAndVectorSchema = organizationAccountSchema.omit({
   password: true,
+  certificate_info_id: true,
   org_vector: true,
 });
 export type OrganizationAccountWithoutPasswordAndVector = zod.infer<typeof organizationAccountWithoutPasswordAndVectorSchema>;
@@ -318,6 +321,24 @@ export type EnrollmentApplication = zod.infer<typeof enrollmentApplicationSchema
 export const newEnrollmentApplicationSchema = enrollmentApplicationSchema.omit({ id: true, created_at: true });
 export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
+// organization_certificate_info
+
+export const organizationCertificateInfoSchema = zod.object({
+  id: zod.number(),
+  hours_threshold: zod.number().int().min(0, 'Hours threshold must be >= 0').nullable(),
+  signatory_name: zod.string().max(128, 'Signatory name must be at most 128 characters').nullable(),
+  signature_path: zod.string().max(256, 'Signature path must be at most 256 characters').nullable(),
+});
+
+export type OrganizationCertificateInfo = zod.infer<typeof organizationCertificateInfoSchema>;
+
+export type OrganizationCertificateInfoTable = WithGeneratedID<OrganizationCertificateInfo>;
+
+export const newOrganizationCertificateInfoSchema = organizationCertificateInfoSchema.omit({
+  id: true,
+});
+export type NewOrganizationCertificateInfo = zod.infer<typeof newOrganizationCertificateInfoSchema>;
+
 export interface Database {
   volunteer_account: VolunteerAccountTable;
   organization_request: OrganizationRequestTable;
@@ -330,4 +351,5 @@ export interface Database {
   password_reset_token: PasswordResetTokenTable;
   enrollment: EnrollmentTable;
   enrollment_application: EnrollmentApplicationTable;
+  organization_certificate_info: OrganizationCertificateInfoTable;
 }

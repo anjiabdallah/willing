@@ -114,15 +114,7 @@ organizationRouter.post('/request', async (req, res: Response<OrganizationReques
 
   const organization = await database
     .insertInto('organization_request')
-    .values({
-      name: body.name,
-      email: email,
-      phone_number: body.phone_number,
-      url: body.url,
-      location_name: body.location_name,
-      latitude: body.latitude,
-      longitude: body.longitude,
-    })
+    .values(body)
     .returningAll().executeTakeFirst();
 
   if (!organization) {

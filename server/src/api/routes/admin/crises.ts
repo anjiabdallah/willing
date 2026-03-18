@@ -13,10 +13,7 @@ import { newCrisisSchema } from '../../../db/tables.js';
 
 const adminCrisesRouter = Router();
 
-const createCrisisBodySchema = newCrisisSchema.pick({
-  name: true,
-  description: true,
-});
+const createCrisisBodySchema = newCrisisSchema;
 
 const crisisParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
@@ -42,11 +39,7 @@ adminCrisesRouter.post('/', async (req, res: Response<AdminCrisisCreateResponse>
 
   const crisis = await database
     .insertInto('crisis')
-    .values({
-      name: body.name,
-      description: body.description,
-      pinned: false,
-    })
+    .values({ ...body, pinned: false })
     .returningAll()
     .executeTakeFirst();
 
@@ -64,10 +57,7 @@ adminCrisesRouter.put('/:id', async (req, res: Response<AdminCrisisUpdateRespons
 
   const crisis = await database
     .updateTable('crisis')
-    .set({
-      name: body.name,
-      description: body.description,
-    })
+    .set(body)
     .where('id', '=', id)
     .returningAll()
     .executeTakeFirst();

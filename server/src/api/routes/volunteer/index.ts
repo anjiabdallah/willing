@@ -73,18 +73,15 @@ volunteerRouter.post('/create', async (req, res: Response<VolunteerCreateRespons
   }
 
   const hashedPassword = await bcrypt.hash(body.password, 10);
+  const insertBody = {
+    ...body,
+    password: hashedPassword,
+    privacy: 'public' as const,
+  };
 
   const newVolunteer = await database
     .insertInto('volunteer_account')
-    .values({
-      first_name: body.first_name,
-      last_name: body.last_name,
-      email: body.email,
-      password: hashedPassword,
-      date_of_birth: body.date_of_birth,
-      gender: body.gender,
-      privacy: 'public',
-    })
+    .values(insertBody)
     .returning(volunteerResponseColumns)
     .executeTakeFirst();
 

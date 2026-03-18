@@ -76,7 +76,7 @@ export const newVolunteerAccountSchema = volunteerAccountSchema.omit({
   experience_vector: true,
   created_at: true,
   updated_at: true,
-});
+}).strict();
 export type NewVolunteerAccount = zod.infer<typeof newVolunteerAccountSchema>;
 
 export const volunteerAccountWithoutPasswordSchema = volunteerAccountSchema.omit({
@@ -114,7 +114,7 @@ export type OrganizationRequest = zod.infer<typeof organizationRequestSchema>;
 
 export type OrganizationRequestTable = WithGeneratedIDAndCreatedAt<OrganizationRequest>;
 
-export const newOrganizationRequestSchema = organizationRequestSchema.omit({ id: true, created_at: true });
+export const newOrganizationRequestSchema = organizationRequestSchema.omit({ id: true, created_at: true }).strict();
 export type NewOrganizationRequest = zod.infer<typeof newOrganizationRequestSchema>;
 
 // organization_account
@@ -148,7 +148,7 @@ export type OrganizationAccount = zod.infer<typeof organizationAccountSchema>;
 
 export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<OrganizationAccount>;
 
-export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, certificate_info_id: true, org_vector: true, created_at: true, updated_at: true });
+export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, certificate_info_id: true, org_vector: true, created_at: true, updated_at: true }).strict();
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
 
 export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, certificate_info_id: true, org_vector: true, created_at: true, updated_at: true });
@@ -177,7 +177,7 @@ export type AdminAccount = zod.infer<typeof adminAccountSchema>;
 
 export type AdminAccountTable = WithGeneratedIDAndTimestamps<AdminAccount>;
 
-export const newAdminAccountSchema = adminAccountSchema.omit({ id: true, created_at: true, updated_at: true });
+export const newAdminAccountSchema = adminAccountSchema.omit({ id: true, created_at: true, updated_at: true }).strict();
 export type NewAdminAccount = zod.infer<typeof newAdminAccountSchema>;
 
 export const adminAccountUpdate = adminAccountSchema.omit({ password: true, created_at: true, updated_at: true });
@@ -214,7 +214,7 @@ export const newCrisisSchema = crisisSchema.omit({
   id: true,
   pinned: true,
   created_at: true,
-});
+}).strict();
 export type NewCrisis = zod.infer<typeof newCrisisSchema>;
 
 // organization_posting
@@ -253,12 +253,13 @@ export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
 export type OrganizationPostingTable = WithGeneratedIDAndTimestamps<OrganizationPosting>;
 
 export const newOrganizationPostingSchema = organizationPostingSchema
-  .omit({ id: true, opportunity_vector: true, posting_context_vector: true, created_at: true, updated_at: true })
+  .omit({ id: true, opportunity_vector: true, posting_context_vector: true, created_at: true, updated_at: true, organization_id: true })
   .extend({
     skills: zod
       .array(zod.string().min(1, 'Skill name is required'))
       .optional(),
-  });
+  })
+  .strict();
 export type NewOrganizationPosting = zod.infer<typeof newOrganizationPostingSchema>;
 
 export const organizationPostingWithoutVectorsSchema = organizationPostingSchema.omit({
@@ -303,7 +304,7 @@ export const enrollmentSchema = zod.object({
 });
 
 export type Enrollment = zod.infer<typeof enrollmentSchema>;
-export const newEnrollmentSchema = enrollmentSchema.omit({ id: true, created_at: true, attended: true });
+export const newEnrollmentSchema = enrollmentSchema.omit({ id: true, created_at: true, attended: true }).strict();
 
 export type EnrollmentTable = WithGeneratedIDAndCreatedAt<Enrollment>;
 
@@ -318,7 +319,7 @@ export const enrollmentApplicationSchema = zod.object({
 });
 
 export type EnrollmentApplication = zod.infer<typeof enrollmentApplicationSchema>;
-export const newEnrollmentApplicationSchema = enrollmentApplicationSchema.omit({ id: true, created_at: true });
+export const newEnrollmentApplicationSchema = enrollmentApplicationSchema.omit({ id: true, created_at: true }).strict();
 export type EnrollmentApplicationTable = WithGeneratedIDAndCreatedAt<EnrollmentApplication>;
 
 // organization_certificate_info
@@ -336,7 +337,7 @@ export type OrganizationCertificateInfoTable = WithGeneratedID<OrganizationCerti
 
 export const newOrganizationCertificateInfoSchema = organizationCertificateInfoSchema.omit({
   id: true,
-});
+}).strict();
 export type NewOrganizationCertificateInfo = zod.infer<typeof newOrganizationCertificateInfoSchema>;
 
 export interface Database {

@@ -93,6 +93,7 @@ const getPostingCrisis = async (crisisId: number | undefined | null) => {
 postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateResponse>) => {
   const body: NewOrganizationPosting = newOrganizationPostingSchema.parse(req.body);
   const orgId = req.userJWT!.id;
+  const { skills, ...postingBody } = body;
 
   if (body.crisis_id !== undefined) {
     await assertCrisisExists(body.crisis_id, res);
@@ -101,21 +102,7 @@ postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateRespo
   const result = await database.transaction().execute(async (trx) => {
     const newPosting = await trx
       .insertInto('organization_posting')
-      .values({
-        organization_id: orgId,
-        crisis_id: body.crisis_id,
-        title: body.title,
-        description: body.description,
-        latitude: body.latitude ?? undefined,
-        longitude: body.longitude ?? undefined,
-        max_volunteers: body.max_volunteers ?? undefined,
-        start_timestamp: body.start_timestamp,
-        end_timestamp: body.end_timestamp ?? undefined,
-        minimum_age: body.minimum_age ?? undefined,
-        automatic_acceptance: body.automatic_acceptance ?? true,
-        is_closed: body.is_closed ?? false,
-        location_name: body.location_name,
-      })
+      .values({ organization_id: orgId, ...postingBody })
       .returning('id')
       .executeTakeFirst();
 
@@ -123,8 +110,8 @@ postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateRespo
       throw new Error('Failed to create posting');
     }
 
-    if (body.skills && body.skills.length > 0) {
-      const skillRows = body.skills.map(skill => ({
+    if (skills && skills.length > 0) {
+      const skillRows = skills.map(skill => ({
         posting_id: newPosting.id,
         name: skill,
       }));
@@ -143,13 +130,13 @@ postingRouter.post('/', async (req, res: Response<OrganizationPostingCreateRespo
     .where('id', '=', result.postingId)
     .executeTakeFirstOrThrow();
 
-  const skills: PostingSkill[] = await database
+  const insertedSkills: PostingSkill[] = await database
     .selectFrom('posting_skill')
     .selectAll()
     .where('posting_id', '=', result.postingId)
     .execute();
 
-  res.json({ posting, skills });
+  res.json({ posting, skills: insertedSkills });
 });
 
 postingRouter.get('/', async (req, res: Response<OrganizationPostingListResponse>) => {

@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   CircleHelp,
   Info,
-  ShieldAlert,
   Sparkles,
   TriangleAlert,
 } from 'lucide-react';
@@ -39,7 +38,7 @@ function Alert({ color, icon: Icon, style = 'soft', role = 'alert', children, cl
   const colorClassName = color ? `alert-${color}` : '';
   const styleClassName = style === 'soft' ? 'alert-soft' : style === 'outline' ? 'alert-outline' : '';
   const alertClassName = ['alert', 'items-start', 'gap-3', 'shadow-sm', 'text-base', colorClassName, styleClassName, className].filter(Boolean).join(' ');
-  const ResolvedIcon = Icon ?? (color ? defaultIconsByColor[color] : ShieldAlert);
+  const ResolvedIcon = Icon ?? (color ? defaultIconsByColor[color] : AlertCircle);
   const renderedChildren = Children
     .toArray(children)
     .filter(child => !(typeof child === 'string' && child.trim() === ''))

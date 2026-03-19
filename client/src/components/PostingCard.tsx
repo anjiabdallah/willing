@@ -3,10 +3,12 @@ import { Link } from 'react-router';
 
 import SkillsList from './skills/SkillsList';
 
-import type { PostingWithContext } from '../../../server/src/types';
+import type { PostingWithContext, PostingWithSkills } from '../../../server/src/types';
+
+type PostingCardData = PostingWithSkills & Partial<Pick<PostingWithContext, 'organization_name' | 'crisis_name' | 'enrollment_count'>>;
 
 interface PostingCardProps {
-  posting: PostingWithContext;
+  posting: PostingCardData;
   applicationStatus?: 'none' | 'pending' | 'registered';
   showCrisis?: boolean;
 }
@@ -206,7 +208,7 @@ function PostingCard({ posting, applicationStatus = 'none', showCrisis = true }:
               </span>
               <div>
                 <p className="text-xs opacity-70">VOLUNTEERS</p>
-                <p className="text-sm">{`${posting.enrollment_count}${posting.max_volunteers ? '/' + posting.max_volunteers : ''}`}</p>
+                <p className="text-sm">{`${volunteerFilled}${posting.max_volunteers ? '/' + posting.max_volunteers : ''}`}</p>
               </div>
             </div>
 

@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { volunteerAccountSchema } from '../../../../server/src/db/tables';
+import Alert from '../../components/Alert';
 import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
@@ -338,9 +339,9 @@ function VolunteerProfile() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <div role="alert" className="alert alert-error">
-            <span>{fetchError}</span>
-          </div>
+          <Alert color="error">
+            {fetchError}
+          </Alert>
           <button className="btn btn-outline mt-4" onClick={loadProfile}>
             Retry
           </button>
@@ -353,9 +354,9 @@ function VolunteerProfile() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <div role="alert" className="alert alert-warning">
-            <span>Profile not found.</span>
-          </div>
+          <Alert color="warning">
+            Profile not found.
+          </Alert>
         </div>
       </div>
     );
@@ -394,22 +395,22 @@ function VolunteerProfile() {
         />
 
         {saveMessage && (
-          <div
-            role="alert"
-            className={`alert alert-success mt-4 transition-all duration-500 ${
+          <Alert
+            color="success"
+            className={`mt-4 transition-all duration-500 ${
               isSaveMessageVisible
                 ? 'opacity-100 translate-y-0'
                 : 'opacity-0 -translate-y-1'
             }`}
           >
-            <span>{saveMessage}</span>
-          </div>
+            {saveMessage}
+          </Alert>
         )}
 
         {saveError && (
-          <div role="alert" className="alert alert-error mt-4">
-            <span>{saveError}</span>
-          </div>
+          <Alert color="error" className="mt-4">
+            {saveError}
+          </Alert>
         )}
 
         <div className="mt-4">
@@ -566,9 +567,9 @@ function VolunteerProfile() {
                 <p className="text-sm opacity-70 mt-1">
                   This section will show your past volunteering experiences completed through the platform.
                 </p>
-                <div className="alert alert-soft mt-4">
-                  <span className="text-sm">No experiences to show yet.</span>
-                </div>
+                <Alert style="soft" className="mt-4">
+                  No experiences to show yet.
+                </Alert>
               </div>
             </div>
 
@@ -609,9 +610,9 @@ function VolunteerProfile() {
                         </div>
                       )
                     : (
-                        <div className="alert alert-soft">
-                          <span className="text-sm">No CV uploaded yet.</span>
-                        </div>
+                        <Alert style="soft">
+                          No CV uploaded yet.
+                        </Alert>
                       )}
 
                   <input

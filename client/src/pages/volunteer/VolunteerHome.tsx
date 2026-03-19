@@ -1,6 +1,7 @@
 import { House } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import Alert from '../../components/Alert';
 import PageHeader from '../../components/layout/PageHeader.tsx';
 import Loading from '../../components/Loading.tsx';
 import PostingCard from '../../components/PostingCard';
@@ -122,9 +123,9 @@ function VolunteerHome() {
                 ? <RailLoadingState />
                 : enrolledError
                   ? (
-                      <div className="alert alert-error">
-                        <span>{enrolledError.message}</span>
-                      </div>
+                      <Alert color="error">
+                        {enrolledError.message}
+                      </Alert>
                     )
                   : null}
             >
@@ -137,9 +138,9 @@ function VolunteerHome() {
           {crisesLoading && <RailLoadingState />}
 
           {crisesError && (
-            <div className="alert alert-error">
-              <span>{crisesError.message}</span>
-            </div>
+            <Alert color="error">
+              {crisesError.message}
+            </Alert>
           )}
 
           {!crisesLoading && !crisesError && featuredCrisesWithPostings.map(({ crisis, postings }) => (
@@ -177,14 +178,14 @@ function VolunteerHome() {
               ? <RailLoadingState />
               : allError
                 ? (
-                    <div className="alert alert-error">
-                      <span>{allError.message}</span>
-                    </div>
+                    <Alert color="error">
+                      {allError.message}
+                    </Alert>
                   )
                 : (
-                    <div className="alert bg-base-100 shadow-sm">
-                      <span>No recommended postings are available yet.</span>
-                    </div>
+                    <Alert>
+                      No recommended postings are available yet.
+                    </Alert>
                   )}
           >
             {forYouPostings.map(posting => (

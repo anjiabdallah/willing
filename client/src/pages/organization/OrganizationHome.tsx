@@ -1,6 +1,7 @@
 import { Plus, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import Alert from '../../components/Alert';
 import PageHeader from '../../components/layout/PageHeader';
 import PostingCard from '../../components/PostingCard';
 import requestServer from '../../utils/requestServer';
@@ -51,9 +52,9 @@ function OrganizationHome() {
         />
 
         {error && (
-          <div className="alert alert-error mb-4">
-            <span>{error.message}</span>
-          </div>
+          <Alert color="error" className="mb-4">
+            {error.message}
+          </Alert>
         )}
 
         {loading && (
@@ -63,9 +64,9 @@ function OrganizationHome() {
         )}
 
         {!loading && (!postings || postings.length === 0) && (
-          <div className="alert">
-            <span>No postings yet. Create your first posting to get started!</span>
-          </div>
+          <Alert>
+            No postings yet. Create your first posting to get started!
+          </Alert>
         )}
 
         {!loading && postings && postings.length > 0 && (

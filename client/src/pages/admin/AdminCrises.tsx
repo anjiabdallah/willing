@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import zod from 'zod';
 
 import { newCrisisSchema } from '../../../../server/src/db/tables';
+import Alert from '../../components/Alert';
 import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageHeader from '../../components/layout/PageHeader';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
@@ -238,9 +239,9 @@ function AdminCrises() {
             </div>
 
             {editingError && (
-              <div role="alert" className="alert alert-error mb-3">
-                <span>{editingError}</span>
-              </div>
+              <Alert color="error" className="mb-3">
+                {editingError}
+              </Alert>
             )}
 
             {!crises
@@ -252,9 +253,9 @@ function AdminCrises() {
                 )
               : crises.length === 0
                 ? (
-                    <div className="alert alert-soft">
-                      <span>No crises added yet.</span>
-                    </div>
+                    <Alert style="soft">
+                      No crises added yet.
+                    </Alert>
                   )
                 : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

@@ -1,6 +1,7 @@
 import { MapPin, Globe, Mail, Phone } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
+import Alert from '../components/Alert';
 import ColumnLayout from '../components/layout/ColumnLayout';
 import PageHeader from '../components/layout/PageHeader';
 import LocationPicker from '../components/LocationPicker';
@@ -33,9 +34,9 @@ function OrganizationProfile() {
       <div className="flex flex-col min-h-screen bg-base-200">
         <div className="grow">
           <div className="p-6 md:container mx-auto">
-            <div className="alert alert-error">
-              <span>Invalid organization ID</span>
-            </div>
+            <Alert color="error">
+              Invalid organization ID
+            </Alert>
           </div>
         </div>
       </div>
@@ -54,9 +55,9 @@ function OrganizationProfile() {
           />
 
           {error && (
-            <div className="alert alert-error mb-4">
-              <span>{error.message}</span>
-            </div>
+            <Alert color="error" className="mb-4">
+              {error.message}
+            </Alert>
           )}
 
           {loading && (

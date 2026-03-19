@@ -168,7 +168,7 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 ### Posting Components (`client/src/components/postings/` + shared posting cards)
 
-- **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional prop: `organization`.
+- **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional props: `applicationStatus` (`'none' | 'pending' | 'registered'`, default `'none'`), `showCrisis` (default `true`).
 - **`PostingSearchView`**: Reusable posting discovery shell with page header, search, date filters, and result states. Required props: `title`, `subtitle`. Optional props: `icon`, `badge`, `showBack`, `defaultBackTo`, `initialFilters`, `emptyMessage`, `filterPostings`, `fetchUrl`.
 - **`HorizontalScrollSection`**: Horizontal carousel-style section with scroll controls, edge fades, and empty state. Required props: `title`, `hasItems`. Optional props: `subtitle`, `action`, `emptyState`, `children`.
 
@@ -180,6 +180,7 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 ### Interaction and Workflow Components
 
+- **`Alert`**: DaisyUI alert wrapper. Always use this instead of a raw `<div className="alert ...">`. Required prop: `children`. Optional prop: `className` (appended after the base `alert` class). Accepts any standard `div` HTML attribute.
 - **`Loading`**: DaisyUI loading spinner. Optional prop: `size` (`xs`, `sm`, `md`, `lg`, `xl`; default `md`).
 - **`LocationPicker`**: Leaflet map picker with draggable marker, click-to-place, Lebanon geocoding search, and read-only mode. Required props: `position`, `setPosition`. Optional props: `readOnly` (default `false`), `className`.
 - **`OrganizationRequestReviewCard`**: Admin review card for organization onboarding requests. Required props: `request`, `refreshOrganizationRequests`.

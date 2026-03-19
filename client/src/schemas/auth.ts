@@ -29,13 +29,13 @@ export type VolunteerSignupFormData = z.infer<typeof volunteerSignupSchema>;
 export const organizationRequestFormSchema = newOrganizationRequestSchema
   .omit({ latitude: true, longitude: true })
   .extend({
-    email: z.string().min(1, 'Email is required').email('Invalid email'),
+    email: z.email('Invalid email'),
   });
 
 export type OrganizationRequestFormData = z.infer<typeof organizationRequestFormSchema>;
 
 export const organizationPostingFormSchema = newOrganizationPostingSchema
-  .omit({ organization_id: true, latitude: true, longitude: true })
+  .omit({ latitude: true, longitude: true })
   .extend({
     latitude: z.number().optional(),
     longitude: z.number().optional(),

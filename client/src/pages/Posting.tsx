@@ -20,6 +20,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext.tsx';
+import Alert from '../components/Alert.tsx';
 import CalendarInfo from '../components/CalendarInfo.tsx';
 import ColumnLayout from '../components/layout/ColumnLayout.tsx';
 import PageHeader from '../components/layout/PageHeader.tsx';
@@ -650,9 +651,9 @@ function PostingPage() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <div role="alert" className="alert alert-error">
-            <span>{fetchError}</span>
-          </div>
+          <Alert color="error">
+            {fetchError}
+          </Alert>
           <button className="btn btn-outline mt-4" onClick={loadPosting}>Retry</button>
         </div>
       </div>
@@ -663,9 +664,9 @@ function PostingPage() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <div role="alert" className="alert alert-warning">
-            <span>Posting not found.</span>
-          </div>
+          <Alert color="warning">
+            Posting not found.
+          </Alert>
           <button className="btn btn-outline mt-4" onClick={() => navigate('/organization')}>
             Back to Home
           </button>
@@ -738,22 +739,22 @@ function PostingPage() {
 
         <div className="mt-6">
           {saveMessage && (
-            <div
-              role="alert"
-              className={`alert alert-success mb-4 transition-all duration-500 ${
+            <Alert
+              color="success"
+              className={`mb-4 transition-all duration-500 ${
                 isSaveMessageVisible
                   ? 'opacity-100 translate-y-0'
                   : 'opacity-0 -translate-y-1'
               }`}
             >
-              <span>{saveMessage}</span>
-            </div>
+              {saveMessage}
+            </Alert>
           )}
 
           {saveError && (
-            <div role="alert" className="alert alert-error mb-4">
-              <span>{saveError}</span>
-            </div>
+            <Alert color="error" className="mb-4">
+              {saveError}
+            </Alert>
           )}
 
           <ColumnLayout
@@ -1137,9 +1138,9 @@ function PostingPage() {
 
                   {applications.length === 0
                     ? (
-                        <div className="alert">
-                          <span className="text-sm">No pending applications.</span>
-                        </div>
+                        <Alert>
+                          No pending applications.
+                        </Alert>
                       )
                     : (
                         <div className="space-y-2">
@@ -1184,9 +1185,9 @@ function PostingPage() {
 
                   {enrollments.length === 0
                     ? (
-                        <div className="alert">
-                          <span className="text-sm">No volunteers have enrolled yet.</span>
-                        </div>
+                        <Alert>
+                          No volunteers have enrolled yet.
+                        </Alert>
                       )
                     : (
                         <div className="space-y-2">

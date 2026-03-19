@@ -1,5 +1,7 @@
 import { AlertCircle, type LucideIcon } from 'lucide-react';
 
+import Alert from '../components/Alert';
+
 import type { HTMLInputTypeAttribute } from 'react';
 import type { FieldValues, UseFormReturn, Path } from 'react-hook-form';
 
@@ -135,11 +137,13 @@ export function FormRootError<T extends FieldValues>({
   if (!error) return null;
 
   return (
-    <div className="alert alert-error alert-soft mt-2 shadow-sm py-3 transition-all animate-in fade-in slide-in-from-top-1">
-      <AlertCircle size={20} />
-      <span className="text-sm font-medium">
-        {error.message as string}
-      </span>
-    </div>
+    <Alert
+      color="error"
+      icon={AlertCircle}
+      style="soft"
+      className="mt-2 py-3 transition-all animate-in fade-in slide-in-from-top-1"
+    >
+      {error.message as string}
+    </Alert>
   );
 }

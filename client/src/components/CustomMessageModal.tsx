@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import zod from 'zod';
 
+import Alert from './Alert';
+
 const applyMessageSchema = zod.object({
   message: zod.string().max(350, 'Message must be 350 characters or fewer').optional(),
 });
@@ -75,9 +77,9 @@ function CustomMessageModal({ open, submitting = false, onClose, onSubmit, error
           </div>
 
           {errorMessage && (
-            <div role="alert" className="alert alert-error">
-              <span className="text-sm">{errorMessage}</span>
-            </div>
+            <Alert color="error">
+              {errorMessage}
+            </Alert>
           )}
 
           <div className="modal-action">

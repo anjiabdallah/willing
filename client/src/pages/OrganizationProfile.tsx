@@ -28,8 +28,6 @@ function OrganizationProfile() {
     { immediate: !!id },
   );
 
-
-
   if (!id) {
     return (
       <div className="flex flex-col min-h-screen bg-base-200">

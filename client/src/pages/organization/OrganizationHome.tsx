@@ -23,8 +23,6 @@ function OrganizationHome() {
     { immediate: true },
   );
 
-
-
   return (
     <div className="grow bg-base-200">
       <div className="p-6 md:container mx-auto">

@@ -40,7 +40,7 @@ import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import VolunteerInfoCollapse from '../components/VolunteerInfoCollapse.tsx';
-import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../schemas/auth.ts';
+import { organizationPostingEditFormSchema, type OrganizationPostingEditFormData } from '../schemas/auth';
 import { executeAndShowError, FormField } from '../utils/formUtils.tsx';
 import requestServer from '../utils/requestServer.ts';
 import { useOrganization } from '../utils/useUsers.ts';
@@ -105,8 +105,8 @@ function PostingPage() {
   const [postingIsFull, setPostingIsFull] = useState(false);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string } | null>(null);
 
-  const form = useForm<OrganizationPostingFormData>({
-    resolver: zodResolver(organizationPostingFormSchema),
+  const form = useForm<OrganizationPostingEditFormData>({
+    resolver: zodResolver(organizationPostingEditFormSchema),
     mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {

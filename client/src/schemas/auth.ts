@@ -67,6 +67,42 @@ export const organizationPostingFormSchema = newOrganizationPostingSchema
     automatic_acceptance: z.boolean(),
   });
 
+// Edit schema for posting (includes is_closed)
+export const organizationPostingEditFormSchema = newOrganizationPostingSchema
+  .omit({ latitude: true, longitude: true })
+  .extend({
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    start_timestamp: z
+      .string()
+      .min(1, 'Start time is required')
+      .refine(
+        (val) => {
+          const yearMatch = val.match(/^(\d+)-/);
+          if (!yearMatch) return true;
+          return yearMatch[1].length <= 4;
+        },
+        { message: 'Year must be 4 digits or less' },
+      ),
+    end_timestamp: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          if (!val) return true;
+          const yearMatch = val.match(/^(\d+)-/);
+          if (!yearMatch) return true;
+          return yearMatch[1].length <= 4;
+        },
+        { message: 'Year must be 4 digits or less' },
+      ),
+    max_volunteers: z.string().optional(),
+    minimum_age: z.string().optional(),
+    automatic_acceptance: z.boolean(),
+    is_closed: z.boolean(),
+  });
+export type OrganizationPostingEditFormData = z.infer<typeof organizationPostingEditFormSchema>;
+
 export type OrganizationPostingFormData = z.infer<typeof organizationPostingFormSchema>;
 
 export const forgotPasswordRequestSchema = z.object({

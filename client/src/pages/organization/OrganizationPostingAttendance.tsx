@@ -44,6 +44,56 @@ function OrganizationPostingAttendance() {
     notifyOnError: true,
   });
 
+  const { trigger: submitAttendanceChanges } = useAsync(
+    async (postingId: string, attendanceUpdates: Array<{ enrollmentId: number; attended: boolean }>) => Promise.all(
+      attendanceUpdates.map(update => requestServer(
+        `/organization/posting/${postingId}/enrollments/${update.enrollmentId}/attendance`,
+        {
+          method: 'PATCH',
+          includeJwt: true,
+          body: { attended: update.attended },
+        },
+      )),
+    ),
+    { notifyOnError: true },
+  );
+
+  const { trigger: requestAttendanceCsv } = useAsync(
+    async (postingId: string) => {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${SERVER_BASE_URL}/organization/posting/${postingId}/attendance/export`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        let messageText = `Failed to export CSV (status ${response.status})`;
+        try {
+          const errorBody = await response.json();
+          messageText = errorBody.message ?? messageText;
+        } catch {
+          // Ignore non-JSON response body
+        }
+        throw new Error(messageText);
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameFromHeader = contentDisposition?.match(/filename="([^"]+)"/)?.[1];
+
+      return {
+        blob,
+        filename: filenameFromHeader ?? `posting-${postingId}-attendance.csv`,
+      };
+    },
+    { notifyOnError: true },
+  );
+
   const toggleAttendance = useCallback(async (enrollment: PostingEnrollment) => {
     if (saving) return;
     setDraftAttendance(current => ({
@@ -79,30 +129,25 @@ function OrganizationPostingAttendance() {
     try {
       setSaving(true);
 
-      await Promise.all(changedEnrollments.map(enrollment => requestServer(
-        `/organization/posting/${id}/enrollments/${enrollment.enrollment_id}/attendance`,
-        {
-          method: 'PATCH',
-          includeJwt: true,
-          body: { attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended },
-        },
-      )));
+      await submitAttendanceChanges(
+        id,
+        changedEnrollments.map(enrollment => ({
+          enrollmentId: enrollment.enrollment_id,
+          attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended,
+        })),
+      );
 
       await loadAttendance();
       notifications.push({
         type: 'success',
         message: `Attendance saved for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`,
       });
-    } catch (submitError) {
-      notifications.push({
-        type: 'error',
-        message: submitError instanceof Error ? submitError.message : 'Failed to submit attendance',
-      });
+    } catch {
       await loadAttendance();
     } finally {
       setSaving(false);
     }
-  }, [data, draftAttendance, id, loadAttendance, notifications, saving]);
+  }, [data, draftAttendance, id, loadAttendance, notifications, saving, submitAttendanceChanges]);
 
   const undoAttendanceChanges = useCallback(() => {
     if (!data || saving) return;
@@ -116,34 +161,10 @@ function OrganizationPostingAttendance() {
 
     try {
       setExportingCsv(true);
-      const token = localStorage.getItem('jwt');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`${SERVER_BASE_URL}/organization/posting/${id}/attendance/export`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        let messageText = `Failed to export CSV (status ${response.status})`;
-        try {
-          const errorBody = await response.json();
-          messageText = errorBody.message ?? messageText;
-        } catch {
-          // Ignore non-JSON response body
-        }
-        throw new Error(messageText);
-      }
-
-      const blob = await response.blob();
+      const { blob, filename } = await requestAttendanceCsv(id);
       const link = document.createElement('a');
-      const contentDisposition = response.headers.get('Content-Disposition');
-      const filenameFromHeader = contentDisposition?.match(/filename="([^"]+)"/)?.[1];
       link.href = URL.createObjectURL(blob);
-      link.download = filenameFromHeader ?? `posting-${id}-attendance.csv`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -152,15 +173,10 @@ function OrganizationPostingAttendance() {
         type: 'success',
         message: 'Attendance CSV exported successfully.',
       });
-    } catch (csvError) {
-      notifications.push({
-        type: 'error',
-        message: csvError instanceof Error ? csvError.message : 'Failed to export CSV',
-      });
     } finally {
       setExportingCsv(false);
     }
-  }, [exportingCsv, id, notifications]);
+  }, [exportingCsv, id, notifications, requestAttendanceCsv]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (!data) return false;

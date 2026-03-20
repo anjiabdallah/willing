@@ -110,6 +110,66 @@ function VolunteerProfile() {
     void loadProfile();
   }, [loadProfile]);
 
+  const { trigger: updateProfile } = useAsync(
+    async (data: {
+      first_name: string;
+      last_name: string;
+      date_of_birth: string;
+      gender: 'male' | 'female' | 'other';
+      description: string;
+      skills: string[];
+      privacy: 'public' | 'private';
+    }) => requestServer<VolunteerProfileResponse>('/volunteer/profile', {
+      method: 'PUT',
+      body: data,
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: uploadCv } = useAsync(
+    async (formData: FormData) => requestServer<VolunteerProfileResponse>('/volunteer/profile/cv', {
+      method: 'POST',
+      body: formData,
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: deleteCv } = useAsync(
+    async () => requestServer<VolunteerProfileResponse>('/volunteer/profile/cv', {
+      method: 'DELETE',
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: getCvPreviewBlob } = useAsync(
+    async () => {
+      const response = await fetch(`${SERVER_BASE_URL}/volunteer/profile/cv/preview`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+        },
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to load CV';
+
+        try {
+          const errorBody = await response.json() as { error?: string; message?: string };
+          message = errorBody.message ?? errorBody.error ?? message;
+        } catch {
+          // Ignore JSON parsing errors and fall back to the default message.
+        }
+
+        throw new Error(message);
+      }
+
+      return response.blob();
+    },
+    { notifyOnError: true },
+  );
+
   const formValues = form.watch();
 
   const volunteerName = useMemo(
@@ -156,22 +216,15 @@ function VolunteerProfile() {
     try {
       setSaving(true);
 
-      const response = await requestServer<VolunteerProfileResponse>(
-        '/volunteer/profile',
-        {
-          method: 'PUT',
-          body: {
-            first_name: data.first_name,
-            last_name: data.last_name,
-            date_of_birth: data.date_of_birth,
-            gender: data.gender,
-            description: data.description,
-            skills,
-            privacy: data.privacy,
-          },
-          includeJwt: true,
-        },
-      );
+      const response = await updateProfile({
+        first_name: data.first_name,
+        last_name: data.last_name,
+        date_of_birth: data.date_of_birth,
+        gender: data.gender,
+        description: data.description,
+        skills,
+        privacy: data.privacy,
+      });
 
       setProfile(response);
       setSkills(response.skills);
@@ -188,11 +241,6 @@ function VolunteerProfile() {
         message: 'Profile changes saved.',
       });
       setIsEditMode(false);
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to save profile',
-      });
     } finally {
       setSaving(false);
     }
@@ -233,24 +281,12 @@ function VolunteerProfile() {
       const formData = new FormData();
       formData.append('cv', file);
 
-      const response = await requestServer<VolunteerProfileResponse>(
-        '/volunteer/profile/cv',
-        {
-          method: 'POST',
-          body: formData,
-          includeJwt: true,
-        },
-      );
+      const response = await uploadCv(formData);
 
       setProfile(response);
       notifications.push({
         type: 'success',
         message: 'CV uploaded successfully.',
-      });
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to upload CV',
       });
     } finally {
       setCvBusy(false);
@@ -264,23 +300,12 @@ function VolunteerProfile() {
     try {
       setCvBusy(true);
 
-      const response = await requestServer<VolunteerProfileResponse>(
-        '/volunteer/profile/cv',
-        {
-          method: 'DELETE',
-          includeJwt: true,
-        },
-      );
+      const response = await deleteCv();
 
       setProfile(response);
       notifications.push({
         type: 'success',
         message: 'CV removed successfully.',
-      });
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to remove CV',
       });
     } finally {
       setCvBusy(false);
@@ -291,34 +316,10 @@ function VolunteerProfile() {
     try {
       setCvBusy(true);
 
-      const response = await fetch(`${SERVER_BASE_URL}/volunteer/profile/cv/preview`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('jwt')}`,
-        },
-      });
-
-      if (!response.ok) {
-        let message = 'Failed to load CV';
-
-        try {
-          const errorBody = await response.json() as { error?: string; message?: string };
-          message = errorBody.message ?? errorBody.error ?? message;
-        } catch {
-          // Ignore JSON parsing errors and fall back to the default message.
-        }
-
-        throw new Error(message);
-      }
-
-      const fileBlob = await response.blob();
+      const fileBlob = await getCvPreviewBlob();
       const previewUrl = URL.createObjectURL(fileBlob);
       window.open(previewUrl, '_blank', 'noopener,noreferrer');
       setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to load CV',
-      });
     } finally {
       setCvBusy(false);
     }

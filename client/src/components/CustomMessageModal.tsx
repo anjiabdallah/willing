@@ -6,7 +6,6 @@ import zod from 'zod';
 
 import Button from './Button';
 import IconButton from './IconButton';
-import useNotifications from '../notifications/useNotifications';
 
 const applyMessageSchema = zod.object({
   message: zod.string().max(350, 'Message must be 350 characters or fewer').optional(),
@@ -19,7 +18,6 @@ type CustomMessageModalProps = {
   submitting?: boolean;
   onClose: () => void;
   onSubmit: (message?: string) => Promise<void> | void;
-  errorMessage?: string | null;
   placeholder: string;
 };
 
@@ -28,10 +26,8 @@ function CustomMessageModal({
   submitting = false,
   onClose,
   onSubmit,
-  errorMessage,
   placeholder,
 }: CustomMessageModalProps) {
-  const notifications = useNotifications();
   const form = useForm<CustomMessageFormData>({
     resolver: zodResolver(applyMessageSchema),
     defaultValues: { message: '' },
@@ -42,14 +38,6 @@ function CustomMessageModal({
       form.reset({ message: '' });
     }
   }, [open, form]);
-
-  useEffect(() => {
-    if (!errorMessage) return;
-    notifications.push({
-      type: 'error',
-      message: errorMessage,
-    });
-  }, [errorMessage, notifications]);
 
   const handleSubmit = form.handleSubmit(async (data) => {
     const trimmedMessage = data.message?.trim();

@@ -95,7 +95,6 @@ function PostingPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [processingApplicationId, setProcessingApplicationId] = useState<number | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-  const [applyError, setApplyError] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [postingIsFull, setPostingIsFull] = useState(false);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string } | null>(null);
@@ -329,6 +328,69 @@ function PostingPage() {
     void loadPosting();
   }, [loadPosting]);
 
+  const { trigger: updatePosting } = useAsync(
+    async (postingId: string, payload: Record<string, unknown>) => requestServer<OrganizationPostingResponse>(
+      `/organization/posting/${postingId}`,
+      {
+        method: 'PUT',
+        body: payload,
+        includeJwt: true,
+      },
+    ),
+    { notifyOnError: true },
+  );
+
+  const { trigger: deletePosting } = useAsync(
+    async (postingId: string) => requestServer(`/organization/posting/${postingId}`, {
+      method: 'DELETE',
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: applyToPosting } = useAsync(
+    async (postingId: string, message?: string) => requestServer(`/volunteer/posting/${postingId}/enroll`, {
+      method: 'POST',
+      body: {
+        message,
+      },
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: withdrawFromPosting } = useAsync(
+    async (postingId: string) => requestServer(`/volunteer/posting/${postingId}/enroll`, {
+      method: 'DELETE',
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: acceptPostingApplication } = useAsync(
+    async (postingId: string, applicationId: number) => requestServer(
+      `/organization/posting/${postingId}/applications/${applicationId}/accept`,
+      { method: 'POST', includeJwt: true },
+    ),
+    { notifyOnError: true },
+  );
+
+  const { trigger: loadPostingEnrollments } = useAsync(
+    async (postingId: string) => requestServer<OrganizationPostingEnrollmentsResponse>(
+      `/organization/posting/${postingId}/enrollments`,
+      { includeJwt: true },
+    ),
+    { notifyOnError: true },
+  );
+
+  const { trigger: rejectPostingApplication } = useAsync(
+    async (postingId: string, applicationId: number) => requestServer(
+      `/organization/posting/${postingId}/applications/${applicationId}`,
+      { method: 'DELETE', includeJwt: true },
+    ),
+    { notifyOnError: true },
+  );
+
   const onSave = form.handleSubmit(async (data) => {
     if (!isEditMode || !posting || !id || !account?.id) return;
 
@@ -352,14 +414,7 @@ function PostingPage() {
           crisis_id: selectedCrisisId ?? null,
         };
 
-        const response = await requestServer<OrganizationPostingResponse>(
-          `/organization/posting/${id}`,
-          {
-            method: 'PUT',
-            body: payload,
-            includeJwt: true,
-          },
-        );
+        const response = await updatePosting(id, payload);
 
         const updatedPosting = {
           ...response.posting,
@@ -375,11 +430,6 @@ function PostingPage() {
           message: 'Posting updated successfully.',
         });
         setIsEditMode(false);
-      } catch (error) {
-        notifications.push({
-          type: 'error',
-          message: error instanceof Error ? error.message : 'Failed to update posting',
-        });
       } finally {
         setSaving(false);
       }
@@ -414,17 +464,12 @@ function PostingPage() {
 
     try {
       setDeleting(true);
-      await requestServer(`/organization/posting/${id}`, { method: 'DELETE', includeJwt: true });
+      await deletePosting(id);
       notifications.push({
         type: 'success',
         message: 'Posting deleted successfully.',
       });
       navigate('/organization');
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to delete posting',
-      });
     } finally {
       setDeleting(false);
     }
@@ -434,25 +479,13 @@ function PostingPage() {
     if (!id || !posting) return;
     try {
       setTogglingClosed(true);
-      const response = await requestServer<OrganizationPostingResponse>(
-        `/organization/posting/${id}`,
-        {
-          method: 'PUT',
-          body: { is_closed: !posting.is_closed },
-          includeJwt: true,
-        },
-      );
+      const response = await updatePosting(id, { is_closed: !posting.is_closed });
       const updatedPosting = { ...response.posting, skills: response.skills };
       setPosting(updatedPosting);
       form.setValue('is_closed', response.posting.is_closed);
       notifications.push({
         type: 'success',
         message: response.posting.is_closed ? 'Posting closed successfully.' : 'Posting reopened successfully.',
-      });
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update posting',
       });
     } finally {
       setTogglingClosed(false);
@@ -461,12 +494,10 @@ function PostingPage() {
 
   const closeApplyModal = useCallback(() => {
     setIsApplyModalOpen(false);
-    setApplyError(null);
   }, []);
 
   const openApplyModal = useCallback(() => {
     if (!id || hasPendingApplication || isEnrolled) return;
-    setApplyError(null);
     setIsApplyModalOpen(true);
   }, [id, hasPendingApplication, isEnrolled]);
 
@@ -475,15 +506,8 @@ function PostingPage() {
 
     try {
       setApplying(true);
-      setApplyError(null);
 
-      await requestServer(`/volunteer/posting/${id}/enroll`, {
-        method: 'POST',
-        body: {
-          message,
-        },
-        includeJwt: true,
-      });
+      await applyToPosting(id, message);
 
       setHasPendingApplication(true);
       setIsApplyModalOpen(false);
@@ -491,17 +515,10 @@ function PostingPage() {
         type: 'success',
         message: 'Application submitted successfully.',
       });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Failed to apply to posting';
-      setApplyError(messageText);
-      notifications.push({
-        type: 'error',
-        message: messageText,
-      });
     } finally {
       setApplying(false);
     }
-  }, [id, hasPendingApplication, isEnrolled, notifications]);
+  }, [applyToPosting, id, hasPendingApplication, isEnrolled, notifications]);
 
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
@@ -510,7 +527,7 @@ function PostingPage() {
     try {
       setWithdrawing(true);
 
-      await requestServer(`/volunteer/posting/${id}/enroll`, { method: 'DELETE', includeJwt: true });
+      await withdrawFromPosting(id);
 
       setHasPendingApplication(false);
       setIsEnrolled(false);
@@ -518,16 +535,10 @@ function PostingPage() {
         type: 'success',
         message: isEnrolled ? 'Left volunteering position.' : 'Application withdrawn successfully.',
       });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Failed to withdraw';
-      notifications.push({
-        type: 'error',
-        message: messageText,
-      });
     } finally {
       setWithdrawing(false);
     }
-  }, [id, hasPendingApplication, isEnrolled, notifications]);
+  }, [id, hasPendingApplication, isEnrolled, notifications, withdrawFromPosting]);
 
   const acceptApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -535,15 +546,9 @@ function PostingPage() {
     try {
       setProcessingApplicationId(applicationId);
 
-      await requestServer(
-        `/organization/posting/${id}/applications/${applicationId}/accept`,
-        { method: 'POST', includeJwt: true },
-      );
+      await acceptPostingApplication(id, applicationId);
 
-      const enrollmentsResponse = await requestServer<OrganizationPostingEnrollmentsResponse>(
-        `/organization/posting/${id}/enrollments`,
-        { includeJwt: true },
-      );
+      const enrollmentsResponse = await loadPostingEnrollments(id);
       setEnrollments(enrollmentsResponse.enrollments);
 
       setApplications(prev => prev.filter(app => app.application_id !== applicationId));
@@ -551,16 +556,10 @@ function PostingPage() {
         type: 'success',
         message: 'Application accepted successfully.',
       });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Failed to accept application';
-      notifications.push({
-        type: 'error',
-        message: messageText,
-      });
     } finally {
       setProcessingApplicationId(null);
     }
-  }, [id, notifications]);
+  }, [acceptPostingApplication, id, loadPostingEnrollments, notifications]);
 
   const rejectApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -568,23 +567,17 @@ function PostingPage() {
 
     try {
       setProcessingApplicationId(applicationId);
-      await requestServer(`/organization/posting/${id}/applications/${applicationId}`, { method: 'DELETE', includeJwt: true });
+      await rejectPostingApplication(id, applicationId);
 
       setApplications(prev => prev.filter(app => app.application_id !== applicationId));
       notifications.push({
         type: 'success',
         message: 'Application rejected.',
       });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Failed to reject application';
-      notifications.push({
-        type: 'error',
-        message: messageText,
-      });
     } finally {
       setProcessingApplicationId(null);
     }
-  }, [id, notifications]);
+  }, [id, notifications, rejectPostingApplication]);
 
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);
@@ -707,7 +700,6 @@ function PostingPage() {
         submitting={applying}
         onClose={closeApplyModal}
         onSubmit={submitApplication}
-        errorMessage={applyError}
         placeholder="You can add an optional message to tell the organization why you're interested in this opportunity"
       />
       <div className="p-6 md:container mx-auto">

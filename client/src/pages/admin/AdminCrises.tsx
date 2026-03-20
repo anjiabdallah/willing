@@ -57,6 +57,40 @@ function AdminCrises() {
     trigger: refreshCrises,
   } = useAsync(getCrises, { immediate: true });
 
+  const { trigger: updateCrisis } = useAsync(
+    async (
+      crisisId: number,
+      data: { name: string; description?: string },
+    ) => requestServer<AdminCrisisUpdateResponse>(`/admin/crises/${crisisId}`, {
+      method: 'PUT',
+      includeJwt: true,
+      body: {
+        name: data.name,
+        description: data.description?.trim() ? data.description.trim() : undefined,
+      },
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: deleteCrisis } = useAsync(
+    async (crisisId: number) => requestServer<AdminCrisisDeleteResponse>(`/admin/crises/${crisisId}`, {
+      method: 'DELETE',
+      includeJwt: true,
+    }),
+    { notifyOnError: true },
+  );
+
+  const { trigger: toggleCrisisPin } = useAsync(
+    async (crisisId: number, pinned: boolean) => requestServer<AdminCrisisPinResponse>(`/admin/crises/${crisisId}/pin`, {
+      method: 'PATCH',
+      includeJwt: true,
+      body: {
+        pinned: !pinned,
+      },
+    }),
+    { notifyOnError: true },
+  );
+
   const onCreateCrisis = crisisForm.handleSubmit(async (data) => {
     await executeAndShowError(crisisForm, async () => {
       setIsCreatingCrisis(true);
@@ -113,14 +147,7 @@ function AdminCrises() {
     setActionBusyId(crisisId);
 
     try {
-      await requestServer<AdminCrisisUpdateResponse>(`/admin/crises/${crisisId}`, {
-        method: 'PUT',
-        includeJwt: true,
-        body: {
-          name: parsed.data.name,
-          description: parsed.data.description?.trim() ? parsed.data.description.trim() : undefined,
-        },
-      });
+      await updateCrisis(crisisId, parsed.data);
 
       await refreshCrises();
       notifications.push({
@@ -128,11 +155,6 @@ function AdminCrises() {
         message: 'Crisis updated successfully.',
       });
       onCancelEdit();
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update crisis',
-      });
     } finally {
       setActionBusyId(null);
     }
@@ -145,10 +167,7 @@ function AdminCrises() {
     setActionBusyId(crisisId);
 
     try {
-      await requestServer<AdminCrisisDeleteResponse>(`/admin/crises/${crisisId}`, {
-        method: 'DELETE',
-        includeJwt: true,
-      });
+      await deleteCrisis(crisisId);
 
       if (editingCrisisId === crisisId) {
         onCancelEdit();
@@ -159,11 +178,6 @@ function AdminCrises() {
         type: 'success',
         message: 'Crisis deleted successfully.',
       });
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to delete crisis',
-      });
     } finally {
       setActionBusyId(null);
     }
@@ -173,23 +187,12 @@ function AdminCrises() {
     setActionBusyId(crisisId);
 
     try {
-      await requestServer<AdminCrisisPinResponse>(`/admin/crises/${crisisId}/pin`, {
-        method: 'PATCH',
-        includeJwt: true,
-        body: {
-          pinned: !pinned,
-        },
-      });
+      await toggleCrisisPin(crisisId, pinned);
 
       await refreshCrises();
       notifications.push({
         type: 'success',
         message: pinned ? 'Crisis unpinned.' : 'Crisis pinned.',
-      });
-    } catch (error) {
-      notifications.push({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update pin status',
       });
     } finally {
       setActionBusyId(null);

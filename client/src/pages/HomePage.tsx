@@ -97,7 +97,6 @@ function HomePage() {
                       color="primary"
                       to={auth.user?.role === 'volunteer' ? '/volunteer' : '/volunteer/create'}
                       layout="wide"
-                      Icon={Users}
                     >
                       {auth.user?.role === 'volunteer' ? 'Go to Dashboard' : 'Create Volunteer Account'}
                     </LinkButton>
@@ -133,7 +132,6 @@ function HomePage() {
                       to={auth.user?.role === 'organization' ? '/organization' : '/organization/request'}
                       color="secondary"
                       layout="wide"
-                      Icon={Building2}
                     >
                       {auth.user?.role === 'organization' ? 'Go to Dashboard' : 'Request Organization Account'}
                     </LinkButton>

@@ -1,7 +1,8 @@
 import { RotateCcw, Search, TextSearch, type LucideIcon } from 'lucide-react';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import requestServer from '../../utils/requestServer.ts';
+import useAsync from '../../utils/useAsync';
 import Alert from '../Alert.tsx';
 import Button from '../Button.tsx';
 import CalendarInfo from '../CalendarInfo.tsx';
@@ -102,20 +103,24 @@ function PostingSearchView({
   filterPostings,
   fetchUrl,
 }: PostingSearchViewProps) {
-  const defaultFilters: PostingSearchFilters = {
+  const defaultFilters = useMemo<PostingSearchFilters>(() => ({
     search: '',
     startDate: '',
     endDate: '',
     ...initialFilters,
-  };
+  }), [initialFilters]);
 
   const [postings, setPostings] = useState<PostingWithContext[]>([]);
   const [filters, setFilters] = useState<PostingSearchFilters>(defaultFilters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPostings = async (useFilters?: PostingSearchFilters) => {
-    const activeFilters = useFilters ?? filters;
+  const { trigger: fetchPostingsRequest } = useAsync(
+    async (url: string) => requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true }),
+    { notifyOnError: true },
+  );
+
+  const fetchPostings = useCallback(async (activeFilters: PostingSearchFilters) => {
     const baseUrl = fetchUrl ?? '/volunteer/posting';
     const query = new URLSearchParams();
 
@@ -130,7 +135,7 @@ function PostingSearchView({
     setError(null);
 
     try {
-      const response = await requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true });
+      const response = await fetchPostingsRequest(url);
       const normalizedSearch = activeFilters.search.trim().toLowerCase();
 
       let result = applyTextSearch(response.postings, normalizedSearch);
@@ -142,15 +147,16 @@ function PostingSearchView({
       setPostings(finalPostings);
     } catch (fetchError) {
       setPostings([]);
-      setError(fetchError instanceof Error ? fetchError.message : 'Failed to load postings');
+      const message = fetchError instanceof Error ? fetchError.message : 'Failed to load postings';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchPostingsRequest, fetchUrl, filterPostings]);
 
   useEffect(() => {
     void fetchPostings(defaultFilters);
-  }, []);
+  }, [defaultFilters, fetchPostings]);
 
   const resetFilters = () => {
     setFilters(defaultFilters);
@@ -175,7 +181,7 @@ function PostingSearchView({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void fetchPostings();
+            void fetchPostings(filters);
           }}
         >
           <div className="mb-3 flex flex-wrap gap-4">
@@ -224,11 +230,7 @@ function PostingSearchView({
         </form>
       </div>
 
-      {error && (
-        <Alert color="error" className="mb-4">
-          {error}
-        </Alert>
-      )}
+      {error && <div className="mb-4 text-sm text-base-content/70">Unable to load postings.</div>}
 
       {loading
         ? (

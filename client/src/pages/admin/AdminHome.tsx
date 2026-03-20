@@ -22,8 +22,8 @@ function AdminHome() {
     return res.crises;
   }, []);
 
-  const { data: organizationRequests } = useAsync(getOrganizationRequests, true);
-  const { data: crises } = useAsync(getCrises, true);
+  const { data: organizationRequests } = useAsync(getOrganizationRequests, { immediate: true });
+  const { data: crises } = useAsync(getCrises, { immediate: true });
 
   const pinnedCrises = crises?.filter(crisis => crisis.pinned) ?? [];
 

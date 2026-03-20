@@ -142,6 +142,13 @@ Useful client scripts:
 6. Keep existing DaisyUI/Tailwind visual language unless explicitly asked to redesign.
 7. Handle loading, error, and success states explicitly.
 
+## Async Hook Conventions
+
+1. Prefer `useAsync` with an **inline async function** when the request logic is local to one component.
+2. Prefer the `trigger` returned by `useAsync` for manual refresh/retry flows instead of separate duplicate loader functions.
+3. Keep a request function outside `useAsync` only when that same function must be reused across multiple hooks or call sites.
+4. For request failures, prefer `useAsync` notification handling via `notifyOnError` instead of catching inside the function passed to `useAsync` only to push error notifications.
+
 ## Reusable Components
 
 All components are in `client/src/components/`. **Use these instead of recreating similar logic.**
@@ -272,5 +279,11 @@ Before finishing code changes:
 4. If DB-dependent checks fail due to DB down, state it explicitly and include the exact command needed.
 
 ## Notes for Agents
+
+## Documentation Maintenance
+
+1. When reusable components change (new props, behavior, moved location, deprecation), update this file’s component sections in the same task.
+2. When hooks or utilities are added or edited (new options, return shape, conventions), update the related guidance in this file in the same task.
+3. Treat `AGENTS.md` updates as part of the definition of done for changes that affect shared developer workflows.
 
 AGENTS.md files may exist at multiple levels. The most specific one in the directory tree takes precedence for files under its scope.

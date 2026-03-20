@@ -1,13 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle, CheckCircle2, LockKeyhole, Save } from 'lucide-react';
+import { CheckCircle, LockKeyhole, Save } from 'lucide-react';
 import { useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import zod from 'zod';
 
-import Alert from './Alert';
 import Button from './Button';
 import { passwordSchema } from '../../../server/src/db/tables';
 import AuthContext from '../auth/AuthContext';
+import useNotifications from '../notifications/useNotifications';
 import { executeAndShowError, FormField, FormRootError } from '../utils/formUtils';
 
 const passwordResetSchema = zod.object({
@@ -23,6 +23,7 @@ type PasswordResetForm = zod.infer<typeof passwordResetSchema>;
 
 function PasswordResetCard() {
   const auth = useContext(AuthContext);
+  const notifications = useNotifications();
   const form = useForm({
     resolver: zodResolver(passwordResetSchema),
     mode: 'onTouched',
@@ -33,6 +34,10 @@ function PasswordResetCard() {
     await executeAndShowError(form, async () => {
       await auth.changePassword(data.currentPassword, data.newPassword);
       form.reset();
+      notifications.push({
+        type: 'success',
+        message: 'Your password was successfully updated.',
+      });
     });
   });
 
@@ -63,13 +68,6 @@ function PasswordResetCard() {
             type="password"
             Icon={CheckCircle}
           />
-
-          {form.formState.isSubmitSuccessful
-            && (
-              <Alert color="success" style="soft" icon={CheckCircle2} className="mt-2">
-                Your password was successfully updated
-              </Alert>
-            )}
 
           <FormRootError form={form} />
 

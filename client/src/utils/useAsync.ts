@@ -1,21 +1,31 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+import useNotifications from '../notifications/useNotifications';
+
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
 }
 
+interface UseAsyncOptions {
+  immediate?: boolean;
+  notifyOnError?: boolean;
+}
+
 export default function useAsync<T, Args extends unknown[]>(
   asyncFunction: (...args: Args) => Promise<T>,
-  immediate = false,
+  options: UseAsyncOptions = {},
 ) {
+  const { immediate = false, notifyOnError = true } = options;
+
   const [state, setState] = useState<AsyncState<T>>({
     data: null,
     loading: false,
     error: null,
   });
 
+  const notifications = useNotifications();
   const hasRunImmediate = useRef(false);
 
   const trigger = useCallback(
@@ -29,10 +39,18 @@ export default function useAsync<T, Args extends unknown[]>(
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setState({ data: null, loading: false, error });
+
+        if (notifyOnError) {
+          notifications.push({
+            type: 'error',
+            message: error.message,
+          });
+        }
+
         throw error;
       }
     },
-    [asyncFunction],
+    [asyncFunction, notifyOnError, notifications],
   );
 
   useEffect(() => {

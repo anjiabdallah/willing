@@ -17,7 +17,7 @@ function AdminRequests() {
   const {
     data: organizationRequests,
     trigger: refreshOrganizationRequests,
-  } = useAsync(getOrganizationRequests, true);
+  } = useAsync(getOrganizationRequests, { immediate: true });
 
   return (
     <div className="grow bg-base-200">

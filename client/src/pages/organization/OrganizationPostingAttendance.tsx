@@ -1,5 +1,5 @@
 import { CheckCheck, Download, RotateCcw, Save, Undo2, Users } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 
 import Alert from '../../components/Alert';
@@ -7,7 +7,9 @@ import Button from '../../components/Button';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import VolunteerInfoCollapse from '../../components/VolunteerInfoCollapse';
+import useNotifications from '../../notifications/useNotifications';
 import requestServer, { SERVER_BASE_URL } from '../../utils/requestServer';
+import useAsync from '../../utils/useAsync';
 
 import type { OrganizationPostingAttendanceResponse } from '../../../../server/src/api/types';
 import type { PostingEnrollment } from '../../../../server/src/types';
@@ -15,112 +17,55 @@ import type { PostingEnrollment } from '../../../../server/src/types';
 function OrganizationPostingAttendance() {
   const { id } = useParams<{ id: string }>();
 
-  const [data, setData] = useState<OrganizationPostingAttendanceResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [draftAttendance, setDraftAttendance] = useState<Record<number, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'attended_first' | 'absent_first'>('name_asc');
+  const notifications = useNotifications();
 
-  const loadAttendance = useCallback(async () => {
-    if (!id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await requestServer<OrganizationPostingAttendanceResponse>(`/organization/posting/${id}/attendance`, { includeJwt: true });
-      setData(response);
-      setDraftAttendance(
-        Object.fromEntries(response.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
-      );
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load attendance');
-    } finally {
-      setLoading(false);
+  const {
+    data,
+    loading,
+    error,
+    trigger: loadAttendance,
+  } = useAsync<OrganizationPostingAttendanceResponse, []>(async () => {
+    if (!id) {
+      throw new Error('Posting ID is missing.');
     }
-  }, [id]);
 
-  const toggleAttendance = useCallback(async (enrollment: PostingEnrollment) => {
-    if (saving) return;
-    setError(null);
-    setMessage(null);
-    setDraftAttendance(current => ({
-      ...current,
-      [enrollment.enrollment_id]: !(current[enrollment.enrollment_id] ?? enrollment.attended),
-    }));
-  }, [data, saving]);
-
-  const setAllAttendanceDraft = useCallback((attended: boolean) => {
-    if (!data) return;
-    if (saving) return;
-    setError(null);
-    setMessage(null);
+    const response = await requestServer<OrganizationPostingAttendanceResponse>(`/organization/posting/${id}/attendance`, { includeJwt: true });
     setDraftAttendance(
-      Object.fromEntries(data!.enrollments.map(enrollment => [enrollment.enrollment_id, attended])),
+      Object.fromEntries(response.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
     );
-  }, [data, saving]);
+    return response;
+  }, {
+    immediate: true,
+    notifyOnError: true,
+  });
 
-  const submitAttendance = useCallback(async () => {
-    if (!id || !data || saving) return;
-
-    const changedEnrollments = data.enrollments.filter((enrollment) => {
-      const nextAttendedValue = draftAttendance[enrollment.enrollment_id] ?? enrollment.attended;
-      return nextAttendedValue !== enrollment.attended;
-    });
-
-    if (changedEnrollments.length === 0) {
-      setMessage('No attendance changes to submit.');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      setMessage(null);
-
-      await Promise.all(changedEnrollments.map(enrollment => requestServer(
-        `/organization/posting/${id}/enrollments/${enrollment.enrollment_id}/attendance`,
+  const { trigger: submitAttendanceChanges } = useAsync(
+    async (postingId: string, attendanceUpdates: Array<{ enrollmentId: number; attended: boolean }>) => Promise.all(
+      attendanceUpdates.map(update => requestServer(
+        `/organization/posting/${postingId}/enrollments/${update.enrollmentId}/attendance`,
         {
           method: 'PATCH',
           includeJwt: true,
-          body: { attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended },
+          body: { attended: update.attended },
         },
-      )));
+      )),
+    ),
+    { notifyOnError: true },
+  );
 
-      await loadAttendance();
-      setMessage(`Attendance saved for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Failed to submit attendance');
-      await loadAttendance();
-    } finally {
-      setSaving(false);
-    }
-  }, [data, draftAttendance, id, loadAttendance, saving]);
-
-  const undoAttendanceChanges = useCallback(() => {
-    if (!data || saving) return;
-    setDraftAttendance(
-      Object.fromEntries(data.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
-    );
-    setError(null);
-    setMessage(null);
-  }, [data, saving]);
-
-  const exportAttendanceCsv = useCallback(async () => {
-    if (!id || exportingCsv) return;
-
-    try {
-      setExportingCsv(true);
-      setError(null);
+  const { trigger: requestAttendanceCsv } = useAsync(
+    async (postingId: string) => {
       const token = localStorage.getItem('jwt');
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${SERVER_BASE_URL}/organization/posting/${id}/attendance/export`, {
+      const response = await fetch(`${SERVER_BASE_URL}/organization/posting/${postingId}/attendance/export`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -138,21 +83,100 @@ function OrganizationPostingAttendance() {
       }
 
       const blob = await response.blob();
-      const link = document.createElement('a');
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameFromHeader = contentDisposition?.match(/filename="([^"]+)"/)?.[1];
+
+      return {
+        blob,
+        filename: filenameFromHeader ?? `posting-${postingId}-attendance.csv`,
+      };
+    },
+    { notifyOnError: true },
+  );
+
+  const toggleAttendance = useCallback(async (enrollment: PostingEnrollment) => {
+    if (saving) return;
+    setDraftAttendance(current => ({
+      ...current,
+      [enrollment.enrollment_id]: !(current[enrollment.enrollment_id] ?? enrollment.attended),
+    }));
+  }, [saving]);
+
+  const setAllAttendanceDraft = useCallback((attended: boolean) => {
+    if (!data) return;
+    if (saving) return;
+    setDraftAttendance(
+      Object.fromEntries(data!.enrollments.map(enrollment => [enrollment.enrollment_id, attended])),
+    );
+  }, [data, saving]);
+
+  const submitAttendance = useCallback(async () => {
+    if (!id || !data || saving) return;
+
+    const changedEnrollments = data.enrollments.filter((enrollment) => {
+      const nextAttendedValue = draftAttendance[enrollment.enrollment_id] ?? enrollment.attended;
+      return nextAttendedValue !== enrollment.attended;
+    });
+
+    if (changedEnrollments.length === 0) {
+      notifications.push({
+        type: 'info',
+        message: 'No attendance changes to submit.',
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await submitAttendanceChanges(
+        id,
+        changedEnrollments.map(enrollment => ({
+          enrollmentId: enrollment.enrollment_id,
+          attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended,
+        })),
+      );
+
+      await loadAttendance();
+      notifications.push({
+        type: 'success',
+        message: `Attendance saved for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`,
+      });
+    } catch {
+      await loadAttendance();
+    } finally {
+      setSaving(false);
+    }
+  }, [data, draftAttendance, id, loadAttendance, notifications, saving, submitAttendanceChanges]);
+
+  const undoAttendanceChanges = useCallback(() => {
+    if (!data || saving) return;
+    setDraftAttendance(
+      Object.fromEntries(data.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
+    );
+  }, [data, saving]);
+
+  const exportAttendanceCsv = useCallback(async () => {
+    if (!id || exportingCsv) return;
+
+    try {
+      setExportingCsv(true);
+      const { blob, filename } = await requestAttendanceCsv(id);
+      const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = filenameFromHeader ?? `posting-${id}-attendance.csv`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
-    } catch (csvError) {
-      setError(csvError instanceof Error ? csvError.message : 'Failed to export CSV');
+      notifications.push({
+        type: 'success',
+        message: 'Attendance CSV exported successfully.',
+      });
     } finally {
       setExportingCsv(false);
     }
-  }, [exportingCsv, id]);
+  }, [exportingCsv, id, notifications, requestAttendanceCsv]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (!data) return false;
@@ -204,17 +228,7 @@ function OrganizationPostingAttendance() {
     return result;
   }, [displayedEnrollments, searchTerm, sortBy]);
 
-  useEffect(() => {
-    void loadAttendance();
-  }, [loadAttendance]);
-
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(null), 2800);
-    return () => clearTimeout(timer);
-  }, [message]);
-
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
@@ -230,9 +244,9 @@ function OrganizationPostingAttendance() {
     return (
       <div className="grow bg-base-200">
         <div className="p-6 md:container mx-auto">
-          <Alert color="error" className="mb-4">
-            {error}
-          </Alert>
+          <div className="mb-4 text-sm text-base-content/70">
+            Unable to load attendance details.
+          </div>
           <Button style="outline" onClick={() => void loadAttendance()} Icon={RotateCcw}>
             Retry
           </Button>
@@ -256,7 +270,6 @@ function OrganizationPostingAttendance() {
             <>
               <Button
                 style="outline"
-                color="neutral"
                 onClick={() => void exportAttendanceCsv()}
                 disabled={data.enrollments.length === 0}
                 loading={exportingCsv}
@@ -305,18 +318,6 @@ function OrganizationPostingAttendance() {
             </>
           )}
         />
-
-        {error && (
-          <Alert color="error" className="mt-4">
-            {error}
-          </Alert>
-        )}
-
-        {message && (
-          <Alert color="success" className="mt-4">
-            {message}
-          </Alert>
-        )}
 
         <div className="card bg-base-100 shadow-md mt-4">
           <div className="card-body">

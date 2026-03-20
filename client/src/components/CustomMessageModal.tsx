@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import zod from 'zod';
 
-import Alert from './Alert';
 import Button from './Button';
 import IconButton from './IconButton';
 
@@ -19,7 +18,6 @@ type CustomMessageModalProps = {
   submitting?: boolean;
   onClose: () => void;
   onSubmit: (message?: string) => Promise<void> | void;
-  errorMessage?: string | null;
   placeholder: string;
 };
 
@@ -28,7 +26,6 @@ function CustomMessageModal({
   submitting = false,
   onClose,
   onSubmit,
-  errorMessage,
   placeholder,
 }: CustomMessageModalProps) {
   const form = useForm<CustomMessageFormData>({
@@ -82,12 +79,6 @@ function CustomMessageModal({
               <span className="text-error">{form.formState.errors.message.message}</span>
             )}
           </div>
-
-          {errorMessage && (
-            <Alert color="error">
-              {errorMessage}
-            </Alert>
-          )}
 
           <div className="modal-action">
             <Button

@@ -51,7 +51,7 @@ function VolunteerHome() {
       const res = await requestServer<VolunteerEnrollmentsResponse>('/volunteer/posting/enrollments', { includeJwt: true });
       return res.postings;
     },
-    true,
+    { immediate: true },
   );
 
   const {
@@ -63,7 +63,7 @@ function VolunteerHome() {
       const res = await requestServer<VolunteerPostingSearchResponse>('/volunteer/posting', { includeJwt: true });
       return res.postings;
     },
-    true,
+    { immediate: true },
   );
 
   const {
@@ -75,7 +75,7 @@ function VolunteerHome() {
       const res = await requestServer<VolunteerPinnedCrisesResponse>('/volunteer/crises/pinned', { includeJwt: true });
       return res.crises;
     },
-    true,
+    { immediate: true },
   );
 
   const forYouPostings = (allPostings ?? []).slice(0, 8);
@@ -123,9 +123,9 @@ function VolunteerHome() {
                 ? <RailLoadingState />
                 : enrolledError
                   ? (
-                      <Alert color="error">
-                        {enrolledError.message}
-                      </Alert>
+                      <div className="rounded-box border border-base-300 bg-base-100 px-6 py-4 text-sm text-base-content/70">
+                        Unable to load enrollments.
+                      </div>
                     )
                   : null}
             >
@@ -138,9 +138,9 @@ function VolunteerHome() {
           {crisesLoading && <RailLoadingState />}
 
           {crisesError && (
-            <Alert color="error">
-              {crisesError.message}
-            </Alert>
+            <div className="rounded-box border border-base-300 bg-base-100 px-6 py-4 text-sm text-base-content/70">
+              Unable to load pinned crises.
+            </div>
           )}
 
           {!crisesLoading && !crisesError && featuredCrisesWithPostings.map(({ crisis, postings }) => (
@@ -178,9 +178,9 @@ function VolunteerHome() {
               ? <RailLoadingState />
               : allError
                 ? (
-                    <Alert color="error">
-                      {allError.message}
-                    </Alert>
+                    <div className="rounded-box border border-base-300 bg-base-100 px-6 py-4 text-sm text-base-content/70">
+                      Unable to load recommended postings.
+                    </div>
                   )
                 : (
                     <Alert>

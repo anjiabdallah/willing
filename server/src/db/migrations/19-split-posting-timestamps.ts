@@ -2,6 +2,13 @@ import { Kysely, sql } from 'kysely';
 
 import type { Database } from '../tables.js';
 
+type DatabaseWithPostingTimestamps = Database & {
+  organization_posting: Database['organization_posting'] & {
+    start_timestamp: Date;
+    end_timestamp: Date | null;
+  };
+};
+
 export async function up(db: Kysely<Database>): Promise<void> {
   await db.schema
     .alterTable('organization_posting')
@@ -35,11 +42,13 @@ export async function down(db: Kysely<Database>): Promise<void> {
     .addColumn('end_timestamp', 'timestamp')
     .execute();
 
-  await db
+  const migrationDb = db as unknown as Kysely<DatabaseWithPostingTimestamps>;
+
+  await migrationDb
     .updateTable('organization_posting')
     .set({
-      start_timestamp: sql`(start_date + start_time)`,
-      end_timestamp: sql`CASE WHEN end_date IS NULL OR end_time IS NULL THEN NULL ELSE (end_date + end_time) END`,
+      start_timestamp: sql<Date>`(start_date + start_time)`,
+      end_timestamp: sql<Date | null>`CASE WHEN end_date IS NULL OR end_time IS NULL THEN NULL ELSE (end_date + end_time) END`,
     })
     .execute();
 

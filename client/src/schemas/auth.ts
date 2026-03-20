@@ -19,7 +19,7 @@ export const volunteerSignupSchema = newVolunteerAccountSchema
   .extend({
     confirmPassword: z.string().min(1, 'Confirm password is required'),
   })
-  .refine(data => data.password === data.confirmPassword, {
+  .refine((data: { password: string; confirmPassword: string }) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
@@ -35,13 +35,20 @@ export const organizationRequestFormSchema = newOrganizationRequestSchema
 export type OrganizationRequestFormData = z.infer<typeof organizationRequestFormSchema>;
 
 export const organizationPostingFormSchema = newOrganizationPostingSchema
-  .omit({ organization_id: true, latitude: true, longitude: true })
+  .omit({
+    latitude: true,
+    longitude: true,
+    start_date: true,
+    start_time: true,
+    end_date: true,
+    end_time: true,
+  })
   .extend({
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     start_timestamp: z
       .string()
-      .min(1, 'Start time is required')
+      .min(1, 'Start date is required')
       .refine(
         (val) => {
           const yearMatch = val.match(/^(\d+)-/);

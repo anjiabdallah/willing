@@ -18,8 +18,6 @@ const organizationPostingResponseColumns = [
   'organization_posting.latitude',
   'organization_posting.longitude',
   'organization_posting.max_volunteers',
-  'organization_posting.start_timestamp',
-  'organization_posting.end_timestamp',
   'organization_posting.start_date',
   'organization_posting.start_time',
   'organization_posting.end_date',
@@ -30,9 +28,20 @@ const organizationPostingResponseColumns = [
   'organization_posting.location_name',
   'organization_posting.created_at',
   'organization_posting.updated_at',
-  'organization_posting.crisis_id',
   'crisis.name as crisis_name',
 ] as const;
+
+const postingStartTimestampExpression = sql<Date>`
+  organization_posting.start_date + organization_posting.start_time
+`.as('start_timestamp');
+
+const postingEndTimestampExpression = sql<Date | undefined>`
+  CASE 
+    WHEN organization_posting.end_date IS NULL OR organization_posting.end_time IS NULL
+    THEN NULL
+    ELSE organization_posting.end_date + organization_posting.end_time
+  END
+`.as('end_timestamp');
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
@@ -94,7 +103,11 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
       'organization_posting.crisis_id',
     )
     .select(organizationPostingResponseColumns)
-    .select(['organization_account.name as organization_name'])
+    .select([
+      postingStartTimestampExpression,
+      postingEndTimestampExpression,
+      'organization_account.name as organization_name',
+    ])
     .where('organization_posting.is_closed', '=', false);
 
   if (skillFilter) {
@@ -132,26 +145,38 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
   }
 
   if (parsedStart && parsedEnd) {
+    const startTs = sql`organization_posting.start_date + organization_posting.start_time`;
+    const endTs = sql`
+      CASE 
+        WHEN organization_posting.end_date IS NULL OR organization_posting.end_time IS NULL
+        THEN NULL
+        ELSE organization_posting.end_date + organization_posting.end_time
+      END
+    `;
     query = query.where(qu =>
       qu.and([
-        qu('organization_posting.start_timestamp', '<=', parsedEnd),
+        qu(startTs, '<=', parsedEnd),
         qu.or([
-          qu('organization_posting.end_timestamp', '>=', parsedStart),
-          qu('organization_posting.end_timestamp', 'is', null),
+          qu(endTs, '>=', parsedStart),
+          qu('organization_posting.end_date', 'is', null),
         ]),
       ]),
     );
   } else {
     if (parsedStart) {
-      query = query.where(
-        'organization_posting.start_timestamp',
-        '>=',
-        parsedStart,
-      );
+      const startTs = sql`organization_posting.start_date + organization_posting.start_time`;
+      query = query.where(startTs, '>=', parsedStart);
     }
 
     if (parsedEnd) {
-      query = query.where('organization_posting.end_timestamp', '<=', parsedEnd);
+      const endTs = sql`
+        CASE 
+          WHEN organization_posting.end_date IS NULL OR organization_posting.end_time IS NULL
+          THEN NULL
+          ELSE organization_posting.end_date + organization_posting.end_time
+        END
+      `;
+      query = query.where(endTs, '<=', parsedEnd);
     }
   }
 
@@ -172,7 +197,7 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
       query = query.orderBy(sql`${profileOnlyScore} desc nulls last`);
     }
 
-    query = query.orderBy('organization_posting.start_timestamp', 'asc');
+    query = query.orderBy('organization_posting.start_date', 'asc').orderBy('organization_posting.start_time', 'asc');
   } else {
     if (!hasProfileVector && hasExperienceVector) {
       console.info('[recommendation] Volunteer has experience_vector but no valid profile_vector. Using default opportunity ordering.');
@@ -180,7 +205,7 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
       console.info('[recommendation] Volunteer vectors unavailable. Using default opportunity ordering.');
     }
 
-    query = query.orderBy('organization_posting.start_timestamp', 'asc');
+    query = query.orderBy('organization_posting.start_date', 'asc').orderBy('organization_posting.start_time', 'asc');
   }
 
   const postings = await query.execute();
@@ -245,7 +270,11 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
       .select(organizationPostingResponseColumns)
-      .select(['organization_account.name as organization_name'])
+      .select([
+        postingStartTimestampExpression,
+        postingEndTimestampExpression,
+        'organization_account.name as organization_name',
+      ])
       .where('enrollment.volunteer_id', '=', volunteerId)
       .execute(),
     database
@@ -254,7 +283,11 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
       .select(organizationPostingResponseColumns)
-      .select(['organization_account.name as organization_name'])
+      .select([
+        postingStartTimestampExpression,
+        postingEndTimestampExpression,
+        'organization_account.name as organization_name',
+      ])
       .where('enrollment_application.volunteer_id', '=', volunteerId)
       .execute(),
   ]);
@@ -308,7 +341,19 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
   });
 
   const postings = Array.from(postingsMap.values())
-    .sort((a, b) => new Date(a.start_timestamp).getTime() - new Date(b.start_timestamp).getTime())
+    .sort((a, b) => {
+      const aStart = a.start_date && a.start_time
+        ? new Date(`${a.start_date}T${a.start_time}`).getTime()
+        : a.start_timestamp
+          ? new Date(a.start_timestamp).getTime()
+          : Infinity;
+      const bStart = b.start_date && b.start_time
+        ? new Date(`${b.start_date}T${b.start_time}`).getTime()
+        : b.start_timestamp
+          ? new Date(b.start_timestamp).getTime()
+          : Infinity;
+      return aStart - bStart;
+    })
     .map((posting) => {
       const enrollmentCount = countsByPostingId.get(posting.id) ?? 0;
 
@@ -337,6 +382,10 @@ volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingRes
       'organization_posting.crisis_id',
     )
     .select(organizationPostingResponseColumns)
+    .select([
+      postingStartTimestampExpression,
+      postingEndTimestampExpression,
+    ])
     .where('organization_posting.id', '=', id)
     .executeTakeFirst();
 

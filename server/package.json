@@ -24,6 +24,7 @@
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.1.0",
+    "@types/node": "^25.5.0",
     "@types/nodemailer": "^7.0.9",
     "@types/pg": "^8.16.0",
     "eslint": "^9.39.2",

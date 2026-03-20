@@ -225,6 +225,32 @@ async function seed() {
   const crisisByName = new Map(crises.map(c => [c.name, c.id]));
 
   const nowYear = 2026;
+  const buildTemporalFields = (startIsoUtc: string, endIsoUtc?: string) => {
+    const start = new Date(startIsoUtc);
+    const end = endIsoUtc ? new Date(endIsoUtc) : undefined;
+
+    const formatDate = (value: Date) => {
+      const year = value.getUTCFullYear();
+      const month = `${value.getUTCMonth() + 1}`.padStart(2, '0');
+      const day = `${value.getUTCDate()}`.padStart(2, '0');
+      return new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+    };
+
+    const formatTime = (value: Date) => {
+      const hours = `${value.getUTCHours()}`.padStart(2, '0');
+      const minutes = `${value.getUTCMinutes()}`.padStart(2, '0');
+      const seconds = `${value.getUTCSeconds()}`.padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    };
+
+    return {
+      start_date: formatDate(start),
+      start_time: formatTime(start),
+      end_date: end ? formatDate(end) : undefined,
+      end_time: end ? formatTime(end) : undefined,
+    };
+  };
+
   const postings = await database.insertInto('organization_posting')
     .values([
       {
@@ -236,8 +262,7 @@ async function seed() {
         longitude: 35.5018,
         location_name: 'Beirut',
         max_volunteers: 10,
-        start_timestamp: new Date(`${nowYear}-01-10T10:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-12T14:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-10T10:00:00Z`, `${nowYear}-01-12T14:00:00Z`),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -251,8 +276,7 @@ async function seed() {
         longitude: 35.48,
         location_name: 'Beirut Coast',
         max_volunteers: 25,
-        start_timestamp: new Date(`${nowYear}-01-12T08:00:00Z`),
-        end_timestamp: undefined,
+        ...buildTemporalFields(`${nowYear}-01-12T08:00:00Z`),
         minimum_age: 14,
         automatic_acceptance: true,
         is_closed: false,
@@ -266,8 +290,7 @@ async function seed() {
         longitude: 35.50,
         location_name: 'Hamra',
         max_volunteers: 14,
-        start_timestamp: new Date(`${nowYear}-01-14T09:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-16T15:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-14T09:00:00Z`, `${nowYear}-01-16T15:00:00Z`),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -280,8 +303,7 @@ async function seed() {
         longitude: 35.4955,
         location_name: 'Saida',
         max_volunteers: 6,
-        start_timestamp: new Date(`${nowYear}-01-15T15:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-17T17:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-15T15:00:00Z`, `${nowYear}-01-17T17:00:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
         is_closed: false,
@@ -294,8 +316,7 @@ async function seed() {
         longitude: 35.47,
         location_name: 'Saida Center',
         max_volunteers: 12,
-        start_timestamp: new Date(`${nowYear}-01-18T09:00:00Z`),
-        end_timestamp: undefined,
+        ...buildTemporalFields(`${nowYear}-01-18T09:00:00Z`),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -308,8 +329,7 @@ async function seed() {
         longitude: 35.49,
         location_name: 'Saida Office',
         max_volunteers: 9,
-        start_timestamp: new Date(`${nowYear}-01-19T16:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-22T19:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-19T16:00:00Z`, `${nowYear}-01-22T19:00:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
         is_closed: false,
@@ -322,8 +342,7 @@ async function seed() {
         longitude: 35.8333,
         location_name: 'Tripoli',
         max_volunteers: 8,
-        start_timestamp: new Date(`${nowYear}-01-20T10:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-22T13:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-20T10:00:00Z`, `${nowYear}-01-22T13:00:00Z`),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -336,8 +355,7 @@ async function seed() {
         longitude: 35.84,
         location_name: 'Tripoli Home',
         max_volunteers: 5,
-        start_timestamp: new Date(`${nowYear}-01-22T11:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-23T12:30:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-22T11:00:00Z`, `${nowYear}-01-23T12:30:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
         is_closed: false,
@@ -350,8 +368,7 @@ async function seed() {
         longitude: 35.82,
         location_name: 'Tripoli Depot',
         max_volunteers: 7,
-        start_timestamp: new Date(`${nowYear}-01-24T09:30:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-24T13:30:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-24T09:30:00Z`, `${nowYear}-01-24T13:30:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
         is_closed: true,
@@ -364,8 +381,7 @@ async function seed() {
         longitude: 35.49,
         location_name: 'Beirut Library',
         max_volunteers: 4,
-        start_timestamp: new Date(`${nowYear}-01-25T10:00:00Z`),
-        end_timestamp: new Date(`${nowYear}-01-25T12:00:00Z`),
+        ...buildTemporalFields(`${nowYear}-01-25T10:00:00Z`, `${nowYear}-01-25T12:00:00Z`),
         minimum_age: 18,
         automatic_acceptance: true,
         is_closed: true,

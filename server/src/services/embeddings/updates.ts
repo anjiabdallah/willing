@@ -20,8 +20,22 @@ const EXPERIENCE_VECTOR_DECAY_LAMBDA = 0.35;
 const getRecencyRankWeight = (rank: number) => Math.exp(-EXPERIENCE_VECTOR_DECAY_LAMBDA * rank);
 
 type OrganizationEmbeddingSource = Pick<OrganizationAccount, 'name' | 'url' | 'location_name' | 'latitude' | 'longitude'>;
-type PostingEmbeddingSource = Pick<OrganizationPosting, 'title' | 'description' | 'location_name' | 'start_timestamp' | 'end_timestamp' | 'minimum_age' | 'max_volunteers'>;
+type PostingEmbeddingSource = Pick<OrganizationPosting, 'title' | 'description' | 'location_name' | 'start_date' | 'start_time' | 'end_date' | 'end_time' | 'minimum_age' | 'max_volunteers'>;
 type VolunteerProfileEmbeddingSource = Pick<VolunteerAccountWithoutPassword, 'first_name' | 'last_name' | 'description' | 'gender'>;
+
+const formatDate = (value: Date | undefined) => {
+  if (!value) return '';
+  const year = value.getUTCFullYear();
+  const month = `${value.getUTCMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getUTCDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateTime = (date: Date | undefined, time: string | undefined) => {
+  const datePart = formatDate(date);
+  if (!datePart) return '';
+  return `${datePart} ${time ?? ''}`.trim();
+};
 
 const updateOrganizationVector = async (organizationId: number, vector: number[], executor: DBExecutor) => {
   await executor
@@ -94,8 +108,8 @@ const buildPostingText = (posting: PostingEmbeddingSource, skills: string[]) => 
     `Title: ${posting.title}`,
     `Description: ${posting.description}`,
     `Location: ${posting.location_name}`,
-    `Start: ${posting.start_timestamp.toISOString()}`,
-    `End: ${posting.end_timestamp?.toISOString() ?? ''}`,
+    `Start: ${formatDateTime(posting.start_date, posting.start_time)}`,
+    `End: ${formatDateTime(posting.end_date, posting.end_time)}`,
     `Minimum age: ${posting.minimum_age ?? ''}`,
     `Max volunteers: ${posting.max_volunteers ?? ''}`,
     `Skills: ${skills.join(', ')}`,
@@ -176,8 +190,10 @@ export const recomputePostingVectors = async (postingId: number, executor: DBExe
         'title',
         'description',
         'location_name',
-        'start_timestamp',
-        'end_timestamp',
+        'start_date',
+        'start_time',
+        'end_date',
+        'end_time',
         'minimum_age',
         'max_volunteers',
       ])

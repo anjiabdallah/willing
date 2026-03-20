@@ -64,8 +64,8 @@ const organizationPostingResponseColumns = [
   'organization_posting.latitude',
   'organization_posting.longitude',
   'organization_posting.max_volunteers',
-  'organization_posting.start_timestamp',
-  'organization_posting.end_timestamp',
+  sql<Date>`(organization_posting.start_date + organization_posting.start_time)`.as('start_timestamp'),
+  sql<Date | undefined>`CASE WHEN organization_posting.end_date IS NULL OR organization_posting.end_time IS NULL THEN NULL ELSE (organization_posting.end_date + organization_posting.end_time) END`.as('end_timestamp'),
   'organization_posting.start_date',
   'organization_posting.start_time',
   'organization_posting.end_date',
@@ -186,7 +186,8 @@ organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResp
     .selectFrom('organization_posting')
     .select(organizationPostingResponseColumns)
     .where('organization_id', '=', orgId)
-    .orderBy('start_timestamp', 'asc')
+    .orderBy('organization_posting.start_date', 'asc')
+    .orderBy('organization_posting.start_time', 'asc')
     .execute();
 
   // Fetch skills for all postings

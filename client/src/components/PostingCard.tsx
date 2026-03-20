@@ -19,11 +19,23 @@ function PostingCard({ posting, applicationStatus = 'none', showCrisis = true }:
     return Number.isNaN(date.getTime()) ? null : date;
   };
 
-  const startDateValue = posting.start_date || posting.start_timestamp;
-  const endDateValue = posting.end_date || posting.end_timestamp;
+  const formatTime12Hour = (timeValue: string | undefined) => {
+    if (!timeValue) return '';
+    const [hoursRaw, minutesRaw] = timeValue.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeValue;
+    const normalizedHours = ((hours % 24) + 24) % 24;
+    const suffix = normalizedHours >= 12 ? 'PM' : 'AM';
+    const hour12 = normalizedHours % 12 === 0 ? 12 : normalizedHours % 12;
+    return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
+  };
 
-  const startTimeValue = posting.start_time || (posting.start_timestamp ? new Date(posting.start_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
-  const endTimeValue = posting.end_time || (posting.end_timestamp ? new Date(posting.end_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+  const startDateValue = posting.start_date;
+  const endDateValue = posting.end_date;
+
+  const startTimeValue = posting.start_time || '';
+  const endTimeValue = posting.end_time || '';
 
   const startDt = normalizeTimestamp(startDateValue);
   const endDt = normalizeTimestamp(endDateValue);
@@ -31,8 +43,8 @@ function PostingCard({ posting, applicationStatus = 'none', showCrisis = true }:
 
   const startDateStr = startDt ? startDt.toLocaleDateString() : '';
   const endDateStr = endDt ? endDt.toLocaleDateString() : '';
-  const startTimeStr = startTimeValue || (startDt ? startDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
-  const endTimeStr = endTimeValue || (endDt ? endDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+  const startTimeStr = formatTime12Hour(startTimeValue) || (startDt ? startDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const endTimeStr = formatTime12Hour(endTimeValue) || (endDt ? endDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const organizationInitials = posting.organization_name
     ? posting.organization_name
         .split(/\s+/)
@@ -156,15 +168,15 @@ function PostingCard({ posting, applicationStatus = 'none', showCrisis = true }:
             <div className="flex items-start gap-3">
               <div className="flex flex-col items-start shrink-0 mt-1">
                 <Calendar size={16} className="text-primary" />
-                {(startDateStr == endDateStr) || <div className="w-0.5 h-6 bg-primary my-1" />}
-                {(startDateStr == endDateStr) || <Calendar size={16} className="text-primary" />}
+                {(hasEndDate && startDateStr !== endDateStr) && <div className="w-0.5 h-6 bg-primary my-1" />}
+                {(hasEndDate && startDateStr !== endDateStr) && <Calendar size={16} className="text-primary" />}
               </div>
               <div>
                 <div className="text-sm">
-                  <p className="text-xs opacity-70">{(startDateStr == endDateStr) ? 'DATE' : 'START'}</p>
+                  <p className="text-xs opacity-70">{(!hasEndDate || startDateStr === endDateStr) ? 'DATE' : 'START'}</p>
                   <p className="font-medium">{startDateStr || 'TBA'}</p>
                 </div>
-                {(startDateStr == endDateStr) || (
+                {(hasEndDate && startDateStr !== endDateStr) && (
                   <div className="mt-3 text-sm">
                     <p className="text-xs opacity-70">END</p>
                     <p className="font-medium">{endDateStr}</p>

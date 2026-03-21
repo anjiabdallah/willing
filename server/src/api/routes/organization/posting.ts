@@ -34,8 +34,6 @@ const postingRouter = Router();
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial().extend({
   crisis_id: zod.number().int().positive().nullable().optional(),
 });
-const postingStartTimestampExpression = sql<Date>`(organization_posting.start_date + organization_posting.start_time)`.as('start_timestamp');
-const postingEndTimestampExpression = sql<Date | undefined>`CASE WHEN organization_posting.end_date IS NULL OR organization_posting.end_time IS NULL THEN NULL ELSE (organization_posting.end_date + organization_posting.end_time) END`.as('end_timestamp');
 const organizationPostingResponseColumns = [
   'organization_posting.id',
   'organization_posting.organization_id',
@@ -45,8 +43,6 @@ const organizationPostingResponseColumns = [
   'organization_posting.latitude',
   'organization_posting.longitude',
   'organization_posting.max_volunteers',
-  postingStartTimestampExpression,
-  postingEndTimestampExpression,
   'organization_posting.start_date',
   'organization_posting.start_time',
   'organization_posting.end_date',
@@ -69,34 +65,6 @@ const areTimeValuesEqual = (left: string | undefined, right: string | undefined)
 const isPostingFull = (maxVolunteers: number | undefined, enrollmentCount: number) => maxVolunteers !== undefined
   && maxVolunteers !== null
   && enrollmentCount >= maxVolunteers;
-
-const toPostingDate = (value: Date) => {
-  const year = value.getUTCFullYear();
-  const month = `${value.getUTCMonth() + 1}`.padStart(2, '0');
-  const day = `${value.getUTCDate()}`.padStart(2, '0');
-  return new Date(`${year}-${month}-${day}T00:00:00.000Z`);
-};
-
-const toPostingTime = (value: Date) => {
-  const hours = `${value.getUTCHours()}`.padStart(2, '0');
-  const minutes = `${value.getUTCMinutes()}`.padStart(2, '0');
-  const seconds = `${value.getUTCSeconds()}`.padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
-};
-
-const normalizePostingTemporalFields = (posting: {
-  start_timestamp: Date;
-  end_timestamp?: Date | undefined;
-  start_date?: Date | undefined;
-  start_time?: string | undefined;
-  end_date?: Date | undefined;
-  end_time?: string | undefined;
-}) => ({
-  start_date: posting.start_date ?? toPostingDate(posting.start_timestamp),
-  start_time: posting.start_time ?? toPostingTime(posting.start_timestamp),
-  end_date: posting.end_date ?? (posting.end_timestamp ? toPostingDate(posting.end_timestamp) : undefined),
-  end_time: posting.end_time ?? (posting.end_timestamp ? toPostingTime(posting.end_timestamp) : undefined),
-});
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),

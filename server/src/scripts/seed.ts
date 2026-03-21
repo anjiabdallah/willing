@@ -23,7 +23,8 @@ async function seed() {
     organization_request,
     volunteer_account,
     organization_account,
-    admin_account
+    admin_account,
+    crisis
   RESTART IDENTITY CASCADE
 `.execute(database);
 

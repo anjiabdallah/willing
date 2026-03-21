@@ -152,8 +152,8 @@ function PostingCard({ posting, showCrisis = true }: PostingCardProps) {
                           </span>
                         )
                       : (
-                          <span className="badge badge-secondary inline-flex items-center gap-2">
-                            <Clock size={14} />
+                          <span className="badge badge-secondary inline-flex items-center gap-2 px-3 min-w-[120px] h-7 items-center" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: '120px', maxWidth: '100%', display: 'inline-flex', alignItems: 'center' }}>
+                            <Clock size={16} style={{ marginBottom: '-2px' }} />
                             Review based
                           </span>
                         )

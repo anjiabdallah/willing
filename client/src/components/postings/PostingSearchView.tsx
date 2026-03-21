@@ -38,12 +38,12 @@ const applyDateFilter = (
   endDate: string,
 ) => {
   return postings.filter((posting) => {
-    if (startDate && posting.start_timestamp) {
-      const postingStart = new Date(posting.start_timestamp).toISOString().split('T')[0];
+    if (startDate && posting.start_time) {
+      const postingStart = new Date(posting.start_time).toISOString().split('T')[0];
       if (postingStart < startDate) return false;
     }
-    if (endDate && posting.end_timestamp) {
-      const postingEnd = new Date(posting.end_timestamp).toISOString().split('T')[0];
+    if (endDate && posting.end_time) {
+      const postingEnd = new Date(posting.end_time).toISOString().split('T')[0];
       if (postingEnd > endDate) return false;
     }
     return true;

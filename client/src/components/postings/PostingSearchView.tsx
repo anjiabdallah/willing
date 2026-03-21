@@ -156,7 +156,7 @@ function PostingSearchView({
 
   useEffect(() => {
     void fetchPostings(defaultFilters);
-  }, [defaultFilters, fetchPostings]);
+  }, [defaultFilters]);
 
   const resetFilters = () => {
     setFilters(defaultFilters);

@@ -67,7 +67,7 @@ function HorizontalScrollSection({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
           {subtitle && (
-            <p className="mt-1 max-w-3xl opacity-70">{subtitle}</p>
+            <p className="mt-1 opacity-70">{subtitle}</p>
           )}
         </div>
 

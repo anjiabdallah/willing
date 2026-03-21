@@ -138,7 +138,7 @@ function VolunteerHome() {
           {(enrolledLoading || enrolledError || (enrolledPostings?.postings.length ?? 0) > 0) && (
             <HorizontalScrollSection
               title="My Enrollments"
-              subtitle="Here you can view all postings you're currently enrolled in or have applied to"
+              subtitle="All postings you're currently enrolled in or have applied to."
               hasItems={!enrolledLoading && (enrolledPostings?.postings.length ?? 0) > 0}
               action={(
                 <Link to="/volunteer/enrollments" className="btn btn-sm btn-primary">
@@ -202,7 +202,7 @@ function VolunteerHome() {
 
           <HorizontalScrollSection
             title="For You"
-            subtitle="Recommended for you"
+            subtitle="Recommended for you."
             hasItems={!forYouSectionLoading && forYouPostings.length > 0}
             action={(
               <Link to="/volunteer/search" className="btn btn-sm btn-primary">

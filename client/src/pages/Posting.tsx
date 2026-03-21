@@ -132,7 +132,7 @@ function PostingPage() {
   const [processingApplicationId, setProcessingApplicationId] = useState<number | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [postingIsFull, setPostingIsFull] = useState(false);
+  const [postingEnrollmentCount, setPostingEnrollmentCount] = useState(0);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string } | null>(null);
   const notifications = useNotifications();
 
@@ -247,18 +247,13 @@ function PostingPage() {
         { includeJwt: true },
       );
 
-      const postingWithSkills = {
-        ...postingResponse.posting,
-        skills: postingResponse.skills,
-      };
-
-      setPosting(postingWithSkills);
+      setPosting(postingResponse.posting);
       setCurrentPostingCrisis(undefined);
       setEnrollments([]);
-      setHasPendingApplication(postingResponse.hasPendingApplication);
-      setIsEnrolled(postingResponse.isEnrolled);
-      setPostingIsFull(postingResponse.is_full);
-      setSkills(postingResponse.skills.map(s => s.name));
+      setHasPendingApplication(postingResponse.posting.application_status === 'pending');
+      setIsEnrolled(postingResponse.posting.application_status === 'registered');
+      setPostingEnrollmentCount(postingResponse.posting.enrollment_count);
+      setSkills(postingResponse.posting.skills.map(s => s.name));
       setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
       setPosition([
         postingResponse.posting.latitude ?? 33.90192863620578,
@@ -316,7 +311,7 @@ function PostingPage() {
     setPosting(postingWithSkills);
     setCurrentPostingCrisis(postingResponse.crisis);
     setEnrollments(enrollmentsResponse.enrollments);
-    setPostingIsFull(postingResponse.is_full);
+    setPostingEnrollmentCount(enrollmentsResponse.enrollments.length);
 
     if (!postingResponse.posting.automatic_acceptance) {
       const applicationsResponse = await requestServer<OrganizationPostingApplicationsReponse>(
@@ -691,10 +686,10 @@ function PostingPage() {
   }, [isVolunteerView, posting]);
 
   const isPostingFull = useMemo(() => {
-    if (isVolunteerView) return postingIsFull;
     if (!posting?.max_volunteers) return false;
-    return enrollments.length >= posting.max_volunteers;
-  }, [isVolunteerView, postingIsFull, posting?.max_volunteers, enrollments.length]);
+    const currentEnrollmentCount = isVolunteerView ? postingEnrollmentCount : enrollments.length;
+    return currentEnrollmentCount >= posting.max_volunteers;
+  }, [isVolunteerView, postingEnrollmentCount, posting?.max_volunteers, enrollments.length]);
 
   if (loading) {
     return (

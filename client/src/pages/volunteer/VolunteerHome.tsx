@@ -16,14 +16,17 @@ import type {
 } from '../../../../server/src/api/types';
 import type { PostingWithContext } from '../../../../server/src/types';
 
-const PostingRailCard = ({ posting, showCrisis = false }: { posting: PostingWithContext & { status?: 'enrolled' | 'pending' }; showCrisis?: boolean }) => {
-  const applicationStatus = posting.status === 'enrolled' ? 'registered' : posting.status === 'pending' ? 'pending' : 'none';
-
+const PostingRailCard = ({
+  posting,
+  showCrisis,
+}: {
+  posting: PostingWithContext;
+  showCrisis: boolean;
+}) => {
   return (
     <div className="shrink-0 snap-start md:w-md w-sm">
       <PostingCard
         posting={posting}
-        applicationStatus={applicationStatus}
         showCrisis={showCrisis}
       />
     </div>
@@ -46,10 +49,10 @@ function VolunteerHome() {
     data: enrolledPostings,
     loading: enrolledLoading,
     error: enrolledError,
-  } = useAsync<PostingWithContext[], []>(
+  } = useAsync(
     async () => {
       const res = await requestServer<VolunteerEnrollmentsResponse>('/volunteer/posting/enrollments', { includeJwt: true });
-      return res.postings;
+      return res;
     },
     { immediate: true },
   );
@@ -58,10 +61,10 @@ function VolunteerHome() {
     data: allPostings,
     loading: allLoading,
     error: allError,
-  } = useAsync<PostingWithContext[], []>(
+  } = useAsync(
     async () => {
       const res = await requestServer<VolunteerPostingSearchResponse>('/volunteer/posting', { includeJwt: true });
-      return res.postings;
+      return res;
     },
     { immediate: true },
   );
@@ -70,19 +73,28 @@ function VolunteerHome() {
     data: pinnedCrises,
     loading: crisesLoading,
     error: crisesError,
-  } = useAsync<VolunteerPinnedCrisesResponse['crises'], []>(
+  } = useAsync(
     async () => {
       const res = await requestServer<VolunteerPinnedCrisesResponse>('/volunteer/crises/pinned', { includeJwt: true });
-      return res.crises;
+      return res;
     },
     { immediate: true },
   );
 
-  const forYouPostings = (allPostings ?? []).slice(0, 8);
-  const featuredCrises = (pinnedCrises ?? []).slice(0, 8);
+  const enrollmentEntries = enrolledPostings?.postings ?? [];
+
+  const allAvailablePostings = allPostings?.postings ?? [];
+  const pinnedCrisisList = pinnedCrises?.crises ?? [];
+
+  const enrollmentPostingIds = new Set<number>(
+    enrollmentEntries.map(entry => entry.id),
+  );
+
   const postingsByCrisisId = new Map<number, PostingWithContext[]>();
 
-  (allPostings ?? []).forEach((posting) => {
+  allAvailablePostings.forEach((posting) => {
+    if (enrollmentPostingIds.has(posting.id)) return;
+
     const crisisId = getPostingCrisisId(posting);
     if (crisisId === undefined) return;
 
@@ -91,12 +103,26 @@ function VolunteerHome() {
     postingsByCrisisId.set(crisisId, crisisPostings);
   });
 
-  const featuredCrisesWithPostings = featuredCrises
+  const featuredCrisesWithPostings = pinnedCrisisList
     .map(crisis => ({
       crisis,
       postings: postingsByCrisisId.get(crisis.id) ?? [],
     }))
     .filter(({ postings }) => postings.length > 0);
+
+  const crisisPostingIds = new Set<number>();
+  featuredCrisesWithPostings.forEach(({ postings }) => {
+    postings.forEach((posting) => {
+      crisisPostingIds.add(posting.id);
+    });
+  });
+
+  const forYouPostings = allAvailablePostings
+    .filter(posting => !enrollmentPostingIds.has(posting.id) && !crisisPostingIds.has(posting.id))
+    .slice(0, 8);
+
+  const crisisSectionsLoading = crisesLoading || allLoading || enrolledLoading;
+  const forYouSectionLoading = allLoading || enrolledLoading;
 
   return (
     <div className="grow bg-base-200">
@@ -109,11 +135,11 @@ function VolunteerHome() {
 
         <div className="space-y-10">
 
-          {(enrolledLoading || enrolledError || (enrolledPostings?.length ?? 0) > 0) && (
+          {(enrolledLoading || enrolledError || (enrolledPostings?.postings.length ?? 0) > 0) && (
             <HorizontalScrollSection
               title="My Enrollments"
               subtitle="Here you can view all postings you're currently enrolled in or have applied to"
-              hasItems={!enrolledLoading && (enrolledPostings?.length ?? 0) > 0}
+              hasItems={!enrolledLoading && (enrolledPostings?.postings.length ?? 0) > 0}
               action={(
                 <Link to="/volunteer/enrollments" className="btn btn-sm btn-primary">
                   View All
@@ -129,13 +155,15 @@ function VolunteerHome() {
                     )
                   : null}
             >
-              {(enrolledPostings ?? []).map(posting => (
-                <PostingRailCard key={posting.id} posting={posting} />
+              {(enrolledPostings?.postings ?? []).map(posting => (
+                <PostingRailCard
+                  key={posting.id}
+                  posting={posting}
+                  showCrisis
+                />
               ))}
             </HorizontalScrollSection>
           )}
-
-          {crisesLoading && <RailLoadingState />}
 
           {crisesError && (
             <div className="rounded-box border border-base-300 bg-base-100 px-6 py-4 text-sm text-base-content/70">
@@ -143,12 +171,12 @@ function VolunteerHome() {
             </div>
           )}
 
-          {!crisesLoading && !crisesError && featuredCrisesWithPostings.map(({ crisis, postings }) => (
+          {!crisesError && featuredCrisesWithPostings.map(({ crisis, postings }) => (
             <HorizontalScrollSection
               key={crisis.id}
               title={crisis.name}
               subtitle={crisis.description || 'No description provided.'}
-              hasItems={postings.length > 0}
+              hasItems={!crisisSectionsLoading && postings.length > 0}
               action={(
                 <Link
                   to={`/volunteer/crises/${crisis.id}/postings`}
@@ -158,9 +186,16 @@ function VolunteerHome() {
                   View All
                 </Link>
               )}
+              emptyState={crisisSectionsLoading
+                ? <RailLoadingState />
+                : null}
             >
               {postings.map(posting => (
-                <PostingRailCard key={posting.id} posting={posting} showCrisis />
+                <PostingRailCard
+                  key={posting.id}
+                  posting={posting}
+                  showCrisis
+                />
               ))}
             </HorizontalScrollSection>
           ))}
@@ -168,13 +203,13 @@ function VolunteerHome() {
           <HorizontalScrollSection
             title="For You"
             subtitle="Recommended for you"
-            hasItems={!allLoading && forYouPostings.length > 0}
+            hasItems={!forYouSectionLoading && forYouPostings.length > 0}
             action={(
               <Link to="/volunteer/search" className="btn btn-sm btn-primary">
                 View All
               </Link>
             )}
-            emptyState={allLoading
+            emptyState={forYouSectionLoading
               ? <RailLoadingState />
               : allError
                 ? (
@@ -189,7 +224,11 @@ function VolunteerHome() {
                   )}
           >
             {forYouPostings.map(posting => (
-              <PostingRailCard key={posting.id} posting={posting} />
+              <PostingRailCard
+                key={posting.id}
+                posting={posting}
+                showCrisis
+              />
             ))}
           </HorizontalScrollSection>
 

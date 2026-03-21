@@ -3,33 +3,13 @@ import { sql } from 'kysely';
 import zod from 'zod';
 
 import { VolunteerEnrollmentsResponse, VolunteerPostingEnrollResponse, VolunteerPostingResponse, VolunteerPostingSearchResponse, VolunteerPostingWithdrawResponse } from './posting.types.js';
+import { buildPostingsWithContext, postingWithContextSelectColumns } from './postingWithContext.js';
 import database from '../../../db/index.js';
 import { Enrollment, EnrollmentApplication } from '../../../db/tables.js';
 import { recomputeVolunteerExperienceVector } from '../../../services/embeddings/updates.js';
 import { authorizeOnly } from '../../authorization.js';
 
 const volunteerPostingRouter = Router();
-const organizationPostingResponseColumns = [
-  'organization_posting.id',
-  'organization_posting.organization_id',
-  'organization_posting.crisis_id',
-  'organization_posting.title',
-  'organization_posting.description',
-  'organization_posting.latitude',
-  'organization_posting.longitude',
-  'organization_posting.max_volunteers',
-  'organization_posting.start_date',
-  'organization_posting.start_time',
-  'organization_posting.end_date',
-  'organization_posting.end_time',
-  'organization_posting.minimum_age',
-  'organization_posting.automatic_acceptance',
-  'organization_posting.is_closed',
-  'organization_posting.location_name',
-  'organization_posting.created_at',
-  'organization_posting.updated_at',
-  'crisis.name as crisis_name',
-] as const;
 
 const postingIdParamsSchema = zod.object({
   id: zod.coerce.number().int().positive('ID must be a positive number'),
@@ -54,10 +34,6 @@ function calculateAge(dateOfBirth: string, at: Date = new Date()): number | null
   }
 
   return age;
-}
-
-function isPostingFull(maxVolunteers: number | undefined, enrollmentCount: number): boolean {
-  return maxVolunteers !== undefined && maxVolunteers !== null && enrollmentCount >= maxVolunteers;
 }
 
 volunteerPostingRouter.use(authorizeOnly('volunteer'));
@@ -90,8 +66,7 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
       'crisis.id',
       'organization_posting.crisis_id',
     )
-    .select(organizationPostingResponseColumns)
-    .select(['organization_account.name as organization_name'])
+    .select(postingWithContextSelectColumns)
     .where('organization_posting.is_closed', '=', false);
 
   if (skillFilter) {
@@ -193,55 +168,12 @@ volunteerPostingRouter.get('/', async (req, res: Response<VolunteerPostingSearch
   }
 
   const postings = await query.execute();
-
-  const postingIds = postings.map(p => p.id);
-
-  const skills = postingIds.length > 0
-    ? await database
-        .selectFrom('posting_skill')
-        .selectAll()
-        .where('posting_id', 'in', postingIds)
-        .execute()
-    : [];
-
-  const skillsByPostingId = new Map<number, typeof skills>();
-
-  skills.forEach((skillRow) => {
-    if (!skillsByPostingId.has(skillRow.posting_id)) {
-      skillsByPostingId.set(skillRow.posting_id, []);
-    }
-    skillsByPostingId.get(skillRow.posting_id)!.push(skillRow);
+  const postingsWithContext = await buildPostingsWithContext({
+    volunteerId,
+    postings,
   });
 
-  const enrollmentCounts = postingIds.length > 0
-    ? await database
-        .selectFrom('enrollment')
-        .select([
-          'posting_id',
-          sql<number>`count(enrollment.id)`.as('count'),
-        ])
-        .where('posting_id', 'in', postingIds)
-        .groupBy('posting_id')
-        .execute()
-    : [];
-
-  const countsByPostingId = new Map<number, number>();
-  enrollmentCounts.forEach((r) => {
-    countsByPostingId.set(r.posting_id, Number(r.count ?? 0));
-  });
-
-  const postingWithSkills = postings.map((posting) => {
-    const enrollmentCount = countsByPostingId.get(posting.id) ?? 0;
-
-    return {
-      ...posting,
-      skills: skillsByPostingId.get(posting.id) || [],
-      enrollment_count: enrollmentCount,
-      is_full: isPostingFull(posting.max_volunteers, enrollmentCount),
-    };
-  });
-
-  res.json({ postings: postingWithSkills });
+  res.json({ postings: postingsWithContext });
 });
 
 volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEnrollmentsResponse>) => {
@@ -253,8 +185,7 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
-      .select(organizationPostingResponseColumns)
-      .select(['organization_account.name as organization_name'])
+      .select(postingWithContextSelectColumns)
       .where('enrollment.volunteer_id', '=', volunteerId)
       .execute(),
     database
@@ -262,61 +193,25 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
-      .select(organizationPostingResponseColumns)
-      .select(['organization_account.name as organization_name'])
+      .select(postingWithContextSelectColumns)
       .where('enrollment_application.volunteer_id', '=', volunteerId)
       .execute(),
   ]);
 
   // Merge: enrolled takes priority over pending for the same posting
-  const statusMap = new Map<number, 'enrolled' | 'pending'>();
+  const applicationStatusMap = new Map<number, 'registered' | 'pending'>();
   const postingsMap = new Map<number, typeof enrolledPostings[0]>();
 
   for (const posting of pendingPostings) {
-    statusMap.set(posting.id, 'pending');
+    applicationStatusMap.set(posting.id, 'pending');
     postingsMap.set(posting.id, posting);
   }
   for (const posting of enrolledPostings) {
-    statusMap.set(posting.id, 'enrolled');
+    applicationStatusMap.set(posting.id, 'registered');
     postingsMap.set(posting.id, posting);
   }
 
-  const allPostingIds = Array.from(postingsMap.keys());
-
-  const skills = allPostingIds.length > 0
-    ? await database
-        .selectFrom('posting_skill')
-        .selectAll()
-        .where('posting_id', 'in', allPostingIds)
-        .execute()
-    : [];
-
-  const skillsByPostingId = new Map<number, typeof skills>();
-  skills.forEach((skill) => {
-    if (!skillsByPostingId.has(skill.posting_id)) {
-      skillsByPostingId.set(skill.posting_id, []);
-    }
-    skillsByPostingId.get(skill.posting_id)!.push(skill);
-  });
-
-  const enrollmentCounts = allPostingIds.length > 0
-    ? await database
-        .selectFrom('enrollment')
-        .select([
-          'posting_id',
-          sql<number>`count(enrollment.id)`.as('count'),
-        ])
-        .where('posting_id', 'in', allPostingIds)
-        .groupBy('posting_id')
-        .execute()
-    : [];
-
-  const countsByPostingId = new Map<number, number>();
-  enrollmentCounts.forEach((r) => {
-    countsByPostingId.set(r.posting_id, Number(r.count ?? 0));
-  });
-
-  const postings = Array.from(postingsMap.values())
+  const sortedPostings = Array.from(postingsMap.values())
     .sort((a, b) => {
       const aStart = a.start_date && a.start_time
         ? new Date(`${a.start_date}T${a.start_time}`).getTime()
@@ -325,19 +220,13 @@ volunteerPostingRouter.get('/enrollments', async (req, res: Response<VolunteerEn
         ? new Date(`${b.start_date}T${b.start_time}`).getTime()
         : Infinity;
       return aStart - bStart;
-    })
-    .map((posting) => {
-      const enrollmentCount = countsByPostingId.get(posting.id) ?? 0;
-
-      return {
-        ...posting,
-        skills: skillsByPostingId.get(posting.id) ?? [],
-        status: statusMap.get(posting.id) as 'enrolled' | 'pending',
-        enrollment_count: enrollmentCount,
-        is_full: isPostingFull(posting.max_volunteers, enrollmentCount),
-        crisis_name: posting.crisis_name ?? null,
-      };
     });
+
+  const postings = await buildPostingsWithContext({
+    volunteerId,
+    postings: sortedPostings,
+    applicationStatusByPostingId: applicationStatusMap,
+  });
 
   res.json({ postings });
 });
@@ -348,12 +237,17 @@ volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingRes
 
   const posting = await database
     .selectFrom('organization_posting')
+    .innerJoin(
+      'organization_account',
+      'organization_account.id',
+      'organization_posting.organization_id',
+    )
     .leftJoin(
       'crisis',
       'crisis.id',
       'organization_posting.crisis_id',
     )
-    .select(organizationPostingResponseColumns)
+    .select(postingWithContextSelectColumns)
     .where('organization_posting.id', '=', id)
     .executeTakeFirst();
 
@@ -362,39 +256,18 @@ volunteerPostingRouter.get('/:id', async (req, res: Response<VolunteerPostingRes
     throw new Error('Posting not found');
   }
 
-  const [skills, pendingApplication, existingEnrollment, enrollmentCountRow] = await Promise.all([
-    database
-      .selectFrom('posting_skill')
-      .selectAll()
-      .where('posting_id', '=', id)
-      .execute(),
-    database
-      .selectFrom('enrollment_application')
-      .selectAll()
-      .where(eb => eb('volunteer_id', '=', volunteerId))
-      .where(eb => eb('posting_id', '=', id))
-      .executeTakeFirst(),
-    database
-      .selectFrom('enrollment')
-      .select('id')
-      .where('posting_id', '=', id)
-      .where('volunteer_id', '=', volunteerId)
-      .executeTakeFirst(),
-    database
-      .selectFrom('enrollment')
-      .select(sql<number>`count(enrollment.id)`.as('count'))
-      .where('posting_id', '=', id)
-      .executeTakeFirst(),
-  ]);
+  const [postingWithContext] = await buildPostingsWithContext({
+    volunteerId,
+    postings: [posting],
+  });
 
-  const enrollmentCount = Number(enrollmentCountRow?.count ?? 0);
+  if (!postingWithContext) {
+    res.status(404);
+    throw new Error('Posting not found');
+  }
 
   res.json({
-    posting,
-    skills,
-    hasPendingApplication: Boolean(pendingApplication),
-    isEnrolled: Boolean(existingEnrollment),
-    is_full: isPostingFull(posting.max_volunteers, enrollmentCount),
+    posting: postingWithContext,
   });
 });
 

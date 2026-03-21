@@ -13,7 +13,7 @@ interface UseAsyncOptions {
   notifyOnError?: boolean;
 }
 
-export default function useAsync<T, Args extends unknown[]>(
+export default function useAsync<T = unknown, Args extends unknown[] = unknown[]>(
   asyncFunction: (...args: Args) => Promise<T>,
   options: UseAsyncOptions = {},
 ) {

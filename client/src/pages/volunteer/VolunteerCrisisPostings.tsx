@@ -9,7 +9,7 @@ import type {
   VolunteerCrisisResponse,
   VolunteerPinnedCrisesResponse,
 } from '../../../../server/src/api/types';
-import type { PostingWithSkillsAndOrgName } from '../../../../server/src/types';
+import type { PostingWithContext } from '../../../../server/src/types';
 
 type CrisisState = {
   crisis?: VolunteerPinnedCrisesResponse['crises'][number];
@@ -66,7 +66,7 @@ function VolunteerCrisisPostings() {
   const subtitle = resolvedCrisis?.description
     || 'Browse and filter postings tagged under this crisis.';
 
-  const filterPostingsByCrisis = (postings: PostingWithSkillsAndOrgName[]) => {
+  const filterPostingsByCrisis = (postings: PostingWithContext[]) => {
     if (parsedCrisisId == null) {
       return [];
     }

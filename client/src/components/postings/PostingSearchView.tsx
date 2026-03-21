@@ -10,7 +10,7 @@ import PageHeader from '../layout/PageHeader.tsx';
 import Loading from '../Loading.tsx';
 import PostingCard from '../PostingCard.tsx';
 
-import type { VolunteerPostingSearchResponse } from '../../../../server/src/api/types.ts';
+import type { VolunteerPostingSearchResponse, VolunteerEnrollmentsResponse } from '../../../../server/src/api/types.ts';
 import type { PostingWithContext } from '../../../../server/src/types.ts';
 
 export type PostingSearchFilters = {
@@ -116,7 +116,7 @@ function PostingSearchView({
   const [error, setError] = useState<string | null>(null);
 
   const { trigger: fetchPostingsRequest } = useAsync(
-    async (url: string) => requestServer<VolunteerPostingSearchResponse>(url, { includeJwt: true }),
+    async (url: string) => requestServer<VolunteerPostingSearchResponse | VolunteerEnrollmentsResponse>(url, { includeJwt: true }),
     { notifyOnError: true },
   );
 

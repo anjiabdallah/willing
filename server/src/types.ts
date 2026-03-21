@@ -30,10 +30,13 @@ export type PostingWithSkills = OrganizationPostingWithoutVectors & {
   skills: PostingSkill[];
 };
 
+export type PostingApplicationStatus = 'none' | 'pending' | 'registered';
+
 export type PostingWithContext = PostingWithSkills & {
   organization_name: string;
   crisis_name: string | null;
   enrollment_count: number;
+  application_status: PostingApplicationStatus;
 };
 
 export type PostingEnrollment = {

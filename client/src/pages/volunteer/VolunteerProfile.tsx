@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
+  Brain,
   Building2,
   Calendar,
+  Clock3,
   Edit3,
   MapPin,
   Globe,
@@ -607,6 +609,53 @@ function VolunteerProfile() {
               </div>
             )}
           >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
+                <div className="stat-title text-base">Completed Postings</div>
+                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+                  <Users className="h-6 w-6 shrink-0 stroke-current" />
+                  <span>{profile.experience_stats.total_completed_experiences}</span>
+                </div>
+              </div>
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
+                <div className="stat-title text-base">Hours Completed</div>
+                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+                  <Clock3 className="h-6 w-6 shrink-0 stroke-current" />
+                  <span>{totalCompletedHours.toFixed(1)}</span>
+                </div>
+              </div>
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
+                <div className="stat-title text-base">Organizations</div>
+                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+                  <Building2 className="h-6 w-6 shrink-0 stroke-current" />
+                  <span>{profile.experience_stats.organizations_supported}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
+                <div className="stat-title text-base">Crisis-Related</div>
+                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+                  <AlertTriangle className="h-6 w-6 shrink-0 stroke-current" />
+                  <span>{profile.experience_stats.crisis_related_experiences}</span>
+                </div>
+              </div>
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
+                <div className="stat-title text-base">Total Skills Used</div>
+                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+                  <Brain className="h-6 w-6 shrink-0 stroke-current" />
+                  <span>{profile.experience_stats.total_skills_used}</span>
+                </div>
+              </div>
+              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
+                <div className="stat-title text-base">Most Volunteered Crisis</div>
+                <div className="stat-value text-lg text-primary/80 inline-flex w-full items-center justify-center gap-2 px-2">
+                  <span className="max-w-full truncate text-center">{profile.experience_stats.most_volunteered_crisis ?? 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
             <div className="card bg-base-100 shadow-md mt-4">
               <div className="card-body">
                 <h5 className="font-bold text-lg">Skills</h5>
@@ -628,46 +677,6 @@ function VolunteerProfile() {
                 <p className="text-sm opacity-70 mt-1">
                   Past volunteering experiences completed through the platform.
                 </p>
-
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Completed</p>
-                    <p className="mt-1 text-2xl font-bold inline-flex items-center gap-2">
-                      <Users size={18} className="text-primary" />
-                      {profile.experience_stats.total_completed_experiences}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Organizations</p>
-                    <p className="mt-1 text-2xl font-bold inline-flex items-center gap-2">
-                      <Building2 size={18} className="text-primary" />
-                      {profile.experience_stats.organizations_supported}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Crisis-Related</p>
-                    <p className="mt-1 text-2xl font-bold inline-flex items-center gap-2">
-                      <AlertTriangle size={18} className="text-primary" />
-                      {profile.experience_stats.crisis_related_experiences}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Hours Completed</p>
-                    <p className="mt-1 text-2xl font-bold">
-                      {totalCompletedHours.toFixed(1)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Total Skills Used</p>
-                    <p className="mt-1 text-2xl font-bold">{profile.experience_stats.total_skills_used}</p>
-                  </div>
-                  <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-70">Most Volunteered For Crisis</p>
-                    <p className="mt-1 text-lg font-bold truncate">
-                      {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
-                    </p>
-                  </div>
-                </div>
 
                 {profile.completed_experiences.length === 0
                   ? (

@@ -37,7 +37,10 @@ const schema = zod.object({
   POSTGRES_PORT: zod.coerce.number(),
 
   JWT_SECRET: zod.string().min(1),
-  UPLOAD_DIR: zod.string().min(1),
+  UPLOAD_DIR: zod.preprocess(
+    val => (val === '' ? undefined : val),
+    zod.string().min(1).default('uploads'),
+  ),
 
   SMTP_HOST: optionalInDev(zod.string().optional()),
   SMTP_PORT: optionalInDev(zod.coerce.number().optional()),

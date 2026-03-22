@@ -1,3 +1,5 @@
+import { sql } from 'kysely';
+
 import database from '../../db/index.js';
 
 import type { VolunteerAccountWithoutPassword } from '../../db/tables.js';
@@ -45,7 +47,7 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
         'cv_path',
         'description',
         'privacy',
-      ])
+      ] as const)
       .where('id', '=', volunteerId)
       .executeTakeFirstOrThrow(),
     database
@@ -59,20 +61,29 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
       .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
-      .select([
-        'enrollment.id as enrollment_id',
-        'organization_posting.id as posting_id',
-        'organization_posting.title as posting_title',
-        'organization_posting.organization_id as organization_id',
-        'organization_account.name as organization_name',
-        'organization_posting.location_name as location_name',
-        'organization_posting.start_timestamp as start_timestamp',
-        'organization_posting.end_timestamp as end_timestamp',
-        'crisis.name as crisis_name',
-      ])
+      .select('enrollment.id as enrollment_id')
+      .select('organization_posting.id as posting_id')
+      .select('organization_posting.title as posting_title')
+      .select('organization_posting.organization_id as organization_id')
+      .select('organization_account.name as organization_name')
+      .select('organization_posting.location_name as location_name')
+      .select(
+        sql<Date>`organization_posting.start_date + organization_posting.start_time::time`
+          .as('start_timestamp'),
+      )
+      .select(
+        sql<Date | null>`
+          case
+            when organization_posting.end_date is null then null
+            else organization_posting.end_date + coalesce(organization_posting.end_time, organization_posting.start_time)::time
+          end
+        `.as('end_timestamp'),
+      )
+      .select('crisis.name as crisis_name')
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment.attended', '=', true)
-      .orderBy('organization_posting.start_timestamp', 'desc')
+      .orderBy('organization_posting.start_date', 'desc')
+      .orderBy('organization_posting.start_time', 'desc')
       .execute(),
     database
       .selectFrom('enrollment')
@@ -144,7 +155,7 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
       organization_name: experience.organization_name,
       location_name: experience.location_name,
       start_timestamp: experience.start_timestamp,
-      end_timestamp: experience.end_timestamp,
+      end_timestamp: experience.end_timestamp ?? undefined,
       crisis_name: experience.crisis_name,
     })),
   };

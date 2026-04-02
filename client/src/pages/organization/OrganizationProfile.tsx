@@ -70,43 +70,40 @@ const certificateFormSchema = newOrganizationCertificateInfoSchema.pick({
 
   if (!data.hasLogo) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['certificate_feature_enabled'],
       message: 'Organization profile picture is required to enable certificates.',
     });
   }
   if (data.hours_threshold === null) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['hours_threshold'],
       message: 'Minimum volunteer hours are required when certificate feature is enabled.',
     });
   }
   if (!data.signatory_name?.trim()) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['signatory_name'],
       message: 'Signatory name is required when certificate feature is enabled.',
     });
   }
   if (!data.signatory_position?.trim()) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['signatory_position'],
       message: 'Signatory position is required when certificate feature is enabled.',
     });
   }
   if (!data.hasSignature) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['hasSignature'],
       message: 'Signature image is required when certificate feature is enabled.',
     });
   }
 });
-
-type ProfileFormData = z.infer<typeof profileFormSchema>;
-type CertificateFormInput = z.input<typeof certificateFormSchema>;
 
 function OrganizationProfile() {
   const organizationFromAuth = useOrganization();
@@ -122,7 +119,7 @@ function OrganizationProfile() {
   const [signatureBusy, setSignatureBusy] = useState(false);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
 
-  const form = useForm<ProfileFormData>({
+  const form = useForm({
     resolver: zodResolver(profileFormSchema),
     mode: 'onTouched',
     defaultValues: {
@@ -134,7 +131,7 @@ function OrganizationProfile() {
     },
   });
 
-  const certificateForm = useForm<CertificateFormInput>({
+  const certificateForm = useForm({
     resolver: zodResolver(certificateFormSchema),
     mode: 'onTouched',
     defaultValues: {
@@ -607,7 +604,7 @@ function OrganizationProfile() {
                     </div>
                     <div className="pt-2">
                       <p className="opacity-70 mb-1">Description</p>
-                      <p className="whitespace-pre-wrap break-words">{formValues.description?.trim() || 'No description added yet.'}</p>
+                      <p className="whitespace-pre-wrap wrap-break-word">{formValues.description?.trim() || 'No description added yet.'}</p>
                     </div>
                   </div>
                 )}

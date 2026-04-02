@@ -4,7 +4,7 @@ import config from '../config.ts';
 import { truncateAllTables } from './helpers/database.ts';
 
 export async function setup() {
-  truncateAllTables();
+  await truncateAllTables();
 }
 
 export async function teardown() {

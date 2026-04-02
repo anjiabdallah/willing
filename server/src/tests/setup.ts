@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { beforeAll, beforeEach } from 'vitest';
+import { beforeAll } from 'vitest';
 
 import { truncateAllTables } from './helpers/database.ts';
 
@@ -14,9 +14,5 @@ beforeAll(async () => {
   await sql`SET search_path TO ${sql.raw(config.POSTGRES_SCHEMA)}, public`.execute(database);
 
   await migrateToLatest(database);
-  await truncateAllTables();
-});
-
-beforeEach(async () => {
   await truncateAllTables();
 });

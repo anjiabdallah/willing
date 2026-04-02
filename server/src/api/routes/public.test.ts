@@ -14,7 +14,7 @@ import type { Database } from '../../db/tables/index.ts';
 import type { ControlledTransaction } from 'kysely';
 import type TestAgent from 'supertest/lib/agent.js';
 
-let transaction: ControlledTransaction<Database, []>;
+let transaction: ControlledTransaction<Database>;
 let server: TestAgent;
 
 beforeEach(async () => {
@@ -43,22 +43,22 @@ describe('GET /public/home-stats', () => {
   });
 
   test('returns the correct number of total organizations, volunteers, and opportunities', async () => {
-    const org1 = await createOrganizationAccount({ email: 'org1@willing.social', phone_number: '+10000000001', url: 'https://org1.com' });
-    const org2 = await createOrganizationAccount({ email: 'org2@willing.social', phone_number: '+10000000002', url: 'https://org2.com' });
-    const org3 = await createOrganizationAccount({ email: 'org3@willing.social', phone_number: '+10000000003', url: 'https://org3.com' });
-    const org4 = await createOrganizationAccount({ email: 'org4@willing.social', phone_number: '+10000000004', url: 'https://org4.com' });
+    const org1 = await createOrganizationAccount(transaction, { email: 'org1@willing.social', phone_number: '+10000000001', url: 'https://org1.com' });
+    const org2 = await createOrganizationAccount(transaction, { email: 'org2@willing.social', phone_number: '+10000000002', url: 'https://org2.com' });
+    const org3 = await createOrganizationAccount(transaction, { email: 'org3@willing.social', phone_number: '+10000000003', url: 'https://org3.com' });
+    const org4 = await createOrganizationAccount(transaction, { email: 'org4@willing.social', phone_number: '+10000000004', url: 'https://org4.com' });
 
-    await createVolunteerAccount({ email: 'vol1@willing.social' });
-    await createVolunteerAccount({ email: 'vol2@willing.social' });
-    await createVolunteerAccount({ email: 'vol3@willing.social' });
+    await createVolunteerAccount(transaction, { email: 'vol1@willing.social' });
+    await createVolunteerAccount(transaction, { email: 'vol2@willing.social' });
+    await createVolunteerAccount(transaction, { email: 'vol3@willing.social' });
 
-    await createOrganizationPosting({ organizationId: org1.organization.id });
-    await createOrganizationPosting({ organizationId: org2.organization.id });
-    await createOrganizationPosting({ organizationId: org1.organization.id });
-    await createOrganizationPosting({ organizationId: org4.organization.id });
-    await createOrganizationPosting({ organizationId: org3.organization.id });
-    await createOrganizationPosting({ organizationId: org2.organization.id });
-    await createOrganizationPosting({ organizationId: org1.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org2.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org4.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org3.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org2.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
 
     const response = await server
       .get('/public/home-stats')
@@ -72,22 +72,22 @@ describe('GET /public/home-stats', () => {
   });
 
   test('returns the correct number of new organizations, volunteers, and opportunities', async () => {
-    const org1 = await createOrganizationAccount({ email: 'org1@willing.social', phone_number: '+10000000001', url: 'https://org1.com', created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
-    const org2 = await createOrganizationAccount({ email: 'org2@willing.social', phone_number: '+10000000002', url: 'https://org2.com' });
-    const org3 = await createOrganizationAccount({ email: 'org3@willing.social', phone_number: '+10000000003', url: 'https://org3.com', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
-    const org4 = await createOrganizationAccount({ email: 'org4@willing.social', phone_number: '+10000000004', url: 'https://org4.com', created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) });
+    const org1 = await createOrganizationAccount(transaction, { email: 'org1@willing.social', phone_number: '+10000000001', url: 'https://org1.com', created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
+    const org2 = await createOrganizationAccount(transaction, { email: 'org2@willing.social', phone_number: '+10000000002', url: 'https://org2.com' });
+    const org3 = await createOrganizationAccount(transaction, { email: 'org3@willing.social', phone_number: '+10000000003', url: 'https://org3.com', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
+    const org4 = await createOrganizationAccount(transaction, { email: 'org4@willing.social', phone_number: '+10000000004', url: 'https://org4.com', created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) });
 
-    await createVolunteerAccount({ email: 'vol1@willing.social', created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) });
-    await createVolunteerAccount({ email: 'vol2@willing.social', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
-    await createVolunteerAccount({ email: 'vol3@willing.social' });
+    await createVolunteerAccount(transaction, { email: 'vol1@willing.social', created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) });
+    await createVolunteerAccount(transaction, { email: 'vol2@willing.social', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
+    await createVolunteerAccount(transaction, { email: 'vol3@willing.social' });
 
-    await createOrganizationPosting({ organizationId: org1.organization.id, created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org2.organization.id, created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org1.organization.id, created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org4.organization.id, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org3.organization.id, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org2.organization.id, created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting({ organizationId: org1.organization.id });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org4.organization.id, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org3.organization.id, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) });
+    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
 
     const response = await server
       .get('/public/home-stats')

@@ -12,5 +12,9 @@ export default defineConfig({
       './src/tests/setup.ts',
     ],
     fileParallelism: true,
+    exclude: [
+      'node_modules',
+      './dist',
+    ],
   },
 });

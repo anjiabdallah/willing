@@ -1,16 +1,18 @@
-import database from '../../db/index.ts';
-
-import type { OrganizationPosting, OrganizationRequest } from '../../db/tables/index.ts';
+import type { Database, OrganizationPosting, OrganizationRequest } from '../../db/tables/index.ts';
+import type { ControlledTransaction } from 'kysely';
 
 type OrganizationRequestOptions = {
   email?: string;
   name?: string;
 };
 
-export async function createOrganizationRequest({
-  email = 'pending-org@example.com',
-  name = 'Pending Org',
-}: OrganizationRequestOptions = {}): Promise<OrganizationRequest> {
+export async function createOrganizationRequest(
+  database: ControlledTransaction<Database>,
+  {
+    email = 'pending-org@example.com',
+    name = 'Pending Org',
+  }: OrganizationRequestOptions = {},
+): Promise<OrganizationRequest> {
   const now = new Date();
 
   const request = await database
@@ -39,13 +41,16 @@ type OrganizationPostingOptions = {
   skills?: string[];
 };
 
-export async function createOrganizationPosting({
-  organizationId,
-  title = 'Community Cleanup',
-  created_at,
-  overrides,
-  skills,
-}: OrganizationPostingOptions): Promise<OrganizationPosting> {
+export async function createOrganizationPosting(
+  database: ControlledTransaction<Database>,
+  {
+    organizationId,
+    title = 'Community Cleanup',
+    created_at,
+    overrides,
+    skills,
+  }: OrganizationPostingOptions,
+): Promise<OrganizationPosting> {
   const now = created_at ?? overrides?.created_at ?? new Date();
   const startDate = overrides?.start_date ?? new Date('2026-01-01');
   const endDate = overrides?.end_date ?? new Date('2026-01-02');

@@ -16,7 +16,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Install server dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Install client dependencies
         working-directory: ./client
         run: npm ci
 
@@ -35,7 +39,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Install server dependencies
         working-directory: ./server
         run: npm ci
 

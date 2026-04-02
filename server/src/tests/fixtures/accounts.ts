@@ -1,6 +1,8 @@
-import database from '../../db/index.ts';
 import { hash } from '../../services/bcrypt/index.ts';
 import { generateJWT } from '../../services/jwt/index.ts';
+
+import type { Database } from '../../db/tables/index.ts';
+import type { ControlledTransaction } from 'kysely';
 
 type OrganizationFixtureOptions = {
   email?: string;
@@ -28,14 +30,17 @@ const HASHED_DEFAULT_VOL_PASSWORD = hash(DEFAULT_VOL_PASSWORD);
 const DEFAULT_ADMIN_PASSWORD = 'AdminPassword123!';
 const HASHED_DEFAULT_ADMIN_PASSWORD = hash(DEFAULT_ADMIN_PASSWORD);
 
-export async function createOrganizationAccount({
-  email = 'org@example.com',
-  password,
-  name = 'Helping Hands',
-  phone_number = '+10000000000',
-  url = 'https://example.org',
-  created_at = new Date(),
-}: OrganizationFixtureOptions = {}) {
+export async function createOrganizationAccount(
+  database: ControlledTransaction<Database>,
+  {
+    email = 'org@example.com',
+    password,
+    name = 'Helping Hands',
+    phone_number = '+10000000000',
+    url = 'https://example.org',
+    created_at = new Date(),
+  }: OrganizationFixtureOptions = {},
+) {
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_ORG_PASSWORD : hash(password));
   const now = new Date();
 
@@ -63,13 +68,16 @@ export async function createOrganizationAccount({
   };
 }
 
-export async function createVolunteerAccount({
-  email = 'vol@example.com',
-  password,
-  first_name = 'Jane',
-  last_name = 'Doe',
-  created_at = new Date(),
-}: VolunteerFixtureOptions = {}) {
+export async function createVolunteerAccount(
+  database: ControlledTransaction<Database>,
+  {
+    email = 'vol@example.com',
+    password,
+    first_name = 'Jane',
+    last_name = 'Doe',
+    created_at = new Date(),
+  }: VolunteerFixtureOptions = {},
+) {
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_VOL_PASSWORD : hash(password));
   const now = new Date();
 
@@ -104,12 +112,15 @@ type AdminFixtureOptions = {
   last_name?: string;
 };
 
-export async function createAdminAccount({
-  email = 'admin@example.com',
-  password,
-  first_name = 'Admin',
-  last_name = 'User',
-}: AdminFixtureOptions = {}) {
+export async function createAdminAccount(
+  database: ControlledTransaction<Database>,
+  {
+    email = 'admin@example.com',
+    password,
+    first_name = 'Admin',
+    last_name = 'User',
+  }: AdminFixtureOptions = {},
+) {
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_ADMIN_PASSWORD : hash(password));
   const now = new Date();
 

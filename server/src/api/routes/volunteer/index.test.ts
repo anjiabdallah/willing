@@ -16,7 +16,7 @@ import type { Database } from '../../../db/tables/index.ts';
 import type { VolunteerProfileData } from '../../../services/volunteer/index.ts';
 import type TestAgent from 'supertest/lib/agent.js';
 
-let transaction: ControlledTransaction<Database, []>;
+let transaction: ControlledTransaction<Database>;
 let server: TestAgent;
 
 const generateJWTSpy = vi
@@ -38,7 +38,7 @@ afterEach(async () => {
 
 describe('POST /volunteer/create', () => {
   test('returns 409 if email is used by another volunteer', async () => {
-    const { volunteer } = await createVolunteerAccount();
+    const { volunteer } = await createVolunteerAccount(transaction);
 
     await server
       .post('/volunteer/create')
@@ -68,7 +68,7 @@ describe('POST /volunteer/create', () => {
   });
 
   test('returns 409 if email is used in organization request', async () => {
-    const request = await createOrganizationRequest();
+    const request = await createOrganizationRequest(transaction);
 
     await server
       .post('/volunteer/create')
@@ -104,7 +104,7 @@ describe('POST /volunteer/create', () => {
   });
 
   test('returns 409 if email is used by an organization', async () => {
-    const { organization } = await createOrganizationAccount();
+    const { organization } = await createOrganizationAccount(transaction);
 
     await server
       .post('/volunteer/create')
@@ -268,7 +268,7 @@ describe('POST /volunteer/verify-email', () => {
   });
 
   test('returns 409 and removes pending account when account already exists', async () => {
-    const { volunteer } = await createVolunteerAccount({ email: 'existing-verify@example.com' });
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'existing-verify@example.com' });
     generateJWTSpy.mockClear();
 
     await transaction
@@ -362,7 +362,7 @@ describe('POST /volunteer/verify-email', () => {
 
 describe('POST /volunteer/resend-verification', () => {
   test('returns 200 and does nothing when email already belongs to a volunteer', async () => {
-    const { volunteer } = await createVolunteerAccount({ email: 'resend-existing@example.com' });
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'resend-existing@example.com' });
 
     const response = await server
       .post('/volunteer/resend-verification')
@@ -440,7 +440,7 @@ describe('GET /volunteer/me', () => {
   });
 
   test('returns 403 when logged in as organization', async () => {
-    const { token: orgToken } = await createOrganizationAccount();
+    const { token: orgToken } = await createOrganizationAccount(transaction);
 
     await server
       .get('/volunteer/me')
@@ -449,7 +449,7 @@ describe('GET /volunteer/me', () => {
   });
 
   test('returns 403 when logged in as admin', async () => {
-    const { token: adminToken } = await createAdminAccount();
+    const { token: adminToken } = await createAdminAccount(transaction);
 
     await server
       .get('/volunteer/me')
@@ -458,7 +458,7 @@ describe('GET /volunteer/me', () => {
   });
 
   test('returns 200 with the currently logged in volunteer', async () => {
-    const { volunteer, token } = await createVolunteerAccount();
+    const { volunteer, token } = await createVolunteerAccount(transaction);
 
     const response = await server
       .get('/volunteer/me')
@@ -481,7 +481,7 @@ describe('GET /volunteer/profile', () => {
   });
 
   test('returns 403 when logged in as organization', async () => {
-    const { token: orgToken } = await createOrganizationAccount();
+    const { token: orgToken } = await createOrganizationAccount(transaction);
 
     await server
       .get('/volunteer/profile')
@@ -490,7 +490,7 @@ describe('GET /volunteer/profile', () => {
   });
 
   test('returns 403 when logged in as admin', async () => {
-    const { token: adminToken } = await createAdminAccount();
+    const { token: adminToken } = await createAdminAccount(transaction);
 
     await server
       .get('/volunteer/profile')
@@ -499,7 +499,7 @@ describe('GET /volunteer/profile', () => {
   });
 
   test('returns profile data for the current volunteer', async () => {
-    const { volunteer, token } = await createVolunteerAccount();
+    const { volunteer, token } = await createVolunteerAccount(transaction);
 
     const profileData: VolunteerProfileData = {
       volunteer: {
@@ -566,8 +566,8 @@ describe('GET /volunteer/certificate', () => {
   });
 
   test('returns total hours, organization eligibility, and platform certificate info', async () => {
-    const { volunteer, token } = await createVolunteerAccount({ email: 'certificate-volunteer@example.com' });
-    const { organization } = await createOrganizationAccount({ email: 'certificate-org@example.com' });
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'certificate-volunteer@example.com' });
+    const { organization } = await createOrganizationAccount(transaction, { email: 'certificate-org@example.com' });
 
     const certificateInfo = await transaction
       .insertInto('organization_certificate_info')
@@ -682,7 +682,7 @@ describe('GET /volunteer/certificate', () => {
   });
 
   test('returns empty organizations and null platform certificate when no certificate data exists', async () => {
-    const { volunteer, token } = await createVolunteerAccount({ email: 'certificate-empty@example.com' });
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'certificate-empty@example.com' });
 
     const response = await server
       .get('/volunteer/certificate')
@@ -704,7 +704,7 @@ describe('GET /volunteer/certificate', () => {
 
 describe('GET /volunteer/crises/pinned', () => {
   test('returns pinned crises ordered by creation time', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crisis-pinned@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crisis-pinned@example.com' });
 
     const olderPinned = await transaction
       .insertInto('crisis')
@@ -753,7 +753,7 @@ describe('GET /volunteer/crises/pinned', () => {
 
 describe('GET /volunteer/crises/:id', () => {
   test('returns 400 for non-positive crisis id', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crisis-invalid-id@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crisis-invalid-id@example.com' });
 
     await server
       .get('/volunteer/crises/0')
@@ -762,7 +762,7 @@ describe('GET /volunteer/crises/:id', () => {
   });
 
   test('returns 404 for unknown crisis', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crisis-lookup@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crisis-lookup@example.com' });
 
     await server
       .get('/volunteer/crises/999999')
@@ -771,7 +771,7 @@ describe('GET /volunteer/crises/:id', () => {
   });
 
   test('returns the requested crisis', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crisis-lookup-success@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crisis-lookup-success@example.com' });
 
     const crisis = await transaction
       .insertInto('crisis')
@@ -807,7 +807,7 @@ describe('PUT /volunteer/profile', () => {
   });
 
   test('returns 403 when logged in as organization', async () => {
-    const { token } = await createOrganizationAccount({ email: 'profile-org-forbidden@example.com' });
+    const { token } = await createOrganizationAccount(transaction, { email: 'profile-org-forbidden@example.com' });
 
     await server
       .put('/volunteer/profile')
@@ -817,7 +817,7 @@ describe('PUT /volunteer/profile', () => {
   });
 
   test('returns 403 when logged in as admin', async () => {
-    const { token } = await createAdminAccount({ email: 'profile-admin-forbidden@example.com' });
+    const { token } = await createAdminAccount(transaction, { email: 'profile-admin-forbidden@example.com' });
 
     await server
       .put('/volunteer/profile')
@@ -827,7 +827,7 @@ describe('PUT /volunteer/profile', () => {
   });
 
   test('updates volunteer details, replaces skills, and recomputes profile vector', async () => {
-    const { volunteer, token } = await createVolunteerAccount({ email: 'profile-update@example.com' });
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'profile-update@example.com' });
 
     await transaction
       .insertInto('volunteer_skill')
@@ -905,7 +905,7 @@ describe('PUT /volunteer/profile', () => {
   });
 
   test('does not recompute profile vector for a no-op update payload', async () => {
-    const { volunteer, token } = await createVolunteerAccount({ email: 'profile-noop@example.com' });
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'profile-noop@example.com' });
 
     await transaction
       .insertInto('volunteer_skill')
@@ -967,7 +967,7 @@ describe('PUT /volunteer/profile', () => {
   });
 
   test('clears all skills when skills is an empty array and recomputes profile vector', async () => {
-    const { volunteer, token } = await createVolunteerAccount({ email: 'profile-clear-skills@example.com' });
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'profile-clear-skills@example.com' });
 
     await transaction
       .insertInto('volunteer_skill')
@@ -1039,14 +1039,14 @@ describe('GET /volunteer/organizations', () => {
   });
 
   test('returns organizations with posting counts sorted by name by default', async () => {
-    const { token } = await createVolunteerAccount({ email: 'org-search-viewer@example.com' });
-    const { organization: firstOrg } = await createOrganizationAccount({
+    const { token } = await createVolunteerAccount(transaction, { email: 'org-search-viewer@example.com' });
+    const { organization: firstOrg } = await createOrganizationAccount(transaction, {
       email: 'org-a@example.com',
       name: 'Alpha Responders',
       phone_number: '123-456-7890',
       url: 'https://alpharesponders.org',
     });
-    const { organization: secondOrg } = await createOrganizationAccount({
+    const { organization: secondOrg } = await createOrganizationAccount(transaction, {
       email: 'org-b@example.com',
       name: 'Bravo Collective',
       phone_number: '987-654-3210',
@@ -1135,8 +1135,8 @@ describe('GET /volunteer/organizations', () => {
   });
 
   test('applies search across organization fields', async () => {
-    const { token } = await createVolunteerAccount({ email: 'org-search-filter@example.com' });
-    const { organization: matchingOrg } = await createOrganizationAccount({
+    const { token } = await createVolunteerAccount(transaction, { email: 'org-search-filter@example.com' });
+    const { organization: matchingOrg } = await createOrganizationAccount(transaction, {
       email: 'beirut-helpers@example.com',
       name: 'Beirut Helpers',
       phone_number: '111-222-3333',
@@ -1152,7 +1152,7 @@ describe('GET /volunteer/organizations', () => {
       .where('id', '=', matchingOrg.id)
       .execute();
 
-    await createOrganizationAccount({
+    await createOrganizationAccount(transaction, {
       email: 'tripoli-care@example.com',
       name: 'Tripoli Care Network',
       phone_number: '444-555-6666',
@@ -1180,7 +1180,7 @@ describe('GET /volunteer/crises', () => {
   });
 
   test('returns crises with pinned entries first by default sorting', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crises-default-sort@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crises-default-sort@example.com' });
 
     await transaction
       .insertInto('crisis')
@@ -1219,7 +1219,7 @@ describe('GET /volunteer/crises', () => {
   });
 
   test('filters by pinned flag and supports title_desc sorting', async () => {
-    const { token } = await createVolunteerAccount({ email: 'crises-filter-sort@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'crises-filter-sort@example.com' });
 
     await transaction
       .insertInto('crisis')
@@ -1266,7 +1266,7 @@ describe('POST /volunteer/reset-password', () => {
   });
 
   test('returns 403 when logged in as organization', async () => {
-    const { token } = await createOrganizationAccount({ email: 'reset-password-org@example.com' });
+    const { token } = await createOrganizationAccount(transaction, { email: 'reset-password-org@example.com' });
 
     await server
       .post('/volunteer/reset-password')
@@ -1276,7 +1276,7 @@ describe('POST /volunteer/reset-password', () => {
   });
 
   test('returns 403 when current password is incorrect', async () => {
-    const { token } = await createVolunteerAccount({ email: 'reset-password-invalid-current@example.com' });
+    const { token } = await createVolunteerAccount(transaction, { email: 'reset-password-invalid-current@example.com' });
 
     await server
       .post('/volunteer/reset-password')
@@ -1286,7 +1286,7 @@ describe('POST /volunteer/reset-password', () => {
   });
 
   test('updates password hash and returns a fresh token when current password is correct', async () => {
-    const { volunteer, token, plainPassword } = await createVolunteerAccount({ email: 'reset-password-success@example.com' });
+    const { volunteer, token, plainPassword } = await createVolunteerAccount(transaction, { email: 'reset-password-success@example.com' });
 
     const beforeUpdate = await transaction
       .selectFrom('volunteer_account')

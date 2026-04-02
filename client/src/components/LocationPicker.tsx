@@ -5,9 +5,10 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-lea
 
 import requestServer from '../utils/requestServer';
 
-import type { GeocodingResponse, GeocodingResponseEntry } from '../../../server/src/api/types';
-
 import 'leaflet/dist/leaflet.css';
+import type { GeocodingSearchResponse } from '../../../server/src/api/types';
+
+type GeocodingSearchResponseEntry = GeocodingSearchResponse[number];
 
 const customIcon = divIcon({
   className: 'custom-icon',
@@ -21,10 +22,10 @@ const customIcon = divIcon({
   iconAnchor: [28, 56],
 });
 
-function MapSearchControl({ onLocationSelect }: { onLocationSelect: (item: GeocodingResponseEntry) => void }) {
+function MapSearchControl({ onLocationSelect }: { onLocationSelect: (item: GeocodingSearchResponseEntry) => void }) {
   const map = useMap();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<GeocodingResponse>([]);
+  const [results, setResults] = useState<GeocodingSearchResponse>([]);
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -51,14 +52,14 @@ function MapSearchControl({ onLocationSelect }: { onLocationSelect: (item: Geoco
     setLoading(true);
     setHasSearched(true);
     try {
-      const data = await requestServer<GeocodingResponse>('/geocoding/search', { query: { query } });
+      const data = await requestServer<GeocodingSearchResponse>('/geocoding/search', { query: { query } });
       setResults(data);
     } finally {
       setLoading(false);
     }
   };
 
-  const selectLocation = (item: GeocodingResponseEntry) => {
+  const selectLocation = (item: GeocodingSearchResponseEntry) => {
     const coords: [number, number] = [item.latitude, item.longitude];
     onLocationSelect(item);
     map.flyTo(coords, 16, { duration: 2 });

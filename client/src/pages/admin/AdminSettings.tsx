@@ -23,11 +23,6 @@ import type {
   AdminCertificateSettingsUploadSignatureResponse,
 } from '../../../../server/src/api/types';
 
-type CertificateSettingsFormData = {
-  signatory_name: string;
-  signatory_position: string;
-};
-
 const certificateSettingsFormSchema = newPlatformCertificateSettingsSchema.pick({
   signatory_name: true,
   signatory_position: true,
@@ -42,7 +37,7 @@ function AdminSettings() {
   const [signatureVersion, setSignatureVersion] = useState(0);
   const [settings, setSettings] = useState<AdminCertificateSettingsGetResponse['settings']>(null);
 
-  const form = useForm<CertificateSettingsFormData>({
+  const form = useForm({
     resolver: zodResolver(certificateSettingsFormSchema),
     defaultValues: {
       signatory_name: '',

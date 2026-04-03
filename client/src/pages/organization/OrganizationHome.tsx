@@ -155,7 +155,7 @@ function OrganizationHome() {
       organization_name: orgName,
       organization_logo_path: orgLogoPath,
       crisis_name: null,
-      enrollment_count: 0,
+      enrollment_count: posting.enrollment_count,
       application_status: 'none',
     }));
   }, [organization?.logo_path, organization?.name, organizationMe?.organization.logo_path, organizationMe?.organization.name, postings]);

@@ -1076,9 +1076,13 @@ function PostingPage() {
             </Card>
 
             <Card
-              title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'Crisis Tag'}
-              description={isEditMode ? 'Add a crisis tag to this posting.' : selectedCrisis?.description || 'No crisis description provided.'}
-              link={isVolunteerView ? `/volunteer/crises/${selectedCrisisId}/postings` : undefined}
+              title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'No Crisis'}
+              description={isEditMode
+                ? 'Add a crisis tag to this posting.'
+                : selectedCrisis
+                  ? (selectedCrisis.description || 'No crisis description provided.')
+                  : undefined}
+              link={isVolunteerView && selectedCrisisId != null ? `/volunteer/crises/${selectedCrisisId}/postings` : undefined}
               color="accent"
               coloredText={true}
               Icon={AlertTriangle}

@@ -9,6 +9,7 @@ import type { PostingWithContext } from '../../../server/src/types';
 interface PostingListProps {
   posting: PostingWithContext;
   showCrisis?: boolean;
+  crisisTagClickable?: boolean;
   variant?: 'volunteer' | 'organization';
   compactOrganizationLayout?: boolean;
   volunteerOutsideMetaAt1700?: boolean;
@@ -44,6 +45,7 @@ const formatCardDate = (dateValue: Date | null) => {
 function PostingList({
   posting,
   showCrisis = true,
+  crisisTagClickable = true,
   variant = 'volunteer',
   compactOrganizationLayout = false,
   volunteerOutsideMetaAt1700 = false,
@@ -146,18 +148,32 @@ function PostingList({
     ? 'hidden min-[1700px]:block'
     : 'hidden lg:block 2xl:hidden';
 
+  const crisisTagContent = (
+    <>
+      <AlertCircle size={14} />
+      <span className="truncate max-w-40 font-semibold">{posting.crisis_name}</span>
+    </>
+  );
+
   return (
 
     <div className="relative overflow-visible">
       {showCrisis && posting.crisis_name && posting.crisis_id && (
-        <Link
-          to={`/volunteer/crises/${posting.crisis_id}/postings`}
-          onClick={event => event.stopPropagation()}
-          className="absolute -top-2 right-1 z-20 pointer-events-auto inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
-        >
-          <AlertCircle size={14} />
-          <span className="truncate max-w-40 font-semibold">{posting.crisis_name}</span>
-        </Link>
+        crisisTagClickable
+          ? (
+              <Link
+                to={`/volunteer/crises/${posting.crisis_id}/postings`}
+                onClick={event => event.stopPropagation()}
+                className="absolute -top-2 right-1 z-20 pointer-events-auto inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
+              >
+                {crisisTagContent}
+              </Link>
+            )
+          : (
+              <span className="absolute -top-2 right-1 z-20 inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3">
+                {crisisTagContent}
+              </span>
+            )
       )}
 
       <article className="collapse collapse-arrow relative border border-base-300 bg-base-100 shadow-sm hover:shadow-md transition-shadow">

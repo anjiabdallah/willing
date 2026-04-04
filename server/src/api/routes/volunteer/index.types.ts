@@ -69,4 +69,9 @@ export type VolunteerCertificateResponse = {
   } | null;
 };
 
+export type VolunteerCertificateIssueResponse = {
+  verification_token: string;
+  issued_at: string;
+};
+
 export type VolunteerResetPasswordResponse = ResetPasswordResponse;

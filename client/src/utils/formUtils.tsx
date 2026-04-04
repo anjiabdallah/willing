@@ -3,8 +3,8 @@ import { AlertCircle, type LucideIcon } from 'lucide-react';
 import Alert from '../components/Alert';
 import CalendarInfo from '../components/CalendarInfo';
 
-import type { HTMLInputTypeAttribute } from 'react';
-import type { FieldValues, UseFormReturn, Path } from 'react-hook-form';
+import type { HTMLInputTypeAttribute, InputHTMLAttributes } from 'react';
+import type { FieldValues, Path, RegisterOptions, UseFormReturn } from 'react-hook-form';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export async function executeAndShowError<T extends FieldValues>(
@@ -38,6 +38,8 @@ interface FormFieldProps<T extends FieldValues> {
   type?: HTMLInputTypeAttribute | 'textarea';
   Icon?: LucideIcon;
   selectOptions?: FormSelectOption[];
+  registerOptions?: RegisterOptions<T, Path<T>>;
+  inputProps?: InputHTMLAttributes<HTMLInputElement>;
 }
 
 export function FormField<T extends FieldValues>({
@@ -48,6 +50,8 @@ export function FormField<T extends FieldValues>({
   type = 'text',
   Icon,
   selectOptions,
+  registerOptions,
+  inputProps,
 }: FormFieldProps<T>) {
   const { register, formState: { errors }, clearErrors } = form;
   const error = errors[name];
@@ -55,6 +59,7 @@ export function FormField<T extends FieldValues>({
   const commonProps = {
     ...register(name, {
       onChange: () => clearErrors('root'),
+      ...registerOptions,
     }),
     placeholder: placeholder || label,
   };
@@ -73,6 +78,13 @@ export function FormField<T extends FieldValues>({
         input.value = input.value.slice(0, 4) + input.value.slice(yearMatch[1].length);
       }
     }
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    if (type === 'number') {
+      e.currentTarget.blur();
+    }
+    inputProps?.onWheel?.(e);
   };
 
   return (
@@ -137,6 +149,8 @@ export function FormField<T extends FieldValues>({
                       type={type}
                       className={`input input-bordered w-full focus:input-primary ${iconPadding} ${statusClass}`}
                       onInput={handleDateTimeInput}
+                      onWheel={handleWheel}
+                      {...inputProps}
                       {...commonProps}
                     />
                   )

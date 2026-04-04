@@ -50,6 +50,16 @@ Willing connects volunteers with organizations that publish real-world help oppo
 3. Volunteer-facing discovery can prioritize/filter opportunities related to current crises.
 4. Pinned crises communicate urgency across the platform and guide organization posting context.
 
+### Certificate Verification Flow
+
+- Public certificate verification is available at `/certificate/verify` (client) and `/public/certificate/verify` (server), with no login required.
+- Certificate authenticity is based on a signed payload token (HMAC), not stored/generated PDF files.
+- A certificate is valid only when both checks pass:
+  1. token signature + payload validation
+  2. DB consistency checks against volunteer/org attendance-hour facts
+- Verification route must keep abuse protection (rate limiting/throttling) in place.
+- `CERTIFICATE_VERIFICATION_SECRET` is server-only and must never be exposed to client code.
+
 ### Access and Ownership Model
 
 - Volunteers only manage their own profile, applications, and enrollments.
@@ -178,9 +188,10 @@ Create tests as `<name>.test.ts` alongside your route file.
 2. Wrap form submissions in `executeAndShowError(form, async () => {...})` from `formUtils.tsx` for consistent error handling.
 3. Reuse and compose server schemas from `server/src/db/tables.ts` for client-side validation.
 4. Use reusable form primitives from `client/src/utils/formUtils.tsx` (`FormField`, `FormRootError`).
-5. Import response types from server using relative paths (e.g., `../../../../server/src/api/types`).
-6. Keep existing DaisyUI/Tailwind visual language unless explicitly asked to redesign.
-7. Handle loading, error, and success states explicitly.
+5. `FormField` supports `registerOptions` for custom react-hook-form registration behavior and `inputProps` for native input attributes when needed.
+6. Import response types from server using relative paths (e.g., `../../../../server/src/api/types`).
+7. Keep existing DaisyUI/Tailwind visual language unless explicitly asked to redesign.
+8. Handle loading, error, and success states explicitly.
 
 ## Async Hook Conventions
 
@@ -256,7 +267,7 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 - **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional prop: `organization`.
 - **`PostingSearchView`**: Reusable posting discovery shell with page header, search, date filters, and result states. Required props: `title`, `subtitle`. Optional props: `icon`, `badge`, `showBack`, `defaultBackTo`, `initialFilters`, `emptyMessage`, `filterPostings`, `fetchUrl`.
 - **`HorizontalScrollSection`**: Horizontal carousel-style section with scroll controls, edge fades, and empty state. Required props: `title`, `hasItems`. Optional props: `subtitle`, `action`, `emptyState`, `children`.
-- **`PostingCollection`**: Shared renderer that switches between `PostingCard` and `PostingList` using global posting view mode context. Required prop: `postings`. Optional props: `showCrisis`, `variant`, `cardsContainerClassName`, `listContainerClassName`, `cardItemClassName`, `listItemClassName`, `emptyState`.
+- **`PostingCollection`**: Shared renderer that switches between `PostingCard` and `PostingList` using global posting view mode context. Required prop: `postings`. Optional props: `showCrisis`, `crisisTagClickable` (default `true`), `variant`, `cardsContainerClassName`, `listContainerClassName`, `cardItemClassName`, `listItemClassName`, `emptyState`.
 - **`PostingViewModeToggle`**: Reusable cards/list toggle UI bound to global posting view mode context.
 - **`PostingViewModeProvider`** + **`usePostingViewMode`** (`PostingViewModeContext.tsx` and `PostingViewModeState.ts`): app-level context and hook for shared cards/list mode state with `localStorage` persistence.
 

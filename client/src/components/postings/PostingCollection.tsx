@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 type PostingCollectionProps = {
   postings: PostingWithContext[];
   showCrisis?: boolean;
+  crisisTagClickable?: boolean;
   variant?: 'volunteer' | 'organization';
   cardsContainerClassName?: string;
   listContainerClassName?: string;
@@ -19,6 +20,7 @@ type PostingCollectionProps = {
 function PostingCollection({
   postings,
   showCrisis = true,
+  crisisTagClickable = true,
   variant = 'volunteer',
   cardsContainerClassName,
   listContainerClassName,
@@ -45,12 +47,14 @@ function PostingCollection({
             <PostingCard
               posting={posting}
               showCrisis={showCrisis}
+              crisisTagClickable={crisisTagClickable}
             />
           )
         : (
             <PostingList
               posting={posting}
               showCrisis={showCrisis}
+              crisisTagClickable={crisisTagClickable}
               variant={variant}
             />
           )}

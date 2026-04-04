@@ -178,8 +178,6 @@ function VolunteerProfile() {
 
   const { trigger: updateProfile } = useAsync(
     async (data: {
-      first_name: string;
-      last_name: string;
       gender: 'male' | 'female' | 'other';
       description: string;
       skills: string[];
@@ -345,8 +343,6 @@ function VolunteerProfile() {
       setSaving(true);
 
       const response = await updateProfile({
-        first_name: data.first_name,
-        last_name: data.last_name,
         gender: data.gender,
         description: data.description,
         skills,
@@ -558,10 +554,28 @@ function VolunteerProfile() {
               ? (
                   <div className="space-y-3">
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                      <FormField form={form} name="first_name" label="First Name" />
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">First Name</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.volunteer.first_name}
+                          disabled
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                      <FormField form={form} name="last_name" label="Last Name" />
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Last Name</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.volunteer.last_name}
+                          disabled
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
                       <FormField
@@ -587,10 +601,13 @@ function VolunteerProfile() {
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
                       <div className="space-y-1">
                         <label className="text-sm font-medium">Date of Birth</label>
-                        <div className="input input-bordered w-full flex items-center gap-2 opacity-80">
-                          <Calendar size={16} />
-                          <span>{formattedDateOfBirth}</span>
-                        </div>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={formattedDateOfBirth}
+                          disabled
+                          readOnly
+                        />
                       </div>
                     </div>
                   </div>

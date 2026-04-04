@@ -10,9 +10,10 @@ import type { PostingWithContext } from '../../../server/src/types';
 interface PostingCardProps {
   posting: PostingWithContext;
   showCrisis?: boolean;
+  crisisTagClickable?: boolean;
 }
 
-function PostingCard({ posting, showCrisis = true }: PostingCardProps) {
+function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: PostingCardProps) {
   const postingDetailsPath = `/posting/${posting.id}`;
   const normalizeTimestamp = (value: string | Date | undefined | null) => {
     if (value == null) return null;
@@ -63,19 +64,33 @@ function PostingCard({ posting, showCrisis = true }: PostingCardProps) {
   if (volunteerPercent >= 100) radialColor = 'text-error';
   else if (volunteerPercent > 70) radialColor = 'text-warning';
 
+  const crisisTagContent = (
+    <>
+      <AlertCircle size={14} />
+      <span className="truncate max-w-40 text-sm font-semibold">
+        {posting.crisis_name}
+      </span>
+    </>
+  );
+
   return (
     // <article className="relative rounded-xl border border-base-200 bg-base-100 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col overflow-visible">
     <Card padding={false}>
       {showCrisis && posting.crisis_name && posting.crisis_id && (
-        <Link
-          to={`/volunteer/crises/${posting.crisis_id}/postings`}
-          className="absolute -top-2 -right-2 z-20 inline-flex items-center gap-1 rounded-md bg-accent text-accent-content px-2 py-1 shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
-        >
-          <AlertCircle size={14} />
-          <span className="truncate max-w-40 text-sm font-semibold">
-            {posting.crisis_name}
-          </span>
-        </Link>
+        crisisTagClickable
+          ? (
+              <Link
+                to={`/volunteer/crises/${posting.crisis_id}/postings`}
+                className="absolute -top-2 -right-2 z-20 inline-flex items-center gap-1 rounded-md bg-accent text-accent-content px-2 py-1 shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
+              >
+                {crisisTagContent}
+              </Link>
+            )
+          : (
+              <span className="absolute -top-2 -right-2 z-20 inline-flex items-center gap-1 rounded-md bg-accent text-accent-content px-2 py-1 shadow-sm rotate-3">
+                {crisisTagContent}
+              </span>
+            )
       )}
 
       <div className="p-4 md:p-5 mt-1 flex items-center justify-between gap-4">

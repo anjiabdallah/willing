@@ -1,21 +1,50 @@
+import database from '../../db/index.ts';
+
 import type { Database, OrganizationPosting, OrganizationRequest } from '../../db/tables/index.ts';
-import type { ControlledTransaction } from 'kysely';
+import type { Kysely } from 'kysely';
 
 type OrganizationRequestOptions = {
   email?: string;
   name?: string;
 };
 
-export async function createOrganizationRequest(
-  database: ControlledTransaction<Database>,
-  {
+type OrganizationPostingOptions = {
+  organizationId: number;
+  title?: string;
+  created_at?: Date;
+  overrides?: Partial<Omit<OrganizationPosting, 'id'>>;
+  skills?: string[];
+};
+
+type DbExecutor = Kysely<Database>;
+
+const isDbExecutor = (value: unknown): value is DbExecutor =>
+  typeof value === 'object'
+  && value !== null
+  && 'insertInto' in value
+  && 'selectFrom' in value;
+
+const resolveFixtureArgs = <T>(arg1?: DbExecutor | T, arg2?: T): [DbExecutor, T] => {
+  if (isDbExecutor(arg1)) {
+    return [arg1, (arg2 ?? {}) as T];
+  }
+
+  return [database, (arg1 ?? {}) as T];
+};
+
+export async function createOrganizationRequest(options?: OrganizationRequestOptions): Promise<OrganizationRequest>;
+export async function createOrganizationRequest(db: DbExecutor, options?: OrganizationRequestOptions): Promise<OrganizationRequest>;
+export async function createOrganizationRequest(arg1?: DbExecutor | OrganizationRequestOptions, arg2?: OrganizationRequestOptions): Promise<OrganizationRequest> {
+  const [db, options] = resolveFixtureArgs<OrganizationRequestOptions>(arg1, arg2);
+
+  const {
     email = 'pending-org@example.com',
     name = 'Pending Org',
-  }: OrganizationRequestOptions = {},
-): Promise<OrganizationRequest> {
+  } = options;
+
   const now = new Date();
 
-  const request = await database
+  const request = await db
     .insertInto('organization_request')
     .values({
       name,
@@ -33,29 +62,24 @@ export async function createOrganizationRequest(
   return request;
 }
 
-type OrganizationPostingOptions = {
-  organizationId: number;
-  title?: string;
-  created_at?: Date;
-  overrides?: Partial<Omit<OrganizationPosting, 'id'>>;
-  skills?: string[];
-};
+export async function createOrganizationPosting(options: OrganizationPostingOptions): Promise<OrganizationPosting>;
+export async function createOrganizationPosting(db: DbExecutor, options: OrganizationPostingOptions): Promise<OrganizationPosting>;
+export async function createOrganizationPosting(arg1: DbExecutor | OrganizationPostingOptions, arg2?: OrganizationPostingOptions): Promise<OrganizationPosting> {
+  const [db, options] = resolveFixtureArgs<OrganizationPostingOptions>(arg1, arg2);
 
-export async function createOrganizationPosting(
-  database: ControlledTransaction<Database>,
-  {
+  const {
     organizationId,
     title = 'Community Cleanup',
     created_at,
     overrides,
     skills,
-  }: OrganizationPostingOptions,
-): Promise<OrganizationPosting> {
+  } = options;
+
   const now = created_at ?? overrides?.created_at ?? new Date();
   const startDate = overrides?.start_date ?? new Date('2026-01-01');
   const endDate = overrides?.end_date ?? new Date('2026-01-02');
 
-  const posting = await database
+  const posting = await db
     .insertInto('organization_posting')
     .values({
       organization_id: organizationId,
@@ -81,7 +105,7 @@ export async function createOrganizationPosting(
     .executeTakeFirstOrThrow();
 
   if (skills && skills.length > 0) {
-    await database
+    await db
       .insertInto('posting_skill')
       .values(skills.map(name => ({
         posting_id: posting.id,

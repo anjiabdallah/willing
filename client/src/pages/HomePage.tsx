@@ -1,4 +1,4 @@
-import { Handshake, BriefcaseMedical, HandHeart, AlertTriangle, ArrowRight, Award, Building2, Heart, Send, ShieldCheck, Users } from 'lucide-react';
+import { Handshake, BriefcaseMedical, HandHeart, AlertTriangle, ArrowRight, Award, Building2, FileSearch, Heart, Send, ShieldCheck, Users } from 'lucide-react';
 import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -350,22 +350,52 @@ function HomePage() {
                   )}
           </section>
         </div>
+
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8">
+          <section className="rounded-[2rem] border border-primary/25 bg-base-100 p-8 shadow-[0_18px_60px_rgba(0,0,0,0.07)] md:p-10">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Public Verification</p>
+                <h2 className="mt-3 text-3xl font-black leading-tight tracking-[-0.03em] text-base-content md:text-4xl">
+                  Verify a Certificate
+                </h2>
+                <p className="mt-3 max-w-2xl text-base text-base-content/75">
+                  Check certificate authenticity instantly with a verification token. No login required.
+                </p>
+              </div>
+              <div className="md:shrink-0">
+                <LinkButton
+                  to="/certificate/verify"
+                  color="primary"
+                  layout="wide"
+                  Icon={FileSearch}
+                >
+                  Open Verification Page
+                </LinkButton>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <div className="w-full bg-base-200">
           <svg viewBox="0 0 1440 120" className="w-full text-base-100" preserveAspectRatio="none" height="120">
             <path d="M0,56L60,64C120,72,240,88,360,90.7C480,93,600,83,720,69.3C840,56,960,40,1080,42.7C1200,45,1320,67,1380,77.3L1440,88L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z" fill="currentColor" />
           </svg>
 
-          <div className="py-20 text-center min-h-96 flex flex-col items-center justify-center">
-            <h2 className="text-4xl font-extrabold tracking-tight text-base-content">Want to Learn More?</h2>
-            <p className="mt-4 text-lg text-base-content/80">Check out our guide page for full details!</p>
-            <LinkButton
-              to="/guide"
-              color="primary"
-              layout="wide"
-              className="mt-8"
-            >
-              Read Our Guide
-            </LinkButton>
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-20 md:px-6 xl:px-8">
+            <section className="text-center min-h-72 flex flex-col items-center justify-center">
+              <h2 className="text-4xl font-extrabold tracking-tight text-base-content">Want to Learn More?</h2>
+              <p className="mt-4 text-lg text-base-content/80">Check out our guide page for full details!</p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <LinkButton
+                  to="/guide"
+                  color="secondary"
+                  layout="wide"
+                >
+                  Read Our Guide
+                </LinkButton>
+              </div>
+            </section>
           </div>
         </div>
       </main>

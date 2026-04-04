@@ -2,10 +2,18 @@ import path from 'path';
 
 import { type Response, Router } from 'express';
 import { type Kysely } from 'kysely';
+import zod from 'zod';
 
-import { type PublicCertificateSignatureResponse, type PublicHomeStatsResponse } from './public.types.ts';
+import { type PublicCertificateSignatureResponse, type PublicCertificateVerificationResponse, type PublicHomeStatsResponse } from './public.types.ts';
+import config from '../../config.ts';
 import { type Database } from '../../db/tables/index.ts';
+import { verifySignedCertificateToken } from '../../services/certificates/token.ts';
+import { verifyCertificatePayloadAgainstDatabase } from '../../services/certificates/verification.ts';
 import { PLATFORM_SIGNATURE_UPLOAD_DIR } from '../../services/uploads/paths.ts';
+
+const certificateVerificationBodySchema = zod.object({
+  token: zod.string().trim().min(1, 'Certificate token is required.').max(512, 'Certificate token is too long.'),
+});
 
 function createPublicRouter(db: Kysely<Database>) {
   const publicRouter = Router();
@@ -78,6 +86,88 @@ function createPublicRouter(db: Kysely<Database>) {
     res.sendFile(settings.signature_path, { root: PLATFORM_SIGNATURE_UPLOAD_DIR }, (error) => {
       if (!error) return;
       next(error);
+    });
+  });
+
+  publicRouter.post('/certificate/verify', async (req, res: Response<PublicCertificateVerificationResponse>) => {
+    const parsedBody = certificateVerificationBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        valid: false,
+        message: 'Invalid certificate token format.',
+      });
+      return;
+    }
+
+    const body = parsedBody.data;
+    const tokenResult = verifySignedCertificateToken(body.token, config.CERTIFICATE_VERIFICATION_SECRET);
+
+    if (!tokenResult.valid) {
+      if (tokenResult.reason === 'malformed') {
+        res.status(400).json({
+          valid: false,
+          message: 'Invalid certificate token format.',
+        });
+        return;
+      }
+
+      res.json({
+        valid: false,
+        message: 'Certificate is invalid.',
+      });
+      return;
+    }
+
+    const dbVerification = await verifyCertificatePayloadAgainstDatabase(tokenResult.payload, db);
+    if (!dbVerification.valid) {
+      res.json({
+        valid: false,
+        message: 'Certificate is invalid.',
+      });
+      return;
+    }
+
+    const volunteerId = Number(tokenResult.payload.uid);
+    const volunteer = await db
+      .selectFrom('volunteer_account')
+      .select(['first_name', 'last_name'])
+      .where('id', '=', volunteerId)
+      .executeTakeFirst();
+
+    if (!volunteer) {
+      res.json({
+        valid: false,
+        message: 'Certificate is invalid.',
+      });
+      return;
+    }
+
+    const organizationIds = tokenResult.payload.org_ids.map(Number);
+    const organizations = organizationIds.length === 0
+      ? []
+      : await db
+          .selectFrom('organization_account')
+          .select(['id', 'name'])
+          .where('id', 'in', organizationIds)
+          .execute();
+
+    const organizationNameById = new Map<number, string>();
+    organizations.forEach((organization) => {
+      organizationNameById.set(organization.id, organization.name);
+    });
+
+    res.json({
+      valid: true,
+      message: 'Certificate is valid.',
+      issued_at: tokenResult.payload.issued_at,
+      certificate_type: tokenResult.payload.type,
+      volunteer_name: `${volunteer.first_name} ${volunteer.last_name}`.trim(),
+      total_hours: tokenResult.payload.total_hours,
+      organizations: organizationIds.map(orgId => ({
+        id: orgId,
+        name: organizationNameById.get(orgId) ?? `Organization ${orgId}`,
+        hours: tokenResult.payload.hours_per_org[String(orgId)] ?? 0,
+      })),
     });
   });
 

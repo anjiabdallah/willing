@@ -16,6 +16,7 @@ import AdminRequests from './pages/admin/AdminRequests';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogin from './pages/AdminLogin';
 import CalendarInfoDemoPage from './pages/CalendarInfoDemoPage';
+import CertificateVerification from './pages/CertificateVerification';
 import ForgotPassword from './pages/ForgotPassword';
 import GuidePage from './pages/GuidePage';
 import HomePage from './pages/HomePage';
@@ -92,6 +93,7 @@ createRoot(document.getElementById('root')!).render(
 
               <Route path="organization/:id" element={<OrganizationProfile />} />
               <Route path="guide" element={<GuidePage />} />
+              <Route path="certificate/verify" element={<CertificateVerification />} />
               <Route path="calendar-demo" element={<CalendarInfoDemoPage />} />
 
               <Route path="/" element={<SharedPage roles={['volunteer', 'organization']} />}>

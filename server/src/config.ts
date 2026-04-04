@@ -8,6 +8,23 @@ dotenv.config({
   path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
 });
 
+const deriveUploadDirFromLegacyCVDir = (cvUploadDir: string | undefined): string | undefined => {
+  if (!cvUploadDir) return undefined;
+
+  const normalized = cvUploadDir.replace(/[\\/]+$/, '');
+  const lastSeparatorIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+
+  if (lastSeparatorIndex < 0) return undefined;
+
+  return normalized.slice(0, lastSeparatorIndex);
+};
+
+const env = {
+  ...process.env,
+  UPLOAD_DIR: process.env.UPLOAD_DIR ?? deriveUploadDirFromLegacyCVDir(process.env.CV_UPLOAD_DIR),
+  CERTIFICATE_VERIFICATION_SECRET: process.env.CERTIFICATE_VERIFICATION_SECRET,
+};
+
 const optionalInDev = <T>(schema: zod.ZodType<T>): zod.ZodType<T> =>
   zod.preprocess((val: unknown) => (val === '' ? undefined : val), schema);
 
@@ -27,6 +44,7 @@ const schema = zod.object({
   POSTGRES_SCHEMA: zod.string().min(1),
 
   JWT_SECRET: zod.string().min(1),
+  CERTIFICATE_VERIFICATION_SECRET: zod.string().min(1),
   UPLOAD_DIR: zod.string(),
 
   SMTP_HOST: optionalInDev(zod.string().optional()),
@@ -58,7 +76,7 @@ const schema = zod.object({
     });
   });
 
-const config = schema.parse(process.env);
+const config = schema.parse(env);
 
 const workerId = process.env.VITEST_WORKER_ID || '0';
 

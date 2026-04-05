@@ -88,7 +88,7 @@ function HomePage() {
       <UserNavbar />
 
       <main className="relative grow">
-        <section className="bg-base-200 relative overflow-hidden">
+        <section className="bg-base-200 relative overflow-visible">
 
           {[
             { Icon: BriefcaseMedical, top: '71%', left: '33%', size: 42 },
@@ -111,18 +111,18 @@ function HomePage() {
           ))}
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 pt-10 md:px-6 xl:px-8">
             <div className="px-4 pt-10 text-center md:px-6 xl:px-8">
-              <h1 className="text-5xl md:text-7xl font-extrabold mb-4 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">
+              <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.1] mb-4 pb-2 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">
                 Connecting volunteers to their
                 <br />
                 <span>vision of a better community</span>
               </h1>
             </div>
 
-            <div className="relative left-1/2 -mt-10 w-screen -translate-x-1/2 overflow-hidden">
+            <div className="relative left-1/2 -mt-10 w-screen -translate-x-1/2 overflow-visible">
               <div className="px-4 pb-24 pt-14 md:px-6 xl:px-8">
                 <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
                   <div className="max-w-2xl self-start pt-2 text-right lg:justify-self-end">
-                    <h2 className="text-3xl md:text-5xl font-black leading-[1.02] tracking-[-0.04em] text-base-content mt-8">
+                    <h2 className="text-3xl md:text-5xl font-black leading-[1.08] tracking-[-0.04em] text-base-content mt-8">
                       Volunteer and make a difference today
                     </h2>
                     <p className="mt-6 ml-auto max-w-xl text-base leading-8 text-base-content/72">
@@ -239,7 +239,7 @@ function HomePage() {
               </div>
 
               <div className="max-w-2xl self-start pt-2 lg:justify-self-end mt-8">
-                <h2 className="text-3xl md:text-5xl font-black leading-[0.98] tracking-[-0.04em] text-base-content">
+                <h2 className="text-3xl md:text-5xl font-black leading-[1.04] tracking-[-0.04em] text-base-content">
                   Join and find
                   <br />
                   <span className="whitespace-nowrap text-[0.9em]">passionate volunteers</span>

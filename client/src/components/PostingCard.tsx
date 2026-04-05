@@ -11,9 +11,72 @@ interface PostingCardProps {
   posting: PostingWithContext;
   showCrisis?: boolean;
   crisisTagClickable?: boolean;
+  fillHeight?: boolean;
 }
 
-function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: PostingCardProps) {
+const getPostingDates = (startDate: string | Date, endDate: string | Date | null | undefined) => {
+  const normalizeDateOnly = (value: string | Date | null | undefined) => {
+    if (value == null) return undefined;
+    if (value instanceof Date) {
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    }
+
+    const datePart = value.split('T')[0]?.trim();
+    return datePart || undefined;
+  };
+
+  const parseIsoDateParts = (value: string) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return undefined;
+
+    return {
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+    };
+  };
+
+  const formatDateToIso = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+
+  const normalizedStartDate = normalizeDateOnly(startDate);
+  const normalizedEndDate = normalizeDateOnly(endDate ?? startDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
+  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+};
+
+const isPostingFullyBooked = (posting: PostingWithContext) => {
+  if (posting.max_volunteers == null) {
+    return false;
+  }
+
+  if (!posting.allows_partial_attendance) {
+    return (posting.enrollment_count ?? 0) >= posting.max_volunteers;
+  }
+
+  const postingDates = getPostingDates(posting.start_date, posting.end_date);
+  if (postingDates.length === 0) {
+    return false;
+  }
+
+  return postingDates.every(date => (posting.date_capacity?.[date] ?? 0) >= posting.max_volunteers!);
+};
+
+function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fillHeight = false }: PostingCardProps) {
   const postingDetailsPath = `/posting/${posting.id}`;
   const normalizeTimestamp = (value: string | Date | undefined | null) => {
     if (value == null) return null;
@@ -56,10 +119,12 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: 
   const endDateStr = formatCardDate(endDt);
   const startTimeStr = formatTime12Hour(startTimeValue) || (startDt ? startDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const endTimeStr = formatTime12Hour(endTimeValue) || (endDt ? endDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const isSingleDayPosting = !hasEndDate || startDateStr === endDateStr;
+  const shouldShowVolunteerCapacity = !posting.allows_partial_attendance || isSingleDayPosting;
 
   const volunteerFilled = posting.enrollment_count ?? 0;
   const volunteerPercent = posting.max_volunteers ? Math.round((volunteerFilled / posting.max_volunteers) * 100) : 0;
-  const isPostingFull = Boolean(posting.max_volunteers && volunteerFilled >= posting.max_volunteers);
+  const isPostingFull = isPostingFullyBooked(posting);
   let radialColor = 'text-primary';
   if (volunteerPercent >= 100) radialColor = 'text-error';
   else if (volunteerPercent > 70) radialColor = 'text-warning';
@@ -74,8 +139,7 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: 
   );
 
   return (
-    // <article className="relative rounded-xl border border-base-200 bg-base-100 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col overflow-visible">
-    <Card padding={false}>
+    <Card padding={false} fillHeight={fillHeight}>
       {showCrisis && posting.crisis_name && posting.crisis_id && (
         crisisTagClickable
           ? (
@@ -226,8 +290,9 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: 
         </div>
 
         <div className="px-4 md:px-5 mt-4 border-t border-base-200 pt-3">
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
-            <div className="flex items-center gap-2 flex-1">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-muted">
+            {/* Left column: Location */}
+            <div className="flex items-center gap-2">
               <MapPin size={16} className="text-primary shrink-0" />
               <div>
                 <p className="text-xs opacity-70">LOCATION</p>
@@ -235,34 +300,56 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true }: 
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-1">
-              <span className="relative w-8 h-8">
-                <div
-                  className={`radial-progress absolute inset-0 m-auto ${radialColor}`}
-                  style={{ '--value': volunteerPercent, '--thickness': '0.4rem', 'scale': 0.4, 'transform': 'translate(-75%, 0%)' } as React.CSSProperties}
-                  aria-valuenow={volunteerPercent}
-                  role="progressbar"
-                />
-                <Users size={16} className="text-primary absolute inset-0 m-auto" />
-              </span>
-              <div>
-                <p className="text-xs opacity-70">VOLUNTEERS</p>
-                <p className="text-sm">{`${volunteerFilled}${posting.max_volunteers ? '/' + posting.max_volunteers : ''}`}</p>
-              </div>
-            </div>
+            {/* Right column: Commitment */}
+            {isSingleDayPosting
+              ? <div />
+              : (
+                  <div className="flex items-center gap-2 pl-4">
+                    <Calendar size={16} className="text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs opacity-70">COMMITMENT</p>
+                      <p className="text-sm">{posting.allows_partial_attendance ? 'Partial' : 'Full'}</p>
+                    </div>
+                  </div>
+                )}
 
-            {posting.minimum_age && (
-              <div className="flex items-center gap-2 flex-1">
-                <Cake size={16} className="text-primary" />
-                <div>
-                  <p className="text-xs opacity-70">AGE</p>
-                  <p className="text-sm">
-                    {posting.minimum_age}
-                    +
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* Left column: Volunteers */}
+            {shouldShowVolunteerCapacity
+              ? (
+                  <div className="flex items-center gap-2">
+                    <span className="relative w-8 h-8">
+                      <div
+                        className={`radial-progress absolute inset-0 m-auto ${radialColor}`}
+                        style={{ '--value': volunteerPercent, '--thickness': '0.4rem', 'scale': 0.4, 'transform': 'translate(-75%, 0%)' } as React.CSSProperties}
+                        aria-valuenow={volunteerPercent}
+                        role="progressbar"
+                      />
+                      <Users size={16} className="text-primary absolute inset-0 m-auto" />
+                    </span>
+                    <div>
+                      <p className="text-xs opacity-70">VOLUNTEERS</p>
+                      <p className="text-sm">{`${volunteerFilled}${posting.max_volunteers ? '/' + posting.max_volunteers : ''}`}</p>
+                    </div>
+                  </div>
+                )
+              : <div />}
+
+            {/* Right column: Age */}
+            {posting.minimum_age
+              ? (
+                  <div className="flex items-center gap-2 pl-4">
+                    <Cake size={16} className="text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs opacity-70">AGE</p>
+                      <p className="text-sm">
+                        {posting.minimum_age}
+                        {' '}
+                        +
+                      </p>
+                    </div>
+                  </div>
+                )
+              : <div />}
           </div>
         </div>
       </div>

@@ -40,7 +40,7 @@ function PostingCollection({
   const items = postings.map(posting => (
     <div
       key={posting.id}
-      className={isCards ? cardItemClassName : listItemClassName}
+      className={isCards ? `h-full min-h-[24rem] self-stretch flex flex-col ${cardItemClassName ?? ''}` : listItemClassName}
     >
       {isCards
         ? (
@@ -48,6 +48,7 @@ function PostingCollection({
               posting={posting}
               showCrisis={showCrisis}
               crisisTagClickable={crisisTagClickable}
+              fillHeight={isCards}
             />
           )
         : (

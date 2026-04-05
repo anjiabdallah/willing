@@ -46,6 +46,7 @@ export type PostingSearchFilters = SharedPostingFilterFields & {
   crisisId: 'all' | `${number}`;
   entity: 'postings' | 'organizations' | 'crises';
   crisisFilter: 'all' | 'pinned_only' | 'unpinned_only';
+  organizationCertificateFilter: 'all' | 'enabled' | 'disabled';
 };
 
 type PostingCrisisOption = {
@@ -103,6 +104,8 @@ const toPostingSearchFormValues = (filters: PostingSearchFilters): PostingSearch
   hideFull: filters.hideFull,
   crisisId: filters.crisisId,
   entity: filters.entity,
+  postingFilter: filters.postingFilter,
+  organizationCertificateFilter: filters.organizationCertificateFilter,
 });
 
 const fromPostingSearchFormValues = (values: PostingSearchFormValues): PostingSearchFilters => {
@@ -136,8 +139,8 @@ const fromPostingSearchFormValues = (values: PostingSearchFormValues): PostingSe
     hideFull: values.hideFull,
     crisisId: values.crisisId,
     entity: values.entity,
-    crisisFilter,
-  } as PostingSearchFilters;
+    postingFilter: values.postingFilter ?? 'all',
+    crisisFilter, organizationCertificateFilter: values.organizationCertificateFilter ?? 'all' } as PostingSearchFilters;
 };
 
 function PostingSearchView({
@@ -169,6 +172,8 @@ function PostingSearchView({
     crisisId: 'all',
     entity: 'postings',
     crisisFilter: 'all',
+    postingFilter: 'all',
+    organizationCertificateFilter: 'all',
     ...initialFilters,
   }), [initialFilters]);
 
@@ -223,6 +228,9 @@ function PostingSearchView({
             if (activeFilters.sortBy === 'title') {
               orgQuery.append('sort_by', 'title');
               orgQuery.append('sort_dir', activeFilters.sortDir);
+            }
+            if (activeFilters.organizationCertificateFilter && activeFilters.organizationCertificateFilter !== 'all') {
+              orgQuery.append('certificate_enabled', activeFilters.organizationCertificateFilter);
             }
             const orgUrl = orgQuery.toString() ? `/volunteer/organizations?${orgQuery.toString()}` : '/volunteer/organizations';
             return requestServer<VolunteerOrganizationSearchResponse>(orgUrl, { includeJwt: true });
@@ -363,22 +371,60 @@ function PostingSearchView({
                 { label: 'Title (Z-A)', value: 'title_desc' },
               ]
             : volunteerPostingSortOptions.map(option => ({ label: option.label, value: option.value }))}
-        extraFields={activeEntity === 'crises'
-          ? form => (
-            <div className="lg:col-span-2">
+        extraFields={(form) => {
+          if (activeEntity === 'postings') {
+            return (
               <FormField
                 form={form}
-                name="crisisFilter"
-                label="Crisis visibility"
+                name="postingFilter"
+                label="Posting Filter"
                 selectOptions={[
-                  { label: 'All crises', value: 'all' },
-                  { label: 'Pinned only', value: 'pinned_only' },
-                  { label: 'Unpinned only', value: 'unpinned_only' },
+                  { label: 'All postings', value: 'all' },
+                  { label: 'Open postings', value: 'open' },
+                  { label: 'Review-based postings', value: 'review' },
+                  { label: 'Full commitment', value: 'full' },
+                  { label: 'Partial commitment', value: 'partial' },
+                  { label: 'Tagged postings', value: 'tagged' },
+                  { label: 'Untagged postings', value: 'untagged' },
                 ]}
               />
-            </div>
-          )
-          : undefined}
+            );
+          }
+
+          if (activeEntity === 'organizations') {
+            return (
+              <FormField
+                form={form}
+                name="organizationCertificateFilter"
+                label="Certificate status"
+                selectOptions={[
+                  { label: 'All organizations', value: 'all' },
+                  { label: 'Cert enabled', value: 'enabled' },
+                  { label: 'Cert disabled', value: 'disabled' },
+                ]}
+              />
+            );
+          }
+
+          if (activeEntity === 'crises') {
+            return (
+              <div className="lg:col-span-2">
+                <FormField
+                  form={form}
+                  name="crisisFilter"
+                  label="Crisis visibility"
+                  selectOptions={[
+                    { label: 'All crises', value: 'all' },
+                    { label: 'Pinned only', value: 'pinned_only' },
+                    { label: 'Unpinned only', value: 'unpinned_only' },
+                  ]}
+                />
+              </div>
+            );
+          }
+
+          return null;
+        }}
         showAdvanced={activeEntity === 'postings'}
         getHasAdvancedFiltersApplied={values => activeEntity === 'postings'
           ? (hasSharedAdvancedPostingFilters(values) || values.hideFull || values.crisisId !== 'all')
@@ -422,7 +468,20 @@ function PostingSearchView({
               label="End Time By"
               type="time"
             />
-
+            {activeEntity === 'organizations' && (
+              <div className="lg:col-span-2">
+                <FormField
+                  form={form}
+                  name="organizationCertificateFilter"
+                  label="Certificate status"
+                  selectOptions={[
+                    { label: 'All organizations', value: 'all' },
+                    { label: 'Cert enabled', value: 'enabled' },
+                    { label: 'Cert disabled', value: 'disabled' },
+                  ]}
+                />
+              </div>
+            )}
             {enableCrisisFilter && (
               <div className="lg:col-span-2">
                 <FormField

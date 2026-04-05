@@ -102,22 +102,44 @@ export async function sendAdminOrganizationRequestEmail(
     html,
   });
 }
+function formatEmailDate(dateString: string): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
 export async function sendVolunteerApplicationAcceptedEmail(opts: {
   volunteerEmail: string;
   volunteerName: string;
   organizationName: string;
   postingTitle: string;
+  acceptedDates?: string[];
 }) {
   const subject = 'You\'re in! Your volunteering application was accepted';
+
+  const rows = [
+    { label: 'Organization', value: opts.organizationName },
+    { label: 'Posting', value: opts.postingTitle },
+  ];
+
+  const paragraphs = ['Congratulations! Thank you for stepping up to help your community.'];
+
+  if (opts.acceptedDates && opts.acceptedDates.length > 0) {
+    const formattedDates = opts.acceptedDates
+      .map(date => formatEmailDate(date));
+    rows.push({ label: 'Accepted dates', value: formattedDates.join(', ') });
+  }
 
   const { html, text } = buildEmailBody({
     title: 'Application Accepted - Congratulations!',
     intro: `Hello ${opts.volunteerName}, your volunteering application was accepted.`,
-    rows: [
-      { label: 'Organization', value: opts.organizationName },
-      { label: 'Posting', value: opts.postingTitle },
-    ],
-    paragraphs: ['Congratulations! Thank you for stepping up to help your community.'],
+    rows,
+    paragraphs,
     tone: 'success',
   });
 

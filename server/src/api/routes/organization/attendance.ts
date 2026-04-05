@@ -2,11 +2,6 @@ import { Router, type Response } from 'express';
 import { type Kysely } from 'kysely';
 import zod from 'zod';
 
-import {
-  type OrganizationPostingAttendanceBulkUpdateResponse,
-  type OrganizationPostingAttendanceResponse,
-  type OrganizationPostingEnrollmentAttendanceUpdateResponse,
-} from './attendance.types.ts';
 import { getPostingEnrollments } from './postingEnrollments.ts';
 import { type Database } from '../../../db/tables/index.ts';
 import { recomputeVolunteerExperienceVector } from '../../../services/embeddings/updates.ts';
@@ -28,6 +23,56 @@ const toCsvCell = (value: string | number | boolean | null | undefined) => {
   return `"${stringValue.replace(/"/g, '""')}"`;
 };
 
+function formatDateToIso(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeStoredDate(value: Date | string | null | undefined): string | undefined {
+  if (value instanceof Date) {
+    return formatDateToIso(value);
+  }
+
+  if (typeof value === 'string') {
+    const datePart = value.split('T')[0]?.trim();
+    return datePart || undefined;
+  }
+
+  return undefined;
+}
+
+function parseIsoDateParts(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return undefined;
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+}
+
+function getPostingDates(startDate: Date | string, endDate: Date | string): string[] {
+  const normalizedStartDate = normalizeStoredDate(startDate);
+  const normalizedEndDate = normalizeStoredDate(endDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
+  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+}
+
 const toCsv = (
   rows: Array<Record<string, string | number | boolean | null | undefined>>,
   headers: string[],
@@ -38,16 +83,16 @@ const toCsv = (
   return [headerLine, ...bodyLines].join('\n');
 };
 
-function createOrganizationAttendanceRouter(db: Kysely<Database>) {
+function createAttendanceRouter(db: Kysely<Database>) {
   const attendanceRouter = Router();
 
-  attendanceRouter.get('/:id/attendance', async (req, res: Response<OrganizationPostingAttendanceResponse>) => {
+  attendanceRouter.get('/:id/attendance', async (req, res: Response) => {
     const orgId = req.userJWT!.id;
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
     const posting = await db
       .selectFrom('organization_posting')
-      .select(['id', 'title', 'location_name'])
+      .select(['id', 'title', 'location_name', 'start_date', 'end_date', 'allows_partial_attendance'])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
       .executeTakeFirst();
@@ -58,14 +103,14 @@ function createOrganizationAttendanceRouter(db: Kysely<Database>) {
     }
 
     const enrollments = await getPostingEnrollments(db, postingId);
+    const posting_dates = posting.start_date && posting.end_date
+      ? getPostingDates(posting.start_date, posting.end_date)
+      : [];
 
-    res.json({
-      posting,
-      enrollments,
-    });
+    res.json({ posting, enrollments, posting_dates });
   });
 
-  attendanceRouter.patch('/:id/attendance', async (req, res: Response<OrganizationPostingAttendanceBulkUpdateResponse>) => {
+  attendanceRouter.patch('/:id/attendance', async (req, res: Response) => {
     const orgId = req.userJWT!.id;
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
     const body = attendanceBulkUpdateBodySchema.parse(req.body);
@@ -90,13 +135,66 @@ function createOrganizationAttendanceRouter(db: Kysely<Database>) {
       .returning('volunteer_id')
       .execute();
 
-    const volunteerIds = Array.from(new Set(changed.map(row => row.volunteer_id)));
+    const volunteerIds = Array.from(new Set((changed as Array<{ volunteer_id: number }>).map(row => row.volunteer_id)));
     await Promise.all(volunteerIds.map(volunteerId => recomputeVolunteerExperienceVector(volunteerId, db)));
 
     res.json({ updated_count: changed.length });
   });
 
-  attendanceRouter.get('/:id/attendance/export', async (req, res: Response<string>) => {
+  attendanceRouter.patch('/:id/enrollment-dates/:enrollmentDateId/attendance', async (req, res: Response) => {
+    const orgId = req.userJWT!.id;
+    const { id: postingId, enrollmentDateId } = zod.object({
+      id: zod.coerce.number().int().positive(),
+      enrollmentDateId: zod.coerce.number().int().positive(),
+    }).parse(req.params);
+    const body = attendanceUpdateBodySchema.parse(req.body);
+
+    const posting = await db
+      .selectFrom('organization_posting')
+      .select(['id'])
+      .where('id', '=', postingId)
+      .where('organization_id', '=', orgId)
+      .executeTakeFirst();
+
+    if (!posting) {
+      res.status(404);
+      throw new Error('Posting not found');
+    }
+
+    const dateRecord = await db
+      .selectFrom('enrollment_date')
+      .select(['id', 'enrollment_id'])
+      .where('id', '=', enrollmentDateId)
+      .where('posting_id', '=', postingId)
+      .executeTakeFirst();
+
+    if (!dateRecord) {
+      res.status(404);
+      throw new Error('Enrollment date record not found');
+    }
+
+    await db
+      .updateTable('enrollment_date')
+      .set({ attended: body.attended })
+      .where('id', '=', enrollmentDateId)
+      .execute();
+
+    if (body.attended) {
+      const enrollment = await db
+        .selectFrom('enrollment')
+        .select(['id', 'volunteer_id'])
+        .where('id', '=', dateRecord.enrollment_id)
+        .executeTakeFirst();
+
+      if (enrollment) {
+        await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
+      }
+    }
+
+    res.json({});
+  });
+
+  attendanceRouter.get('/:id/attendance/export', async (req, res) => {
     const orgId = req.userJWT!.id;
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
@@ -113,6 +211,7 @@ function createOrganizationAttendanceRouter(db: Kysely<Database>) {
     }
 
     const enrollments = await getPostingEnrollments(db, postingId);
+
     const rows = enrollments.map(enrollment => ({
       enrollment_id: enrollment.enrollment_id,
       volunteer_id: enrollment.volunteer_id,
@@ -126,28 +225,16 @@ function createOrganizationAttendanceRouter(db: Kysely<Database>) {
       skills: enrollment.skills.map(skill => skill.name).join('|'),
     }));
 
-    const csvHeaders = [
-      'enrollment_id',
-      'volunteer_id',
-      'first_name',
-      'last_name',
-      'email',
-      'date_of_birth',
-      'gender',
-      'attended',
-      'message',
-      'skills',
-    ];
-
+    const csvHeaders = ['enrollment_id', 'volunteer_id', 'first_name', 'last_name', 'email', 'date_of_birth', 'gender', 'attended', 'message', 'skills'];
     const csv = toCsv(rows, csvHeaders);
-    const safeTitle = posting.title.replace(/[^a-z0-9-_]+/gi, '_');
+    const safeTitle = posting.title.replace(/[^a-z0-9-_]+/gi, '_') || 'posting';
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'posting'}-attendance.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}-attendance.csv"`);
     res.send(csv);
   });
 
-  attendanceRouter.patch('/:id/enrollments/:enrollmentId/attendance', async (req, res: Response<OrganizationPostingEnrollmentAttendanceUpdateResponse>) => {
+  attendanceRouter.patch('/:id/enrollments/:enrollmentId/attendance', async (req, res) => {
     const orgId = req.userJWT!.id;
     const { id: postingId, enrollmentId } = zod.object({
       id: zod.coerce.number().int().positive(),
@@ -197,4 +284,4 @@ function createOrganizationAttendanceRouter(db: Kysely<Database>) {
   return attendanceRouter;
 }
 
-export default createOrganizationAttendanceRouter;
+export default createAttendanceRouter;

@@ -257,7 +257,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
     },
   );
 
-  organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResponse>, next) => {
+  organizationRouter.get('/:id', authorizeOnly('volunteer', 'organization'), async (req, res: Response<OrganizationProfileResponse>, next) => {
     let orgId;
     try {
       orgId = zod

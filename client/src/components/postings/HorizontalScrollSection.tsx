@@ -97,7 +97,7 @@ function HorizontalScrollSection({
             <div className="relative">
               <div
                 ref={scrollContainerRef}
-                className="flex gap-4 overflow-x-scroll overflow-y-hidden py-3 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex items-stretch gap-4 overflow-x-scroll overflow-y-hidden py-3 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
                 {children}
               </div>

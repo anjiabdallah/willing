@@ -15,11 +15,16 @@ async function seed() {
 
   await sql`
   TRUNCATE TABLE
+    enrollment_application_date,
+    enrollment_date,
     enrollment_application,
     enrollment,
     posting_skill,
     volunteer_skill,
     organization_posting,
+    platform_certificate_settings,
+    organization_certificate_info,
+    volunteer_pending_account,
     organization_request,
     volunteer_account,
     organization_account,
@@ -35,6 +40,72 @@ async function seed() {
     password: passwordHash,
   }).execute();
 
+  await database.insertInto('platform_certificate_settings').values({
+    signatory_name: 'Willing Platform',
+    signatory_position: 'Volunteer Program Director',
+    signature_path: 'platform-signatures/willing-platform-signature.png',
+    signature_uploaded_by_admin_id: 1,
+  }).execute();
+
+  const certificateInfos = await database.insertInto('organization_certificate_info')
+    .values([
+      {
+        certificate_feature_enabled: true,
+        hours_threshold: 8,
+        signatory_name: 'Mira Khoury',
+        signatory_position: 'Programs Director',
+        signature_path: 'org-signatures/nour-relief-signature.png',
+      },
+      {
+        certificate_feature_enabled: false,
+        hours_threshold: null,
+        signatory_name: null,
+        signatory_position: null,
+        signature_path: null,
+      },
+      {
+        certificate_feature_enabled: true,
+        hours_threshold: 5,
+        signatory_name: 'Fadi Daher',
+        signatory_position: 'Community Partnerships Lead',
+        signature_path: 'org-signatures/arz-community-signature.png',
+      },
+      {
+        certificate_feature_enabled: true,
+        hours_threshold: 6,
+        signatory_name: 'Nadine Saliba',
+        signatory_position: 'Executive Director',
+        signature_path: 'org-signatures/cedar-response-signature.png',
+      },
+      {
+        certificate_feature_enabled: false,
+        hours_threshold: null,
+        signatory_name: null,
+        signatory_position: null,
+        signature_path: null,
+      },
+    ])
+    .returning(['id'])
+    .execute();
+
+  const [
+    nourReliefCertificateInfo,
+    ajialounaCertificateInfo,
+    arzCommunityCertificateInfo,
+    cedarResponseCertificateInfo,
+    bekaaUpliftCertificateInfo,
+  ] = certificateInfos;
+
+  if (
+    !nourReliefCertificateInfo
+    || !ajialounaCertificateInfo
+    || !arzCommunityCertificateInfo
+    || !cedarResponseCertificateInfo
+    || !bekaaUpliftCertificateInfo
+  ) {
+    throw new Error('Failed to seed organization certificate info');
+  }
+
   const orgs = await database.insertInto('organization_account')
     .values([
       {
@@ -45,6 +116,9 @@ async function seed() {
         latitude: 33.8938,
         longitude: 35.5018,
         location_name: 'Beirut',
+        description: 'Emergency relief NGO coordinating shelter, food, and health support across Beirut.',
+        logo_path: 'org-logos/nour-relief.png',
+        certificate_info_id: nourReliefCertificateInfo.id,
         password: passwordHash,
       },
       {
@@ -55,6 +129,9 @@ async function seed() {
         latitude: 33.3547,
         longitude: 35.4955,
         location_name: 'Saida',
+        description: 'Youth-focused nonprofit delivering educational and inclusive community programming in South Lebanon.',
+        logo_path: 'org-logos/ajialouna.png',
+        certificate_info_id: ajialounaCertificateInfo.id,
         password: passwordHash,
       },
       {
@@ -65,6 +142,48 @@ async function seed() {
         latitude: 34.4367,
         longitude: 35.8333,
         location_name: 'Tripoli',
+        description: 'North Lebanon volunteer network supporting environmental recovery and neighborhood resilience.',
+        logo_path: 'org-logos/arz-community.png',
+        certificate_info_id: arzCommunityCertificateInfo.id,
+        password: passwordHash,
+      },
+      {
+        name: 'Cedar Response',
+        email: 'org4@willing.social',
+        phone_number: '+96181777000',
+        url: 'https://cedarresponse.org',
+        latitude: 33.8889,
+        longitude: 35.4942,
+        location_name: 'Beirut',
+        description: 'Rapid-response nonprofit focused on volunteer coordination, hotline support, and urban recovery.',
+        logo_path: 'org-logos/cedar-response.png',
+        certificate_info_id: cedarResponseCertificateInfo.id,
+        password: passwordHash,
+      },
+      {
+        name: 'Bekaa Uplift',
+        email: 'org5@willing.social',
+        phone_number: '+96188881111',
+        url: 'https://bekaauplift.org',
+        latitude: 33.8462,
+        longitude: 35.9020,
+        location_name: 'Zahle',
+        description: 'Bekaa-based community organization supporting farms, schools, and flood recovery efforts.',
+        logo_path: 'org-logos/bekaa-uplift.png',
+        certificate_info_id: bekaaUpliftCertificateInfo.id,
+        password: passwordHash,
+      },
+      {
+        name: 'Scam Organization',
+        email: 'org6@willing.social',
+        phone_number: '+96199990000',
+        url: 'https://scam-organization.example.social',
+        latitude: 33.5000,
+        longitude: 35.5000,
+        location_name: 'Test Beirut',
+        description: 'Fraudulent organization seeded for manual reporting and disable-account testing.',
+        logo_path: 'org-logos/scam-organization.png',
+        certificate_info_id: bekaaUpliftCertificateInfo.id,
         password: passwordHash,
       },
     ])
@@ -143,7 +262,7 @@ async function seed() {
         password: passwordHash,
         gender: 'female',
         date_of_birth: '1994-01-30',
-        description: 'Social worker background. Comfortable with elderly care and emotional support.',
+        description: 'com worker background. Comfortable with elderly care and emotional support.',
       },
       {
         first_name: 'Tarek',
@@ -199,6 +318,51 @@ async function seed() {
         date_of_birth: '2001-06-06',
         description: 'Flexible volunteer. Prefers to keep profile private.',
       },
+      {
+        first_name: 'Sami',
+        last_name: 'Khater',
+        email: 'vol11@willing.social',
+        password: passwordHash,
+        gender: 'male',
+        date_of_birth: '1995-04-09',
+        description: 'Operations-minded volunteer with warehouse and dispatch experience.',
+      },
+      {
+        first_name: 'Lea',
+        last_name: 'Rizk',
+        email: 'vol12@willing.social',
+        password: passwordHash,
+        gender: 'female',
+        date_of_birth: '1999-10-02',
+        description: 'Community educator who enjoys tutoring, facilitation, and youth engagement.',
+      },
+      {
+        first_name: 'Omar',
+        last_name: 'Haddad',
+        email: 'vol13@willing.social',
+        password: passwordHash,
+        gender: 'male',
+        date_of_birth: '1997-12-19',
+        description: 'Tech-savvy coordinator comfortable with helplines, spreadsheets, and operations support.',
+      },
+      {
+        first_name: 'Dana',
+        last_name: 'Mokbel',
+        email: 'vol14@willing.social',
+        password: passwordHash,
+        gender: 'female',
+        date_of_birth: '2000-03-27',
+        description: 'Patient and dependable volunteer with experience in admin support and event coordination.',
+      },
+      {
+        first_name: 'Scam',
+        last_name: 'Volunteer',
+        email: 'vol15@willing.social',
+        password: passwordHash,
+        gender: 'other',
+        date_of_birth: '1998-12-12',
+        description: 'Seeded test volunteer for reporting and account disable scenarios.',
+      },
     ].map(volunteer => ({
       ...volunteer,
       gender: volunteer.gender as 'male' | 'female' | 'other',
@@ -207,6 +371,108 @@ async function seed() {
     .execute();
 
   const volByEmail = new Map(volunteers.map(v => [v.email, v.id]));
+
+  await database.insertInto('organization_report').values([
+    {
+      reported_organization_id: orgByName.get('Scam Organization')!,
+      reporter_volunteer_id: volByEmail.get('vol1@willing.social')!,
+      title: 'scam',
+      message: 'Claimed to be a legitimate nonprofit but provided fake credentials and payment requests.',
+    },
+    {
+      reported_organization_id: orgByName.get('Scam Organization')!,
+      reporter_volunteer_id: volByEmail.get('vol2@willing.social')!,
+      title: 'impersonation',
+      message: 'Operated under a convincing but fraudulent brand name and solicited volunteers dishonestly.',
+    },
+    {
+      reported_organization_id: orgByName.get('Nour Relief')!,
+      reporter_volunteer_id: volByEmail.get('vol3@willing.social')!,
+      title: 'harassment',
+      message: 'Overseers used intimidating language and blamed volunteers for issues outside their control.',
+    },
+    {
+      reported_organization_id: orgByName.get('Cedar Response')!,
+      reporter_volunteer_id: volByEmail.get('vol4@willing.social')!,
+      title: 'other',
+      message: 'Committed to providing a proper volunteer orientation but repeatedly postponed and canceled sessions.',
+    },
+    {
+      reported_organization_id: orgByName.get('Ajialouna')!,
+      reporter_volunteer_id: volByEmail.get('vol5@willing.social')!,
+      title: 'inappropriate_behavior',
+      message: 'Asked volunteers to perform unsafe tasks without proper protective equipment.',
+    },
+    {
+      reported_organization_id: orgByName.get('Arz Community')!,
+      reporter_volunteer_id: volByEmail.get('vol6@willing.social')!,
+      title: 'other',
+      message: 'Provided inaccurate location details and caused confusion during volunteer transport planning.',
+    },
+    {
+      reported_organization_id: orgByName.get('Bekaa Uplift')!,
+      reporter_volunteer_id: volByEmail.get('vol7@willing.social')!,
+      title: 'scam',
+      message: 'Asked volunteers to pay a registration fee despite the platform policy against it.',
+    },
+    {
+      reported_organization_id: orgByName.get('Cedar Response')!,
+      reporter_volunteer_id: volByEmail.get('vol8@willing.social')!,
+      title: 'impersonation',
+      message: 'Claimed staff were certified when they had no verified credentials.',
+    },
+  ]).execute();
+
+  await database.insertInto('volunteer_report').values([
+    {
+      reported_volunteer_id: volByEmail.get('vol15@willing.social')!,
+      reporter_organization_id: orgByName.get('Nour Relief')!,
+      title: 'scam',
+      message: 'Volunteer attempted to collect funds from our community contacts using false statements.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol15@willing.social')!,
+      reporter_organization_id: orgByName.get('Cedar Response')!,
+      title: 'inappropriate_behavior',
+      message: 'Exhibited rude and unprofessional behavior during onboarding calls and site visits.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol5@willing.social')!,
+      reporter_organization_id: orgByName.get('Ajialouna')!,
+      title: 'impersonation',
+      message: 'Misrepresented availability and qualifications during onboarding calls.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol6@willing.social')!,
+      reporter_organization_id: orgByName.get('Arz Community')!,
+      title: 'harassment',
+      message: 'Used aggressive language with staff and other volunteers during a shift.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol9@willing.social')!,
+      reporter_organization_id: orgByName.get('Bekaa Uplift')!,
+      title: 'other',
+      message: 'Missed a confirmed shift and did not respond to several scheduling messages.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol10@willing.social')!,
+      reporter_organization_id: orgByName.get('Cedar Response')!,
+      title: 'harassment',
+      message: 'Raised their voice at our staff during a debrief for no valid reason.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol11@willing.social')!,
+      reporter_organization_id: orgByName.get('Ajialouna')!,
+      title: 'scam',
+      message: 'Repeatedly offered unauthorized services to community members and requested personal details.',
+    },
+    {
+      reported_volunteer_id: volByEmail.get('vol12@willing.social')!,
+      reporter_organization_id: orgByName.get('Arz Community')!,
+      title: 'other',
+      message: 'Arrived without required paperwork and declined to complete intake forms when asked.',
+    },
+  ]).execute();
 
   // ─── Crises ───────────────────────────────────────────────────────────────────
 
@@ -296,6 +562,34 @@ async function seed() {
     };
   };
 
+  const toIsoDate = (value: Date) => {
+    const year = value.getUTCFullYear();
+    const month = `${value.getUTCMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getUTCDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateRange = (startDate: Date, endDate: Date) => {
+    const dates: string[] = [];
+    const cursor = new Date(Date.UTC(
+      startDate.getUTCFullYear(),
+      startDate.getUTCMonth(),
+      startDate.getUTCDate(),
+    ));
+    const end = new Date(Date.UTC(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth(),
+      endDate.getUTCDate(),
+    ));
+
+    while (cursor.getTime() <= end.getTime()) {
+      dates.push(toIsoDate(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return dates;
+  };
+
   // ─── Postings ─────────────────────────────────────────────────────────────────
 
   const postings = await database.insertInto('organization_posting')
@@ -333,6 +627,7 @@ async function seed() {
         ...buildTemporalFields(`${nowYear}-02-12T08:00:00Z`, `${nowYear}-02-14T18:00:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
+        allows_partial_attendance: true,
         is_closed: false,
       },
       {
@@ -370,8 +665,8 @@ async function seed() {
       {
         organization_id: orgByName.get('Nour Relief')!,
         crisis_id: crisisByName.get('Lebanon 2026 War')!,
-        title: 'War Survivor Psychosocial Support',
-        description: 'Support trained counsellors running group psychosocial sessions for '
+        title: 'War Survivor Psychocom Support',
+        description: 'Support trained counsellors running group psychocom sessions for '
           + 'adults displaced by the conflict. Volunteers help facilitate safe spaces, '
           + 'manage attendance, and assist participants who need extra attention.',
         latitude: 33.8870,
@@ -511,6 +806,7 @@ async function seed() {
         ...buildTemporalFields(`${nowYear}-02-01T15:00:00Z`, `${nowYear}-04-30T18:00:00Z`),
         minimum_age: 18,
         automatic_acceptance: false,
+        allows_partial_attendance: true,
         is_closed: false,
       },
       {
@@ -562,6 +858,110 @@ async function seed() {
         is_closed: false,
       },
       {
+        organization_id: orgByName.get('Cedar Response')!,
+        crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
+        title: 'Volunteer Helpline Shifts',
+        description: 'Take scheduled helpline shifts to guide affected residents toward support services, legal referrals, and psychocom resources. Clear communication and calm call handling are important.',
+        latitude: 33.8955,
+        longitude: 35.5140,
+        location_name: 'Cedar Response Office, Gemmayze',
+        max_volunteers: 12,
+        ...buildTemporalFields(`${nowYear}-03-10T09:00:00Z`, `${nowYear}-03-14T17:00:00Z`),
+        minimum_age: 18,
+        automatic_acceptance: false,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Cedar Response')!,
+        crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
+        title: 'Neighborhood Repair Week',
+        description: 'Support teams repainting, cleaning, and repairing damaged community spaces over a five-day neighborhood recovery push.',
+        latitude: 33.8981,
+        longitude: 35.5182,
+        location_name: 'Mar Mikhael Recovery Hub',
+        max_volunteers: 24,
+        ...buildTemporalFields(`${nowYear}-03-18T08:00:00Z`, `${nowYear}-03-22T16:00:00Z`),
+        minimum_age: 17,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Bekaa Uplift')!,
+        crisis_id: crisisByName.get('Bekaa Valley Flooding')!,
+        title: 'Flood Cleanup Crew',
+        description: 'Join teams helping families clear mud, salvage belongings, and reset homes after flooding in the Bekaa Valley.',
+        latitude: 33.8462,
+        longitude: 35.9020,
+        location_name: 'Zahle Flood Recovery Point',
+        max_volunteers: 18,
+        ...buildTemporalFields(`${nowYear}-03-12T08:00:00Z`, `${nowYear}-03-13T15:00:00Z`),
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Bekaa Uplift')!,
+        crisis_id: crisisByName.get('Bekaa Valley Flooding')!,
+        title: 'School Supply Restocking',
+        description: 'Help restock school materials and classroom kits for schools affected by flooding. Includes sorting, packing, and local delivery coordination.',
+        latitude: 33.8500,
+        longitude: 35.9100,
+        location_name: 'Bekaa Uplift Learning Hub',
+        max_volunteers: 16,
+        ...buildTemporalFields(`${nowYear}-03-24T09:00:00Z`, `${nowYear}-03-26T14:00:00Z`),
+        minimum_age: 16,
+        automatic_acceptance: false,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Cedar Response')!,
+        crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
+        title: 'One-Day Hotline Sprint',
+        description: 'Support the hotline team for a single high-volume day by answering calls, escalating urgent cases, and updating referral notes.',
+        latitude: 33.8940,
+        longitude: 35.5132,
+        location_name: 'Cedar Response Office, Gemmayze',
+        max_volunteers: 6,
+        ...buildTemporalFields(`${nowYear}-03-25T09:00:00Z`, `${nowYear}-03-25T17:00:00Z`),
+        minimum_age: 18,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Bekaa Uplift')!,
+        crisis_id: crisisByName.get('Bekaa Valley Flooding')!,
+        title: 'Farm Recovery Rotation',
+        description: 'Help farm families recover across a three-day rotation of cleanup, seed sorting, and irrigation setup support in flood-affected areas.',
+        latitude: 33.8525,
+        longitude: 35.9150,
+        location_name: 'Bekaa Farm Support Hub',
+        max_volunteers: 2,
+        ...buildTemporalFields(`${nowYear}-03-28T08:00:00Z`, `${nowYear}-03-30T15:00:00Z`),
+        minimum_age: 18,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Cedar Response')!,
+        crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
+        title: 'Crisis Hotline Coverage Week',
+        description: 'Cover every hotline shift for a three-day support push. Volunteers handle caller triage, documentation, and referral follow-ups.',
+        latitude: 33.8950,
+        longitude: 35.5144,
+        location_name: 'Cedar Response Coordination Room',
+        max_volunteers: 2,
+        ...buildTemporalFields(`${nowYear}-04-05T09:00:00Z`, `${nowYear}-04-07T17:00:00Z`),
+        minimum_age: 18,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
         organization_id: orgByName.get('Arz Community')!,
         crisis_id: crisisByName.get('Tyre Coastal Pollution')!,
         title: 'Coastal Cleanup',
@@ -593,6 +993,76 @@ async function seed() {
         is_closed: false,
       },
       {
+        organization_id: orgByName.get('Ajialouna')!,
+        crisis_id: undefined,
+        title: 'Community Storytelling Circle',
+        description: 'Lead a welcoming storytelling and conversation circle for women and youth in Saida. No prior experience is required and all ages are encouraged to participate.',
+        latitude: 33.3560,
+        longitude: 35.4950,
+        location_name: 'Saida Women\'s Centre',
+        max_volunteers: 12,
+        ...buildTemporalFields(`${nowYear}-03-12T16:00:00Z`, `${nowYear}-03-12T19:00:00Z`),
+        minimum_age: null,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Ajialouna')!,
+        crisis_id: undefined,
+        title: 'Youth Reading Circle',
+        description: 'Host a youth reading circle for students and pre-teens at the Saida library. All ages are welcome and no previous experience is needed.',
+        latitude: 33.3545,
+        longitude: 35.4960,
+        location_name: 'Saida Public Library',
+        max_volunteers: 14,
+        ...buildTemporalFields(`${nowYear}-03-22T10:00:00Z`, `${nowYear}-03-22T13:00:00Z`),
+        minimum_age: null,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Ajialouna')!,
+        crisis_id: undefined,
+        title: 'Junior Sports Field Prep',
+        description: 'Prepare a local youth sports field with line marking, equipment setup, and light groundskeeping before community games.',
+        latitude: 33.3560,
+        longitude: 35.4950,
+        location_name: 'Saida Youth Sports Ground',
+        max_volunteers: 12,
+        ...buildTemporalFields(`${nowYear}-03-23T08:00:00Z`, `${nowYear}-03-23T12:00:00Z`),
+        minimum_age: 14,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Arz Community')!,
+        crisis_id: undefined,
+        title: 'Youth Garden Helpers',
+        description: 'Support a community garden project by planting, weeding, and watering garden beds with local youth volunteers.',
+        latitude: 34.4370,
+        longitude: 35.8340,
+        location_name: 'Tripoli Community Garden',
+        max_volunteers: 12,
+        ...buildTemporalFields(`${nowYear}-03-24T09:00:00Z`, `${nowYear}-03-24T13:00:00Z`),
+        minimum_age: 12,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
+        organization_id: orgByName.get('Arz Community')!,
+        crisis_id: undefined,
+        title: 'Family Water Station Support',
+        description: 'Support a community water station in Tripoli by handing out water and refreshments to families. This shift is suitable for younger volunteers and focuses on friendly, helpful service.',
+        latitude: 34.4360,
+        longitude: 35.8335,
+        location_name: 'Tripoli Al-Akhdar Community Hub',
+        max_volunteers: 18,
+        ...buildTemporalFields(`${nowYear}-03-26T09:00:00Z`, `${nowYear}-03-26T13:00:00Z`),
+        minimum_age: null,
+        automatic_acceptance: true,
+        is_closed: false,
+      },
+      {
         organization_id: orgByName.get('Arz Community')!,
         crisis_id: crisisByName.get('Akkar Wildfires')!,
         title: 'Debris Clearance',
@@ -608,7 +1078,7 @@ async function seed() {
         is_closed: true,
       },
     ])
-    .returning(['id', 'title'])
+    .returning(['id', 'title', 'start_date', 'end_date', 'allows_partial_attendance'])
     .execute();
 
   const postingByTitle = new Map(postings.map(p => [p.title, p.id]));
@@ -642,11 +1112,11 @@ async function seed() {
     { posting_id: postingByTitle.get('Mobile Aid Kit Distribution')!, name: 'Safety Awareness' },
     { posting_id: postingByTitle.get('Mobile Aid Kit Distribution')!, name: 'Organisation' },
 
-    // War Survivor Psychosocial Support
-    { posting_id: postingByTitle.get('War Survivor Psychosocial Support')!, name: 'Emotional Support' },
-    { posting_id: postingByTitle.get('War Survivor Psychosocial Support')!, name: 'Active Listening' },
-    { posting_id: postingByTitle.get('War Survivor Psychosocial Support')!, name: 'Empathy' },
-    { posting_id: postingByTitle.get('War Survivor Psychosocial Support')!, name: 'Communication' },
+    // War Survivor Psychocom Support
+    { posting_id: postingByTitle.get('War Survivor Psychocom Support')!, name: 'Emotional Support' },
+    { posting_id: postingByTitle.get('War Survivor Psychocom Support')!, name: 'Active Listening' },
+    { posting_id: postingByTitle.get('War Survivor Psychocom Support')!, name: 'Empathy' },
+    { posting_id: postingByTitle.get('War Survivor Psychocom Support')!, name: 'Communication' },
 
     // Hot Meals for Displaced Families
     { posting_id: postingByTitle.get('Meals for the Displaced')!, name: 'Cooking' },
@@ -718,6 +1188,48 @@ async function seed() {
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Label Checking' },
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Accuracy' },
 
+    // Volunteer Helpline Shifts
+    { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Communication' },
+    { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Active Listening' },
+    { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Remote Support' },
+    { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Data Entry' },
+
+    // One-Day Hotline Sprint
+    { posting_id: postingByTitle.get('One-Day Hotline Sprint')!, name: 'Communication' },
+    { posting_id: postingByTitle.get('One-Day Hotline Sprint')!, name: 'Active Listening' },
+    { posting_id: postingByTitle.get('One-Day Hotline Sprint')!, name: 'Data Entry' },
+    { posting_id: postingByTitle.get('One-Day Hotline Sprint')!, name: 'Calm Under Pressure' },
+
+    // Neighborhood Repair Week
+    { posting_id: postingByTitle.get('Neighborhood Repair Week')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Neighborhood Repair Week')!, name: 'Physical Stamina' },
+    { posting_id: postingByTitle.get('Neighborhood Repair Week')!, name: 'Painting' },
+    { posting_id: postingByTitle.get('Neighborhood Repair Week')!, name: 'Construction' },
+
+    // Farm Recovery Rotation
+    { posting_id: postingByTitle.get('Farm Recovery Rotation')!, name: 'Physical Stamina' },
+    { posting_id: postingByTitle.get('Farm Recovery Rotation')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Farm Recovery Rotation')!, name: 'Organisation' },
+    { posting_id: postingByTitle.get('Farm Recovery Rotation')!, name: 'Field Support' },
+
+    // Flood Cleanup Crew
+    { posting_id: postingByTitle.get('Flood Cleanup Crew')!, name: 'Physical Stamina' },
+    { posting_id: postingByTitle.get('Flood Cleanup Crew')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Flood Cleanup Crew')!, name: 'Safety Awareness' },
+    { posting_id: postingByTitle.get('Flood Cleanup Crew')!, name: 'Logistics' },
+
+    // School Supply Restocking
+    { posting_id: postingByTitle.get('School Supply Restocking')!, name: 'Organisation' },
+    { posting_id: postingByTitle.get('School Supply Restocking')!, name: 'Packing' },
+    { posting_id: postingByTitle.get('School Supply Restocking')!, name: 'Inventory Handling' },
+    { posting_id: postingByTitle.get('School Supply Restocking')!, name: 'Communication' },
+
+    // Crisis Hotline Coverage Week
+    { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Communication' },
+    { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Active Listening' },
+    { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Remote Support' },
+    { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Data Entry' },
+
     // Coastal Cleanup – Tyre
     { posting_id: postingByTitle.get('Coastal Cleanup')!, name: 'Physical Stamina' },
     { posting_id: postingByTitle.get('Coastal Cleanup')!, name: 'Environmental Awareness' },
@@ -730,6 +1242,36 @@ async function seed() {
     { posting_id: postingByTitle.get('Children\'s Art & Story Workshop')!, name: 'Child Engagement' },
     { posting_id: postingByTitle.get('Children\'s Art & Story Workshop')!, name: 'Art' },
     { posting_id: postingByTitle.get('Children\'s Art & Story Workshop')!, name: 'Patience' },
+
+    // Community Storytelling Circle
+    { posting_id: postingByTitle.get('Community Storytelling Circle')!, name: 'Communication' },
+    { posting_id: postingByTitle.get('Community Storytelling Circle')!, name: 'Storytelling' },
+    { posting_id: postingByTitle.get('Community Storytelling Circle')!, name: 'Community Engagement' },
+    { posting_id: postingByTitle.get('Community Storytelling Circle')!, name: 'Empathy' },
+
+    // Youth Reading Circle
+    { posting_id: postingByTitle.get('Youth Reading Circle')!, name: 'Storytelling' },
+    { posting_id: postingByTitle.get('Youth Reading Circle')!, name: 'Child Engagement' },
+    { posting_id: postingByTitle.get('Youth Reading Circle')!, name: 'Communication' },
+    { posting_id: postingByTitle.get('Youth Reading Circle')!, name: 'Patience' },
+
+    // Junior Sports Field Prep
+    { posting_id: postingByTitle.get('Junior Sports Field Prep')!, name: 'Line Marking' },
+    { posting_id: postingByTitle.get('Junior Sports Field Prep')!, name: 'Equipment Setup' },
+    { posting_id: postingByTitle.get('Junior Sports Field Prep')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Junior Sports Field Prep')!, name: 'Light Groundskeeping' },
+
+    // Family Water Station Support
+    { posting_id: postingByTitle.get('Family Water Station Support')!, name: 'Customer Service' },
+    { posting_id: postingByTitle.get('Family Water Station Support')!, name: 'Hydration Support' },
+    { posting_id: postingByTitle.get('Family Water Station Support')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Family Water Station Support')!, name: 'Community Support' },
+
+    // Youth Garden Helpers
+    { posting_id: postingByTitle.get('Youth Garden Helpers')!, name: 'Gardening' },
+    { posting_id: postingByTitle.get('Youth Garden Helpers')!, name: 'Light Groundskeeping' },
+    { posting_id: postingByTitle.get('Youth Garden Helpers')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Youth Garden Helpers')!, name: 'Community Support' },
 
     // Debris Clearance – Akkar Villages
     { posting_id: postingByTitle.get('Debris Clearance')!, name: 'Physical Stamina' },
@@ -764,7 +1306,7 @@ async function seed() {
     { volunteer_id: volByEmail.get('vol3@willing.social')!, name: 'Crisis Response' },
     { volunteer_id: volByEmail.get('vol3@willing.social')!, name: 'Teamwork' },
 
-    // vol4 – elderly care / social support
+    // vol4 – elderly care / com support
     { volunteer_id: volByEmail.get('vol4@willing.social')!, name: 'Empathy' },
     { volunteer_id: volByEmail.get('vol4@willing.social')!, name: 'Emotional Support' },
     { volunteer_id: volByEmail.get('vol4@willing.social')!, name: 'Active Listening' },
@@ -813,11 +1355,35 @@ async function seed() {
     { volunteer_id: volByEmail.get('vol10@willing.social')!, name: 'Communication' },
     { volunteer_id: volByEmail.get('vol10@willing.social')!, name: 'Teamwork' },
     { volunteer_id: volByEmail.get('vol10@willing.social')!, name: 'Organisation' },
+
+    // vol11 – operations / logistics
+    { volunteer_id: volByEmail.get('vol11@willing.social')!, name: 'Logistics' },
+    { volunteer_id: volByEmail.get('vol11@willing.social')!, name: 'Inventory Handling' },
+    { volunteer_id: volByEmail.get('vol11@willing.social')!, name: 'Organisation' },
+    { volunteer_id: volByEmail.get('vol11@willing.social')!, name: 'Physical Stamina' },
+
+    // vol12 – tutoring / facilitation
+    { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Teaching' },
+    { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Child Engagement' },
+    { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Communication' },
+    { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Patience' },
+
+    // vol13 – tech / coordination
+    { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Remote Support' },
+    { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Data Entry' },
+    { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Communication' },
+    { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Problem Solving' },
+
+    // vol14 – admin / events
+    { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Organisation' },
+    { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Communication' },
+    { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Data Entry' },
+    { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Teamwork' },
   ]).execute();
 
   // ─── Enrollment Applications ──────────────────────────────────────────────────
 
-  await database.insertInto('enrollment_application').values([
+  const applications = await database.insertInto('enrollment_application').values([
     // Field First Aid Support (org1, review-based)
     {
       volunteer_id: volByEmail.get('vol3@willing.social')!,
@@ -834,7 +1400,7 @@ async function seed() {
     {
       volunteer_id: volByEmail.get('vol4@willing.social')!,
       posting_id: postingByTitle.get('Displaced Families Registration')!,
-      message: 'I work as a social worker and speak Arabic fluently. Comfortable conducting intake interviews with empathy and care.',
+      message: 'I work as a com worker and speak Arabic fluently. Comfortable conducting intake interviews with empathy and care.',
     },
     {
       volunteer_id: volByEmail.get('vol2@willing.social')!,
@@ -847,18 +1413,18 @@ async function seed() {
       message: 'Available for the full two-day window and comfortable with documentation and interacting with displaced families.',
     },
 
-    // War Survivor Psychosocial Support (org1, review-based)
+    // War Survivor Psychocom Support (org1, review-based)
     {
       volunteer_id: volByEmail.get('vol4@willing.social')!,
-      posting_id: postingByTitle.get('War Survivor Psychosocial Support')!,
-      message: 'Background in social work and mental health support. Familiar with trauma-informed approaches and psychosocial first aid frameworks.',
+      posting_id: postingByTitle.get('War Survivor Psychocom Support')!,
+      message: 'Background in com work and mental health support. Familiar with trauma-informed approaches and psychocom first aid frameworks.',
     },
 
     // Psychological First Aid Sessions (org1, review-based)
     {
       volunteer_id: volByEmail.get('vol4@willing.social')!,
       posting_id: postingByTitle.get('Psychological First Aid Sessions')!,
-      message: 'Background in social work and mental health support. Familiar with trauma-informed approaches and psychosocial first aid frameworks.',
+      message: 'Background in com work and mental health support. Familiar with trauma-informed approaches and psychocom first aid frameworks.',
     },
 
     // Remote Homework Support Hotline (org2, review-based)
@@ -884,11 +1450,33 @@ async function seed() {
       posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!,
       message: 'Good with physical organisation and sorting. Can commit to the full morning.',
     },
-  ]).execute();
+    {
+      volunteer_id: volByEmail.get('vol13@willing.social')!,
+      posting_id: postingByTitle.get('Volunteer Helpline Shifts')!,
+      message: 'Comfortable with helpline systems, spreadsheets, and coordinating information for callers across multiple shifts.',
+    },
+    {
+      volunteer_id: volByEmail.get('vol14@willing.social')!,
+      posting_id: postingByTitle.get('Volunteer Helpline Shifts')!,
+      message: 'Strong communication and admin coordination skills. Happy to cover selected daytime shifts.',
+    },
+    {
+      volunteer_id: volByEmail.get('vol12@willing.social')!,
+      posting_id: postingByTitle.get('School Supply Restocking')!,
+      message: 'Would love to help schools recover and can support with sorting, packing, and classroom kit prep.',
+    },
+    {
+      volunteer_id: volByEmail.get('vol11@willing.social')!,
+      posting_id: postingByTitle.get('School Supply Restocking')!,
+      message: 'Warehouse and operations experience. Comfortable with inventory and loading support for school deliveries.',
+    },
+  ])
+    .returning(['id', 'volunteer_id', 'posting_id'])
+    .execute();
 
   // ─── Enrollments ──────────────────────────────────────────────────────────────
 
-  await database.insertInto('enrollment').values([
+  const enrollments = await database.insertInto('enrollment').values([
 
     // ── Approved from review-based postings ────────────────────────────────────
 
@@ -901,13 +1489,13 @@ async function seed() {
     {
       volunteer_id: volByEmail.get('vol4@willing.social')!,
       posting_id: postingByTitle.get('Displaced Families Registration')!,
-      message: 'I work as a social worker and speak Arabic fluently. Comfortable conducting intake interviews with empathy and care.',
+      message: 'I work as a com worker and speak Arabic fluently. Comfortable conducting intake interviews with empathy and care.',
       attended: false,
     },
     {
       volunteer_id: volByEmail.get('vol4@willing.social')!,
       posting_id: postingByTitle.get('Psychological First Aid Sessions')!,
-      message: 'Background in social work and mental health support. Familiar with trauma-informed approaches and psychosocial first aid frameworks.',
+      message: 'Background in com work and mental health support. Familiar with trauma-informed approaches and psychocom first aid frameworks.',
       attended: true,
     },
     {
@@ -1155,8 +1743,175 @@ async function seed() {
       message: 'Available to distribute aid kits across Beirut neighborhoods.',
       attended: false,
     },
+    {
+      volunteer_id: volByEmail.get('vol11@willing.social')!,
+      posting_id: postingByTitle.get('Flood Cleanup Crew')!,
+      message: 'Ready to help with cleanup logistics, hauling, and field coordination in the Bekaa.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol14@willing.social')!,
+      posting_id: postingByTitle.get('Flood Cleanup Crew')!,
+      message: 'Available for flood recovery support and team coordination on site.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol13@willing.social')!,
+      posting_id: postingByTitle.get('Flood Cleanup Crew')!,
+      message: 'Can support field coordination, volunteer communication, and on-site logistics in the Bekaa.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol11@willing.social')!,
+      posting_id: postingByTitle.get('Neighborhood Repair Week')!,
+      message: 'Can support repair teams for selected days and help keep materials organised.',
+      attended: true,
+    },
+    {
+      volunteer_id: volByEmail.get('vol12@willing.social')!,
+      posting_id: postingByTitle.get('Neighborhood Repair Week')!,
+      message: 'Happy to help the neighborhood recovery team with painting, cleanup, and volunteer support.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol13@willing.social')!,
+      posting_id: postingByTitle.get('One-Day Hotline Sprint')!,
+      message: 'Available all day to support hotline documentation and urgent call routing.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol14@willing.social')!,
+      posting_id: postingByTitle.get('One-Day Hotline Sprint')!,
+      message: 'Can assist the team with caller support and accurate note taking throughout the shift.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol11@willing.social')!,
+      posting_id: postingByTitle.get('Farm Recovery Rotation')!,
+      message: 'Can help with cleanup and setup tasks across selected farm recovery days.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol14@willing.social')!,
+      posting_id: postingByTitle.get('Farm Recovery Rotation')!,
+      message: 'Available for rotating field support days and logistics coordination.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol13@willing.social')!,
+      posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!,
+      message: 'Ready to cover multiple hotline days and keep referral notes organised.',
+      attended: false,
+    },
+    {
+      volunteer_id: volByEmail.get('vol14@willing.social')!,
+      posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!,
+      message: 'Can commit to the full hotline coverage window and support caller triage.',
+      attended: false,
+    },
 
-  ]).execute();
+  ])
+    .returning(['id', 'volunteer_id', 'posting_id', 'attended'])
+    .execute();
+
+  const applicationByKey = new Map(
+    applications.map(application => [`${application.volunteer_id}:${application.posting_id}`, application.id] as const),
+  );
+
+  const partialApplicationDateSelections: Array<{ volunteerEmail: string; postingTitle: string; dates: string[] }> = [
+    {
+      volunteerEmail: 'vol4@willing.social',
+      postingTitle: 'Displaced Families Registration',
+      dates: ['2026-02-12', '2026-02-14'],
+    },
+    {
+      volunteerEmail: 'vol2@willing.social',
+      postingTitle: 'Displaced Families Registration',
+      dates: ['2026-02-13'],
+    },
+    {
+      volunteerEmail: 'vol10@willing.social',
+      postingTitle: 'Displaced Families Registration',
+      dates: ['2026-02-12', '2026-02-13'],
+    },
+    {
+      volunteerEmail: 'vol7@willing.social',
+      postingTitle: 'Remote Homework Support',
+      dates: ['2026-02-03', '2026-02-10', '2026-02-17', '2026-02-24'],
+    },
+    {
+      volunteerEmail: 'vol2@willing.social',
+      postingTitle: 'Remote Homework Support',
+      dates: ['2026-02-02', '2026-02-09', '2026-02-16'],
+    },
+    {
+      volunteerEmail: 'vol13@willing.social',
+      postingTitle: 'Volunteer Helpline Shifts',
+      dates: ['2026-03-10', '2026-03-12', '2026-03-14'],
+    },
+    {
+      volunteerEmail: 'vol14@willing.social',
+      postingTitle: 'Volunteer Helpline Shifts',
+      dates: ['2026-03-11', '2026-03-13'],
+    },
+    {
+      volunteerEmail: 'vol12@willing.social',
+      postingTitle: 'School Supply Restocking',
+      dates: ['2026-03-24', '2026-03-26'],
+    },
+    {
+      volunteerEmail: 'vol11@willing.social',
+      postingTitle: 'School Supply Restocking',
+      dates: ['2026-03-25'],
+    },
+  ];
+
+  await database.insertInto('enrollment_application_date').values(
+    partialApplicationDateSelections.flatMap(({ volunteerEmail, postingTitle, dates }) => {
+      const volunteerId = volByEmail.get(volunteerEmail);
+      const postingId = postingByTitle.get(postingTitle);
+      const applicationId = volunteerId && postingId ? applicationByKey.get(`${volunteerId}:${postingId}`) : undefined;
+
+      if (!applicationId) return [];
+
+      return dates.map(date => ({
+        application_id: applicationId,
+        date: new Date(`${date}T00:00:00.000Z`),
+      }));
+    }),
+  ).execute();
+
+  const partialEnrollmentDateSelections = new Map<string, string[]>([
+    [`${volByEmail.get('vol4@willing.social')}:${postingByTitle.get('Displaced Families Registration')}`, [`${nowYear}-02-12`, `${nowYear}-02-14`]],
+    [`${volByEmail.get('vol7@willing.social')}:${postingByTitle.get('Remote Homework Support')}`, [`${nowYear}-02-03`, `${nowYear}-02-10`, `${nowYear}-02-17`, `${nowYear}-02-24`]],
+    [`${volByEmail.get('vol11@willing.social')}:${postingByTitle.get('Neighborhood Repair Week')}`, [`${nowYear}-03-18`, `${nowYear}-03-19`, `${nowYear}-03-21`]],
+    [`${volByEmail.get('vol12@willing.social')}:${postingByTitle.get('Neighborhood Repair Week')}`, [`${nowYear}-03-20`, `${nowYear}-03-22`]],
+    [`${volByEmail.get('vol13@willing.social')}:${postingByTitle.get('One-Day Hotline Sprint')}`, [`${nowYear}-03-25`]],
+    [`${volByEmail.get('vol14@willing.social')}:${postingByTitle.get('One-Day Hotline Sprint')}`, [`${nowYear}-03-25`]],
+    [`${volByEmail.get('vol11@willing.social')}:${postingByTitle.get('Farm Recovery Rotation')}`, [`${nowYear}-03-28`, `${nowYear}-03-29`]],
+    [`${volByEmail.get('vol14@willing.social')}:${postingByTitle.get('Farm Recovery Rotation')}`, [`${nowYear}-03-28`, `${nowYear}-03-30`]],
+    [`${volByEmail.get('vol13@willing.social')}:${postingByTitle.get('Crisis Hotline Coverage Week')}`, [`${nowYear}-04-05`, `${nowYear}-04-06`, `${nowYear}-04-07`]],
+    [`${volByEmail.get('vol14@willing.social')}:${postingByTitle.get('Crisis Hotline Coverage Week')}`, [`${nowYear}-04-05`, `${nowYear}-04-06`, `${nowYear}-04-07`]],
+  ]);
+
+  await database.insertInto('enrollment_date').values(
+    enrollments.flatMap((enrollment) => {
+      const posting = postings.find(postingRow => postingRow.id === enrollment.posting_id);
+      if (!posting) return [];
+
+      const partialKey = `${enrollment.volunteer_id}:${enrollment.posting_id}`;
+      const dateStrings = posting.allows_partial_attendance
+        ? (partialEnrollmentDateSelections.get(partialKey) ?? [])
+        : getDateRange(posting.start_date, posting.end_date);
+
+      return dateStrings.map(date => ({
+        enrollment_id: enrollment.id,
+        posting_id: enrollment.posting_id,
+        date: new Date(`${date}T00:00:00.000Z`),
+        attended: enrollment.attended,
+      }));
+    }),
+  ).execute();
 
   console.log('─────────────────────────────────────────────');
   console.log('Seed complete.');
@@ -1165,10 +1920,10 @@ async function seed() {
   console.log('Admin:');
   console.log('  admin@willing.social');
   console.log('');
-  console.log('Organizations (approved): org1@willing.social, org2@willing.social, org3@willing.social');
+  console.log('Organizations (approved): org1@willing.social, org2@willing.social, org3@willing.social, org4@willing.social, org5@willing.social, org6@willing.social (scam)');
 
   console.log('');
-  console.log('Volunteers: vol1@willing.social, vol2@willing.social, vol3@willing.social, vol4@willing.social, vol5@willing.social, vol6@willing.social, vol7@willing.social, vol8@willing.social, vol9@willing.social, vol10@willing.social');
+  console.log('Volunteers: vol1@willing.social, vol2@willing.social, vol3@willing.social, vol4@willing.social, vol5@willing.social, vol6@willing.social, vol7@willing.social, vol8@willing.social, vol9@willing.social, vol10@willing.social, vol11@willing.social, vol12@willing.social, vol13@willing.social, vol14@willing.social, vol15@willing.social (scam)');
 
   await database.destroy();
 }

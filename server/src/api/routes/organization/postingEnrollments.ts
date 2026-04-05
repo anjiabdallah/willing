@@ -1,4 +1,4 @@
-import { type Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 
 import { type Database } from '../../../db/tables/index.ts';
 import { type PostingEnrollment } from '../../../types.ts';
@@ -36,6 +36,30 @@ export const getPostingEnrollments = async (
         .execute()
     : [];
 
+  const enrollmentIds = enrollments.map(enrollment => enrollment.enrollment_id);
+  const enrollmentDates = enrollmentIds.length > 0
+    ? await db
+        .selectFrom('enrollment_date')
+        .select([
+          'id',
+          'enrollment_id',
+          sql<string>`to_char(enrollment_date.date, 'YYYY-MM-DD')`.as('date'),
+          'attended',
+        ])
+        .where('enrollment_id', 'in', enrollmentIds)
+        .execute()
+    : [];
+
+  const datesByEnrollmentId = new Map<number, Array<{ id: number; date: string; attended: boolean }>>();
+  enrollmentDates.forEach((row) => {
+    const dateStr = typeof row.date === 'string' ? row.date : undefined;
+    if (!dateStr) return;
+    if (!datesByEnrollmentId.has(row.enrollment_id)) {
+      datesByEnrollmentId.set(row.enrollment_id, []);
+    }
+    datesByEnrollmentId.get(row.enrollment_id)!.push({ id: row.id, date: dateStr, attended: Boolean(row.attended) });
+  });
+
   const skillsByVolunteerId = new Map<number, typeof skills>();
   skills.forEach((skill) => {
     if (!skillsByVolunteerId.has(skill.volunteer_id)) {
@@ -56,6 +80,7 @@ export const getPostingEnrollments = async (
       date_of_birth: enrollment.date_of_birth,
       gender: enrollment.gender,
       skills: skillsByVolunteerId.get(enrollment.volunteer_id) || [],
+      dates: datesByEnrollmentId.get(enrollment.enrollment_id) || [],
     };
 
     if (enrollment.cv_path !== undefined) {

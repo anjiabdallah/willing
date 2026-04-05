@@ -36,6 +36,71 @@ type BuildPostingsWithContextOptions = {
   applicationStatusByPostingId?: ReadonlyMap<number, Extract<PostingApplicationStatus, 'registered' | 'pending'>>;
 };
 
+const formatDateToIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const normalizeStoredDate = (value: Date | string | null | undefined) => {
+  if (value instanceof Date) return formatDateToIso(value);
+  if (typeof value === 'string') {
+    const datePart = value.split('T')[0]?.trim();
+    return datePart || undefined;
+  }
+  return undefined;
+};
+
+const parseIsoDateParts = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return undefined;
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+};
+
+export const getPostingDates = (startDate: Date | string, endDate: Date | string | null | undefined): string[] => {
+  const normalizedStartDate = normalizeStoredDate(startDate);
+  const normalizedEndDate = normalizeStoredDate(endDate ?? startDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
+  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+};
+
+export const isVolunteerPostingFull = (
+  posting: Pick<PostingWithContext, 'allows_partial_attendance' | 'max_volunteers' | 'enrollment_count' | 'start_date' | 'end_date' | 'date_capacity'>,
+) => {
+  const maxVolunteers = posting.max_volunteers;
+
+  if (maxVolunteers == null) {
+    return false;
+  }
+
+  if (!posting.allows_partial_attendance) {
+    return posting.enrollment_count >= maxVolunteers;
+  }
+
+  const postingDates = getPostingDates(posting.start_date, posting.end_date);
+  if (postingDates.length === 0) {
+    return false;
+  }
+
+  return postingDates.every(date => (posting.date_capacity?.[date] ?? 0) >= maxVolunteers);
+};
+
 export async function buildPostingsWithContext(
   db: Kysely<Database>,
   {
@@ -50,7 +115,7 @@ export async function buildPostingsWithContext(
 
   const postingIds = postings.map(posting => posting.id);
 
-  const [skills, enrollmentCounts, volunteerEnrollments, volunteerPendingApplications] = await Promise.all([
+  const [skills, enrollmentCounts, dateCapacities, volunteerEnrollments, volunteerPendingApplications] = await Promise.all([
     db
       .selectFrom('posting_skill')
       .selectAll()
@@ -64,6 +129,16 @@ export async function buildPostingsWithContext(
       ])
       .where('posting_id', 'in', postingIds)
       .groupBy('posting_id')
+      .execute(),
+    db
+      .selectFrom('enrollment_date')
+      .select([
+        'posting_id',
+        sql<string>`to_char(enrollment_date.date, 'YYYY-MM-DD')`.as('date'),
+        sql<number>`count(enrollment_date.id)`.as('count'),
+      ])
+      .where('posting_id', 'in', postingIds)
+      .groupBy(['posting_id', 'enrollment_date.date'])
       .execute(),
     applicationStatusByPostingId
       ? Promise.resolve([])
@@ -96,6 +171,15 @@ export async function buildPostingsWithContext(
     countsByPostingId.set(countRow.posting_id, Number(countRow.count ?? 0));
   });
 
+  const dateCapacityByPostingId = new Map<number, Record<string, number>>();
+  dateCapacities.forEach((row) => {
+    if (!dateCapacityByPostingId.has(row.posting_id)) {
+      dateCapacityByPostingId.set(row.posting_id, {});
+    }
+
+    dateCapacityByPostingId.get(row.posting_id)![row.date] = Number(row.count ?? 0);
+  });
+
   const resolvedApplicationStatusByPostingId = new Map<number, PostingApplicationStatus>();
 
   if (applicationStatusByPostingId) {
@@ -116,6 +200,7 @@ export async function buildPostingsWithContext(
     crisis_name: posting.crisis_name ?? null,
     skills: skillsByPostingId.get(posting.id) ?? [],
     enrollment_count: countsByPostingId.get(posting.id) ?? 0,
+    date_capacity: dateCapacityByPostingId.get(posting.id) ?? {},
     application_status: resolvedApplicationStatusByPostingId.get(posting.id) ?? 'none',
   }));
 }

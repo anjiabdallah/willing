@@ -55,7 +55,7 @@ function OrganizationProfile() {
         `/organization/${id}`,
         {
           method: 'GET',
-          includeJwt: false,
+          includeJwt: true,
         },
       );
       return response;

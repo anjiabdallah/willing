@@ -95,7 +95,6 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="settings" element={<VolunteerSettings />} />
               </Route>
 
-              <Route path="organization/:id" element={<OrganizationProfile />} />
               <Route path="guide" element={<GuidePage />} />
               <Route path="certificate/verify" element={<CertificateVerification />} />
               <Route path="calendar-demo" element={<CalendarInfoDemoPage />} />

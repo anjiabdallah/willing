@@ -4,6 +4,7 @@ import { useParams } from 'react-router';
 
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
+import CalendarInfo from '../../components/CalendarInfo';
 import Card from '../../components/Card';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
@@ -21,7 +22,9 @@ function OrganizationPostingAttendance() {
 
   const [saving, setSaving] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
-  const [draftAttendance, setDraftAttendance] = useState<Record<number, boolean>>({});
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [currentDateIndex, setCurrentDateIndex] = useState(0);
+  const [draftDateAttendance, setDraftDateAttendance] = useState<Record<number, Record<string, boolean>>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'attended_first' | 'absent_first'>('name_asc');
   const notifications = useNotifications();
@@ -37,9 +40,20 @@ function OrganizationPostingAttendance() {
     }
 
     const response = await requestServer<OrganizationPostingAttendanceResponse>(`/organization/posting/${id}/attendance`, { includeJwt: true });
-    setDraftAttendance(
-      Object.fromEntries(response.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
-    );
+    const postingDates = response.posting_dates ?? [];
+
+    const dateAttendanceMap: Record<number, Record<string, boolean>> = {};
+    response.enrollments.forEach((enrollment) => {
+      dateAttendanceMap[enrollment.enrollment_id] = {};
+      enrollment.dates?.forEach((dateItem) => {
+        dateAttendanceMap[enrollment.enrollment_id][dateItem.date] = dateItem.attended;
+      });
+    });
+
+    setAvailableDates(postingDates);
+    setCurrentDateIndex(0);
+    setDraftDateAttendance(dateAttendanceMap);
+
     return response;
   }, {
     immediate: true,
@@ -47,9 +61,9 @@ function OrganizationPostingAttendance() {
   });
 
   const { trigger: submitAttendanceChanges } = useAsync(
-    async (postingId: string, attendanceUpdates: Array<{ enrollmentId: number; attended: boolean }>) => Promise.all(
+    async (postingId: string, attendanceUpdates: Array<{ enrollmentDateId: number; attended: boolean }>) => Promise.all(
       attendanceUpdates.map(update => requestServer(
-        `/organization/posting/${postingId}/enrollments/${update.enrollmentId}/attendance`,
+        `/organization/posting/${postingId}/enrollment-dates/${update.enrollmentDateId}/attendance`,
         {
           method: 'PATCH',
           includeJwt: true,
@@ -96,31 +110,69 @@ function OrganizationPostingAttendance() {
     { notifyOnError: true },
   );
 
+  const currentDate = availableDates[currentDateIndex] ?? null;
+
   const toggleAttendance = useCallback(async (enrollment: PostingEnrollment) => {
-    if (saving) return;
-    setDraftAttendance(current => ({
+    if (saving || !currentDate) return;
+
+    setDraftDateAttendance((current) => {
+      const nextForEnrollment = {
+        ...(current[enrollment.enrollment_id] ?? {}),
+      };
+
+      const currentValue = nextForEnrollment[currentDate] ?? enrollment.dates?.find(d => d.date === currentDate)?.attended ?? false;
+      nextForEnrollment[currentDate] = !currentValue;
+
+      return {
+        ...current,
+        [enrollment.enrollment_id]: nextForEnrollment,
+      };
+    });
+  }, [currentDate, saving]);
+
+  const markVolunteerAllDates = useCallback((enrollment: PostingEnrollment) => {
+    const dates = enrollment.dates ?? [];
+    if (dates.length === 0) return;
+
+    setDraftDateAttendance(current => ({
       ...current,
-      [enrollment.enrollment_id]: !(current[enrollment.enrollment_id] ?? enrollment.attended),
+      [enrollment.enrollment_id]: Object.fromEntries(
+        dates.map(dateItem => [dateItem.date, true]),
+      ),
     }));
-  }, [saving]);
+  }, []);
 
   const setAllAttendanceDraft = useCallback((attended: boolean) => {
-    if (!data) return;
+    if (!data || !currentDate) return;
     if (saving) return;
-    setDraftAttendance(
-      Object.fromEntries(data!.enrollments.map(enrollment => [enrollment.enrollment_id, attended])),
+
+    setDraftDateAttendance(
+      Object.fromEntries(data.enrollments.map(enrollment => [
+        enrollment.enrollment_id,
+        {
+          ...(draftDateAttendance[enrollment.enrollment_id] ?? {}),
+          [currentDate]: attended,
+        },
+      ])),
     );
-  }, [data, saving]);
+  }, [currentDate, data, draftDateAttendance, saving]);
 
   const submitAttendance = useCallback(async () => {
-    if (!id || !data || saving) return;
+    if (!id || !data || saving || !currentDate) return;
 
-    const changedEnrollments = data.enrollments.filter((enrollment) => {
-      const nextAttendedValue = draftAttendance[enrollment.enrollment_id] ?? enrollment.attended;
-      return nextAttendedValue !== enrollment.attended;
+    const changes: Array<{ enrollmentDateId: number; attended: boolean }> = [];
+
+    data.enrollments.forEach((enrollment) => {
+      enrollment.dates?.forEach((dateItem) => {
+        const originalValue = dateItem.attended;
+        const draftValue = draftDateAttendance[enrollment.enrollment_id]?.[dateItem.date];
+        if (typeof draftValue === 'boolean' && draftValue !== originalValue) {
+          changes.push({ enrollmentDateId: dateItem.id, attended: draftValue });
+        }
+      });
     });
 
-    if (changedEnrollments.length === 0) {
+    if (changes.length === 0) {
       notifications.push({
         type: 'info',
         message: 'No attendance changes to submit.',
@@ -131,30 +183,36 @@ function OrganizationPostingAttendance() {
     try {
       setSaving(true);
 
-      await submitAttendanceChanges(
-        id,
-        changedEnrollments.map(enrollment => ({
-          enrollmentId: enrollment.enrollment_id,
-          attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended,
-        })),
-      );
+      await submitAttendanceChanges(id, changes);
 
       await loadAttendance();
+      const changedVolunteerCount = new Set(changes.map((c) => {
+        const enrollment = data.enrollments.find(e => e.dates?.some(d => d.id === c.enrollmentDateId));
+        return enrollment?.enrollment_id;
+      }).filter((id): id is number => id !== undefined)).size;
+
       notifications.push({
         type: 'success',
-        message: `Attendance saved for ${changedEnrollments.length} volunteer${changedEnrollments.length > 1 ? 's' : ''}.`,
+        message: `Attendance saved for ${changes.length} ${changes.length === 1 ? 'day' : 'days'}, for ${changedVolunteerCount} volunteer${changedVolunteerCount === 1 ? '' : 's'}.`,
       });
     } catch {
       await loadAttendance();
     } finally {
       setSaving(false);
     }
-  }, [data, draftAttendance, id, loadAttendance, notifications, saving, submitAttendanceChanges]);
+  }, [currentDate, data, draftDateAttendance, id, loadAttendance, notifications, saving, submitAttendanceChanges]);
 
   const undoAttendanceChanges = useCallback(() => {
     if (!data || saving) return;
-    setDraftAttendance(
-      Object.fromEntries(data.enrollments.map(enrollment => [enrollment.enrollment_id, enrollment.attended])),
+    setDraftDateAttendance(
+      Object.fromEntries(
+        data.enrollments.map(enrollment => [
+          enrollment.enrollment_id,
+          Object.fromEntries(
+            enrollment.dates?.map(dateItem => [dateItem.date, dateItem.attended]) ?? [],
+          ),
+        ]),
+      ),
     );
   }, [data, saving]);
 
@@ -182,19 +240,40 @@ function OrganizationPostingAttendance() {
 
   const hasUnsavedChanges = useMemo(() => {
     if (!data) return false;
+
     return data.enrollments.some((enrollment) => {
-      const nextAttendedValue = draftAttendance[enrollment.enrollment_id] ?? enrollment.attended;
-      return nextAttendedValue !== enrollment.attended;
+      return enrollment.dates?.some((dateItem) => {
+        const originalValue = dateItem.attended;
+        const nextAttendedValue = draftDateAttendance[enrollment.enrollment_id]?.[dateItem.date];
+        return typeof nextAttendedValue === 'boolean' && nextAttendedValue !== originalValue;
+      }) ?? false;
     });
-  }, [data, draftAttendance]);
+  }, [data, draftDateAttendance]);
 
   const displayedEnrollments = useMemo(() => {
     if (!data) return [];
-    return data.enrollments.map(enrollment => ({
-      ...enrollment,
-      attended: draftAttendance[enrollment.enrollment_id] ?? enrollment.attended,
-    }));
-  }, [data, draftAttendance]);
+    return data.enrollments.map((enrollment) => {
+      let attended = false;
+
+      if (currentDate) {
+        const original = enrollment.dates?.find(d => d.date === currentDate)?.attended;
+        const draft = draftDateAttendance[enrollment.enrollment_id]?.[currentDate];
+        if (typeof draft === 'boolean') {
+          attended = draft;
+        } else if (typeof original === 'boolean') {
+          attended = original;
+        }
+      }
+
+      return {
+        ...enrollment,
+        attended,
+      };
+    }).filter((enrollment) => {
+      if (!currentDate) return true;
+      return enrollment.dates?.some(dateItem => dateItem.date === currentDate) ?? false;
+    });
+  }, [currentDate, data, draftDateAttendance]);
 
   const filteredAndSortedEnrollments = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -346,6 +425,44 @@ function OrganizationPostingAttendance() {
           </select>
         </div>
 
+        {availableDates.length > 0 && (
+          <div className="mb-4 -mt-2">
+            <div className="flex items-center gap-2 flex-nowrap">
+              <span className="text-sm font-semibold relative top-1">Select date:</span>
+              <CalendarInfo
+                selectionMode="single"
+                singleValue={currentDate ?? ''}
+                onSingleChange={(value) => {
+                  const index = availableDates.indexOf(value);
+                  if (index >= 0) setCurrentDateIndex(index);
+                }}
+                className="w-56"
+                allowedDates={availableDates}
+                showTopLabels={false}
+                startLabel=""
+                endLabel=""
+              />
+              <Button
+                className="relative top-2 h-11 px-5 text-base"
+                style="outline"
+                onClick={() => setCurrentDateIndex(prev => Math.max(prev - 1, 0))}
+                disabled={currentDateIndex <= 0}
+              >
+                Previous
+              </Button>
+              <Button
+                className="relative top-2 h-11 px-5 text-base"
+                style="outline"
+                onClick={() => setCurrentDateIndex(prev => Math.min(prev + 1, availableDates.length - 1))}
+                disabled={currentDateIndex >= availableDates.length - 1}
+              >
+                Next
+              </Button>
+            </div>
+            <span className="text-xs opacity-70">Showing attendance for one day at a time</span>
+          </div>
+        )}
+
         {data.enrollments.length === 0 && (
           <Alert>
             No enrolled volunteers to track yet.
@@ -354,7 +471,7 @@ function OrganizationPostingAttendance() {
 
         {data.enrollments.length > 0 && filteredAndSortedEnrollments.length === 0 && (
           <Alert>
-            No volunteers match this search.
+            No volunteers signed up for this day yet
           </Alert>
         )}
 
@@ -366,18 +483,29 @@ function OrganizationPostingAttendance() {
                 volunteer={volunteer}
                 profileLink={`/organization/volunteer/${volunteer.volunteer_id}`}
                 actions={(
-                  <label className="flex items-center gap-2">
-                    <span className={`badge ${volunteer.attended ? 'badge-success' : 'badge-ghost'}`}>
-                      {volunteer.attended ? 'Present' : 'Absent'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      className="toggle toggle-success"
-                      checked={volunteer.attended}
-                      disabled={saving}
-                      onChange={() => void toggleAttendance(volunteer)}
-                    />
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2">
+                      <span className={`badge ${volunteer.attended ? 'badge-success' : 'badge-ghost'}`}>
+                        {volunteer.attended ? 'Present' : 'Absent'}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="toggle toggle-success"
+                        checked={volunteer.attended}
+                        disabled={saving || !currentDate || !volunteer.dates?.some(d => d.date === currentDate)}
+                        onChange={() => void toggleAttendance(volunteer)}
+                      />
+                    </label>
+                    <Button
+                      size="sm"
+                      color="secondary"
+                      style="outline"
+                      onClick={() => markVolunteerAllDates(volunteer)}
+                      disabled={saving || !volunteer.dates || volunteer.dates.length === 0}
+                    >
+                      All Days Present
+                    </Button>
+                  </div>
                 )}
               />
             ))}

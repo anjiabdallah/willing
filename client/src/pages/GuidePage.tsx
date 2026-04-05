@@ -24,11 +24,13 @@ import {
   UserPlus,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import AuthContext from '../auth/AuthContext';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import Footer from '../components/layout/Footer';
-import LoggedOutNavbar from '../components/layout/navbars/LoggedOutNavbar';
+import UserNavbar from '../components/layout/navbars/UserNavbar';
 import PageContainer from '../components/layout/PageContainer';
 import LinkButton from '../components/LinkButton';
 
@@ -55,6 +57,7 @@ const getOffsetTopRelativeToContainer = (el: HTMLElement, container: HTMLElement
 };
 
 function GuidePage() {
+  const auth = useContext(AuthContext);
   const [activeSection, setActiveSection] = useState('overview');
   const activeSectionRef = useRef('overview');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -261,7 +264,7 @@ function GuidePage() {
 
   return (
     <main className="h-screen flex flex-col">
-      <LoggedOutNavbar />
+      <UserNavbar />
       <div ref={scrollContainerRef} className="overflow-y-scroll flex-1">
         <PageContainer>
           <div className="flex w-full gap-6">
@@ -480,14 +483,42 @@ function GuidePage() {
                   title="Start volunteering today"
                   description="Find your first opportunity, apply, and start earning certificate hours."
                 >
-                  <LinkButton to="/volunteer/create" color="primary">Get Started</LinkButton>
+                  {auth.user?.role === 'admin'
+                    ? (
+                        <Button disabled color="primary">Admin Account Active</Button>
+                      )
+                    : auth.user?.role === 'organization'
+                      ? (
+                          <Button disabled color="primary">Organization Account Active</Button>
+                        )
+                      : auth.user?.role === 'volunteer'
+                        ? (
+                            <LinkButton to="/volunteer" color="primary">Go to Dashboard</LinkButton>
+                          )
+                        : (
+                            <LinkButton to="/volunteer/create" color="primary">Get Started</LinkButton>
+                          )}
                 </Card>
                 <Card
                   color="secondary"
                   title="Register your organization"
                   description="Publish your first posting and start matching with local volunteers."
                 >
-                  <LinkButton to="/organization/request" color="secondary">Register</LinkButton>
+                  {auth.user?.role === 'admin'
+                    ? (
+                        <Button disabled color="secondary">Admin Account Active</Button>
+                      )
+                    : auth.user?.role === 'volunteer'
+                      ? (
+                          <Button disabled color="secondary">Volunteer Account Active</Button>
+                        )
+                      : auth.user?.role === 'organization'
+                        ? (
+                            <LinkButton to="/organization" color="secondary">Go to Dashboard</LinkButton>
+                          )
+                        : (
+                            <LinkButton to="/organization/request" color="secondary">Register</LinkButton>
+                          )}
                 </Card>
               </section>
             </main>

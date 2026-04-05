@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock, Tag, Plus } from 'lucide-react';
+import { Send, MapPin, Edit3, Users, ShieldCheck, LockOpen, Lock, Tag, Plus, Calendar } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
@@ -29,6 +29,11 @@ export default function OrganizationPostingCreate() {
     reValidateMode: 'onChange',
     defaultValues: {
       automatic_acceptance: true,
+      allows_partial_attendance: false,
+      start_date: '',
+      start_time: '',
+      end_date: '',
+      end_time: '',
     },
   });
 
@@ -42,6 +47,7 @@ export default function OrganizationPostingCreate() {
   const startTime = useWatch({ control: form.control, name: 'start_time' }) ?? '';
   const endDate = useWatch({ control: form.control, name: 'end_date' }) ?? '';
   const endTime = useWatch({ control: form.control, name: 'end_time' }) ?? '';
+  const allowsPartialAttendance = useWatch({ control: form.control, name: 'allows_partial_attendance' }) ?? false;
 
   useEffect(() => {
     const loadCrises = async () => {
@@ -82,6 +88,7 @@ export default function OrganizationPostingCreate() {
         max_volunteers: data.max_volunteers ? Number(data.max_volunteers) : undefined,
         minimum_age: data.minimum_age ? Number(data.minimum_age) : undefined,
         automatic_acceptance: data.automatic_acceptance,
+        allows_partial_attendance: data.allows_partial_attendance,
         skills: skills.length > 0 ? skills : undefined,
         crisis_id: selectedCrisisId,
       };
@@ -155,11 +162,32 @@ export default function OrganizationPostingCreate() {
           <div className="space-y-4">
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
+                <ToggleButton
+                  form={form}
+                  name="allows_partial_attendance"
+                  label="Attendance Commitment"
+                  options={[
+                    {
+                      value: true,
+                      label: 'Partial Attendance',
+                      description: 'Volunteers can choose specific days.',
+                      Icon: Calendar,
+                      btnColor: 'btn-primary',
+                    },
+                    {
+                      value: false,
+                      label: 'Full Commitment',
+                      description: 'Volunteers must attend all dates.',
+                      Icon: Users,
+                      btnColor: 'btn-secondary',
+                    },
+                  ]}
+                />
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     form={form}
-                    label="Max Volunteers"
+                    label={`Max Volunteers${allowsPartialAttendance ? ' (per day)' : ''}`}
                     name="max_volunteers"
                     type="number"
                     placeholder="Optional"
@@ -188,7 +216,7 @@ export default function OrganizationPostingCreate() {
                           shouldTouch: true,
                           shouldValidate: true,
                         });
-                        form.setValue('end_date', to, {
+                        form.setValue('end_date', to || from, {
                           shouldDirty: true,
                           shouldTouch: true,
                           shouldValidate: true,
@@ -297,16 +325,16 @@ export default function OrganizationPostingCreate() {
                 />
               </div>
 
-              <div className="lg:col-span-1 flex flex-col">
-                <fieldset className="fieldset h-full flex flex-col">
+              <div className="lg:col-span-1 flex flex-col self-stretch">
+                <fieldset className="fieldset flex flex-col flex-1" style={{ minHeight: '500px' }}>
                   <label className="label">
                     <span className="label-text font-medium">Pin Location on Map</span>
                   </label>
-                  <div className="grow min-h-128">
+                  <div className="flex-1">
                     <LocationPicker
                       position={position}
                       setPosition={onMapPositionPick}
-                      className="h-full"
+                      className="h-full w-full"
                     />
                   </div>
                 </fieldset>

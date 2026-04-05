@@ -61,9 +61,39 @@ import type {
   VolunteerPostingResponse,
 } from '../../../server/src/api/types.ts';
 import type { Crisis } from '../../../server/src/db/tables/index.ts';
-import type { PostingApplication, PostingEnrollment, PostingWithSkills } from '../../../server/src/types.ts';
+import type { PostingApplication, PostingEnrollment, PostingWithContext, PostingWithSkills } from '../../../server/src/types.ts';
+
+const parseDateOnlyParts = (value: string) => {
+  const datePart = value.split('T')[0] ?? '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!match) return null;
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+};
+
+const normalizeDateOnlyValue = (value: string) => {
+  const dateParts = parseDateOnlyParts(value);
+  if (!dateParts) return '';
+
+  return `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
+};
+
+const normalizeDateOnlyList = (values: string[]) => values
+  .map(normalizeDateOnlyValue)
+  .filter((value): value is string => Boolean(value));
 
 const getDateInputValue = (value: Date | string) => {
+  if (typeof value === 'string') {
+    const dateParts = parseDateOnlyParts(value);
+    if (dateParts) {
+      return `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
+    }
+  }
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
   const year = parsed.getUTCFullYear();
@@ -82,6 +112,16 @@ const getPostingStartDateTime = (posting: PostingWithSkills) => {
 
 const formatDisplayDate = (value?: string) => {
   if (!value) return '-';
+
+  const dateParts = parseDateOnlyParts(value);
+  if (dateParts) {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(dateParts.year, dateParts.month - 1, dateParts.day));
+  }
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat('en-US', {
@@ -115,7 +155,7 @@ function PostingPage() {
   const organizationAccount = useOrganization();
   const account = isVolunteerView ? null : organizationAccount;
 
-  const [posting, setPosting] = useState<PostingWithSkills | null>(null);
+  const [posting, setPosting] = useState<PostingWithSkills | PostingWithContext | null>(null);
   const [enrollments, setEnrollments] = useState<PostingEnrollment[]>([]);
   const [applications, setApplications] = useState<PostingApplication[]>([]);
   const [hasPendingApplication, setHasPendingApplication] = useState(false);
@@ -133,6 +173,9 @@ function PostingPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [processingApplicationId, setProcessingApplicationId] = useState<number | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [selectedApplicationDates, setSelectedApplicationDates] = useState<string[]>([]);
+  const [selectedVolunteerDates, setSelectedVolunteerDates] = useState<string[]>([]);
+  const [postingDates, setPostingDates] = useState<string[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [postingEnrollmentCount, setPostingEnrollmentCount] = useState(0);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string; logoPath?: string | null } | null>(null);
@@ -256,6 +299,8 @@ function PostingPage() {
       setHasPendingApplication(postingResponse.posting.application_status === 'pending');
       setIsEnrolled(postingResponse.posting.application_status === 'registered');
       setPostingEnrollmentCount(postingResponse.posting.enrollment_count);
+      setPostingDates(normalizeDateOnlyList(postingResponse.posting_dates ?? []));
+      setSelectedVolunteerDates(normalizeDateOnlyList(postingResponse.selected_dates ?? []));
       setSkills(postingResponse.posting.skills.map(s => s.name));
       setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
       setPosition([
@@ -290,8 +335,8 @@ function PostingPage() {
         start_time: getTimeInputValue(postingResponse.posting.start_time),
         end_date: postingResponse.posting.end_date ? getDateInputValue(postingResponse.posting.end_date) : '',
         end_time: getTimeInputValue(postingResponse.posting.end_time),
-        max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? undefined,
-        minimum_age: postingResponse.posting.minimum_age?.toString() ?? undefined,
+        max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? '',
+        minimum_age: postingResponse.posting.minimum_age?.toString() ?? '',
         automatic_acceptance: postingResponse.posting.automatic_acceptance,
         is_closed: postingResponse.posting.is_closed,
         allows_partial_attendance: postingResponse.posting.allows_partial_attendance,
@@ -325,6 +370,7 @@ function PostingPage() {
 
     setIsEnrolled(false);
     setHasPendingApplication(false);
+    setSelectedVolunteerDates([]);
     setSkills(postingResponse.skills.map(s => s.name));
     setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
     setPosition([
@@ -369,8 +415,8 @@ function PostingPage() {
       start_time: getTimeInputValue(postingResponse.posting.start_time),
       end_date: postingResponse.posting.end_date ? getDateInputValue(postingResponse.posting.end_date) : '',
       end_time: getTimeInputValue(postingResponse.posting.end_time),
-      max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? undefined,
-      minimum_age: postingResponse.posting.minimum_age?.toString() ?? undefined,
+      max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? '',
+      minimum_age: postingResponse.posting.minimum_age?.toString() ?? '',
       automatic_acceptance: postingResponse.posting.automatic_acceptance,
       is_closed: postingResponse.posting.is_closed,
       allows_partial_attendance: postingResponse.posting.allows_partial_attendance,
@@ -410,10 +456,11 @@ function PostingPage() {
   );
 
   const { trigger: applyToPosting } = useAsync(
-    async (postingId: string, message?: string) => requestServer(`/volunteer/posting/${postingId}/enroll`, {
+    async (postingId: string, message?: string, dates?: string[]) => requestServer(`/volunteer/posting/${postingId}/enroll`, {
       method: 'POST',
       body: {
         message,
+        dates,
       },
       includeJwt: true,
     }),
@@ -465,9 +512,10 @@ function PostingPage() {
           location_name: data.location_name.trim(),
           latitude: position[0],
           longitude: position[1],
-          max_volunteers: data.max_volunteers ? Number(data.max_volunteers) : undefined,
-          minimum_age: data.minimum_age ? Number(data.minimum_age) : undefined,
+          max_volunteers: data.max_volunteers === '' ? null : data.max_volunteers ? Number(data.max_volunteers) : undefined,
+          minimum_age: data.minimum_age === '' ? null : data.minimum_age ? Number(data.minimum_age) : undefined,
           automatic_acceptance: data.automatic_acceptance,
+          allows_partial_attendance: data.allows_partial_attendance,
           is_closed: data.is_closed,
           skills: skills.length > 0 ? skills : undefined,
           crisis_id: selectedCrisisId ?? null,
@@ -509,8 +557,8 @@ function PostingPage() {
       start_time: getTimeInputValue(posting.start_time),
       end_date: posting.end_date ? getDateInputValue(posting.end_date) : '',
       end_time: getTimeInputValue(posting.end_time),
-      max_volunteers: posting.max_volunteers?.toString() ?? undefined,
-      minimum_age: posting.minimum_age?.toString() ?? undefined,
+      max_volunteers: posting.max_volunteers?.toString() ?? '',
+      minimum_age: posting.minimum_age?.toString() ?? '',
       automatic_acceptance: posting.automatic_acceptance,
       is_closed: posting.is_closed,
       allows_partial_attendance: posting.allows_partial_attendance,
@@ -560,20 +608,29 @@ function PostingPage() {
 
   const closeApplyModal = useCallback(() => {
     setIsApplyModalOpen(false);
+    setSelectedApplicationDates([]);
   }, []);
 
   const openApplyModal = useCallback(() => {
     if (!id || hasPendingApplication || isEnrolled) return;
+    setSelectedApplicationDates([]);
     setIsApplyModalOpen(true);
   }, [id, hasPendingApplication, isEnrolled]);
 
   const submitApplication = useCallback(async (message?: string) => {
-    if (!id || hasPendingApplication || isEnrolled) return;
+    if (!id || hasPendingApplication || isEnrolled || !posting) return;
+
+    if (posting.allows_partial_attendance) {
+      if (selectedApplicationDates.length === 0) {
+        notifications.push({ type: 'error', message: 'Please select at least one date to apply.' });
+        return;
+      }
+    }
 
     try {
       setApplying(true);
 
-      await applyToPosting(id, message);
+      await applyToPosting(id, message, posting.allows_partial_attendance ? selectedApplicationDates : undefined);
 
       setHasPendingApplication(true);
       setIsApplyModalOpen(false);
@@ -586,15 +643,16 @@ function PostingPage() {
     } finally {
       setApplying(false);
     }
-  }, [applyToPosting, id, hasPendingApplication, isEnrolled, notifications, loadPosting]);
+  }, [applyToPosting, id, hasPendingApplication, isEnrolled, notifications, loadPosting, posting, postingDates, selectedApplicationDates]);
 
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
-    if (!confirm(isEnrolled ? 'Are you sure you want to leave this position?' : 'Are you sure you want to withdraw your application?')) return;
+
+    const withdrawConfirmed = confirm(isEnrolled ? 'Are you sure you want to leave this position?' : 'Are you sure you want to withdraw your application?');
+    if (!withdrawConfirmed) return;
 
     try {
       setWithdrawing(true);
-
       await withdrawFromPosting(id);
 
       setHasPendingApplication(false);
@@ -684,6 +742,55 @@ function PostingPage() {
     };
   }, [hasPendingApplication, isEnrolled]);
 
+  const formattedSelectedDates = useMemo(() => (
+    (selectedVolunteerDates ?? []).map(date => formatDisplayDate(date))
+  ), [selectedVolunteerDates]);
+
+  const applicationDaysLabel = useMemo(() => {
+    if (!posting || (!isEnrolled && !hasPendingApplication)) return null;
+    if (!posting.allows_partial_attendance) return 'All days';
+    if (formattedSelectedDates.length === 0) return null;
+    return formattedSelectedDates.join(', ');
+  }, [formattedSelectedDates, hasPendingApplication, isEnrolled, posting]);
+
+  const shouldShowCommitmentCard = useMemo(() => {
+    if (!posting) return false;
+    return startDate !== endDate;
+  }, [endDate, posting, startDate]);
+
+  const isMultiDayPartialPosting = useMemo(() => (
+    Boolean(posting?.allows_partial_attendance) && shouldShowCommitmentCard
+  ), [posting?.allows_partial_attendance, shouldShowCommitmentCard]);
+
+  const fullPostingDates = useMemo(() => {
+    if (!posting?.allows_partial_attendance) return [];
+    const maxVolunteers = posting.max_volunteers;
+    if (maxVolunteers == null) return [];
+
+    const dateCapacity = 'date_capacity' in posting ? (posting.date_capacity ?? {}) : {};
+    return postingDates.filter(date => (dateCapacity[date] ?? 0) >= maxVolunteers);
+  }, [posting, postingDates]);
+
+  const postingDateDetails = useMemo(() => {
+    if (!posting || !postingDates.length) return {};
+    const maxVolunteers = posting.max_volunteers;
+    if (maxVolunteers == null) return {};
+
+    const combinedCapacity = 'date_capacity' in posting ? (posting.date_capacity ?? {}) : {};
+    const confirmedCapacity = 'confirmed_date_capacity' in posting
+      ? (posting.confirmed_date_capacity ?? {})
+      : combinedCapacity;
+
+    return postingDates.reduce<Record<string, string>>((acc, date) => {
+      const confirmedEnrolled = confirmedCapacity[date] ?? 0;
+      const isFull = (combinedCapacity[date] ?? 0) >= maxVolunteers;
+      acc[date] = isFull
+        ? 'Full'
+        : `${confirmedEnrolled}/${maxVolunteers}`;
+      return acc;
+    }, {});
+  }, [posting, postingDates]);
+
   const canOpenAttendancePage = useMemo(() => {
     if (isVolunteerView || !posting) return false;
     return new Date() >= getPostingStartDateTime(posting);
@@ -699,11 +806,6 @@ function PostingPage() {
   const overMaxVolunteerCount = useMemo(() => {
     if (!maxVolunteers) return 0;
     return Math.max(0, currentEnrollmentCount - maxVolunteers);
-  }, [currentEnrollmentCount, maxVolunteers]);
-
-  const isPostingFull = useMemo(() => {
-    if (!maxVolunteers) return false;
-    return currentEnrollmentCount >= maxVolunteers;
   }, [currentEnrollmentCount, maxVolunteers]);
 
   const volunteerProgressPercent = useMemo(() => {
@@ -769,8 +871,24 @@ function PostingPage() {
         submitting={applying}
         onClose={closeApplyModal}
         onSubmit={submitApplication}
+        title="Apply to posting"
         placeholder="You can add an optional message to tell the organization why you're interested in this opportunity"
-      />
+      >
+        {posting?.allows_partial_attendance && (
+          <div className="mt-3">
+            <p className="text-sm font-medium mb-2">Select your available days (partial attendance)</p>
+            <CalendarInfo
+              selectionMode="multiple"
+              selectedDates={selectedApplicationDates}
+              onSelectedDatesChange={setSelectedApplicationDates}
+              allowedDates={postingDates}
+              disabledDates={fullPostingDates}
+              dateDetails={postingDateDetails}
+            />
+            <p className="text-xs text-muted mt-2">You must select at least one available day. Full days are unavailable.</p>
+          </div>
+        )}
+      </CustomMessageModal>
 
       <PageHeader
         title="Posting Details"
@@ -1031,49 +1149,51 @@ function PostingPage() {
                   )}
             </Card>
 
-            <Card
-              title="Capacity"
-              description="Number of volunteers still needed"
-              color="secondary"
-              Icon={Users}
-              right={
-                maxVolunteers != null
-                  ? (
-                      <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
-                        {(remainingSpots ?? 0) > 0
-                          ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
-                          : 'No spots remaining'}
-                      </span>
-                    )
-                  : (
-                      <span className="text-sm opacity-70">{`${currentEnrollmentCount} volunteers`}</span>
-                    )
-              }
-            >
-              <div className="space-y-2">
-                {maxVolunteers != null && (
-                  <progress
-                    className="progress progress-secondary w-full"
-                    value={volunteerProgressPercent}
-                    max={100}
-                    aria-label="Volunteer capacity progress"
-                  />
-                )}
-                <p className="text-xs opacity-70">
-                  {maxVolunteers
-                    ? `${currentEnrollmentCount} / ${maxVolunteers} volunteers`
-                    : `${currentEnrollmentCount} volunteers`}
-                </p>
-                {maxVolunteers == null && (
-                  <p className="text-xs opacity-70">No maximum number of volunteers set</p>
-                )}
-                {maxVolunteers != null && overMaxVolunteerCount > 0 && (
-                  <p className="text-xs text-error font-semibold">
-                    {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+            {!isMultiDayPartialPosting && (
+              <Card
+                title="Capacity"
+                description="Number of volunteers still needed"
+                color="secondary"
+                Icon={Users}
+                right={
+                  maxVolunteers != null
+                    ? (
+                        <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
+                          {(remainingSpots ?? 0) > 0
+                            ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
+                            : 'No spots remaining'}
+                        </span>
+                      )
+                    : (
+                        <span className="text-sm opacity-70">{`${currentEnrollmentCount} volunteers`}</span>
+                      )
+                }
+              >
+                <div className="space-y-2">
+                  {maxVolunteers != null && (
+                    <progress
+                      className="progress progress-secondary w-full"
+                      value={volunteerProgressPercent}
+                      max={100}
+                      aria-label="Volunteer capacity progress"
+                    />
+                  )}
+                  <p className="text-xs opacity-70">
+                    {maxVolunteers
+                      ? `${currentEnrollmentCount} / ${maxVolunteers} volunteers`
+                      : `${currentEnrollmentCount} volunteers`}
                   </p>
-                )}
-              </div>
-            </Card>
+                  {maxVolunteers == null && (
+                    <p className="text-xs opacity-70">No maximum number of volunteers set</p>
+                  )}
+                  {maxVolunteers != null && overMaxVolunteerCount > 0 && (
+                    <p className="text-xs text-error font-semibold">
+                      {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+                    </p>
+                  )}
+                </div>
+              </Card>
+            )}
 
             <Card
               title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'No Crisis'}
@@ -1123,33 +1243,36 @@ function PostingPage() {
             >
               {isEditMode
                 ? (
-                    <ToggleButton
-                      form={form}
-                      name="automatic_acceptance"
-                      label="Posting Type"
-                      disabled={saving}
-                      options={[
-                        {
-                          value: true,
-                          label: 'Open Posting',
-                          description: 'Volunteers are accepted automatically.',
-                          Icon: LockOpen,
-                          btnColor: 'btn-primary',
-                        },
-                        {
-                          value: false,
-                          label: 'Review-Based',
-                          description: 'Volunteers must be approved by the organization.',
-                          Icon: Lock,
-                          btnColor: 'btn-secondary',
-                        },
-                      ]}
-                    />
+                    <>
+                      <ToggleButton
+                        form={form}
+                        name="automatic_acceptance"
+                        label="Posting Type"
+                        disabled={saving}
+                        options={[
+                          {
+                            value: true,
+                            label: 'Open Posting',
+                            description: 'Volunteers are accepted automatically.',
+                            Icon: LockOpen,
+                            btnColor: 'btn-primary',
+                          },
+                          {
+                            value: false,
+                            label: 'Review-Based',
+                            description: 'Volunteers must be approved by the organization.',
+                            Icon: Lock,
+                            btnColor: 'btn-secondary',
+                          },
+                        ]}
+                      />
+
+                    </>
                   )
                 : (
                     <span className={`badge gap-2 ${posting?.is_closed ? 'badge-error' : isOpen ? 'badge-primary' : 'badge-secondary'}`}>
                       {posting?.is_closed ? <Lock size={12} /> : isOpen ? <LockOpen size={12} /> : <Lock size={12} />}
-                      {posting?.is_closed ? 'Closed' : isPostingFull ? 'Full' : isOpen ? 'Open' : 'Review Based'}
+                      {posting?.is_closed ? 'Closed' : isOpen ? 'Open' : 'Review Based'}
                     </span>
                   )}
               <p className="text-xs opacity-70 mt-2">
@@ -1159,6 +1282,9 @@ function PostingPage() {
                     ? 'Volunteers are accepted automatically.'
                     : 'Volunteers must be accepted by the organization.'}
               </p>
+              {!isEditMode && !isVolunteerView && (
+                null
+              )}
             </Card>
 
             {!isVolunteerView && (
@@ -1177,6 +1303,16 @@ function PostingPage() {
           </>
         )}
       >
+        {shouldShowCommitmentCard && (
+          <Card
+            title={posting?.allows_partial_attendance ? 'Partial attendance' : 'Full commitment'}
+            description={posting?.allows_partial_attendance
+              ? 'Volunteers can choose specific days instead of committing to the full posting range.'
+              : 'Volunteers must commit to the full posting date range when they apply.'}
+            Icon={Calendar}
+          />
+        )}
+
         {isVolunteerView && (
           <Card
             title="Application Status"
@@ -1189,6 +1325,12 @@ function PostingPage() {
             <p className="text-sm opacity-70 mt-2">
               {applicationStatus.description}
             </p>
+            {applicationDaysLabel && (
+              <div className="mt-3">
+                <p className="text-xs font-medium uppercase tracking-wide opacity-60">Applied Days</p>
+                <p className="text-sm mt-1">{applicationDaysLabel}</p>
+              </div>
+            )}
 
             <div className="mt-3 flex justify-end">
               {isEnrolled

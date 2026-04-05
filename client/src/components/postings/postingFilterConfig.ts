@@ -17,6 +17,8 @@ export type SharedPostingFilterFields = {
   endDateTo: string;
   startTimeFrom: string;
   endTimeTo: string;
+  postingFilter: 'all' | 'open' | 'review' | 'partial' | 'full' | 'tagged' | 'untagged';
+  organizationCertificateFilter: 'all' | 'enabled' | 'disabled';
 };
 
 export type OrganizationPostingSortBy = SharedPostingSortBy | 'title';
@@ -93,13 +95,16 @@ export const buildSharedPostingQuery = (filters: SharedPostingFilterFields): Rec
   if (filters.endDateTo) query.end_date_to = filters.endDateTo;
   if (filters.startTimeFrom) query.start_time_from = filters.startTimeFrom;
   if (filters.endTimeTo) query.end_time_to = filters.endTimeTo;
+  if (filters.postingFilter && filters.postingFilter !== 'all') query.posting_filter = filters.postingFilter;
+  if (filters.organizationCertificateFilter && filters.organizationCertificateFilter !== 'all') query.certificate_enabled = filters.organizationCertificateFilter;
 
   return query;
 };
 
-export const hasSharedAdvancedPostingFilters = (filters: Pick<SharedPostingFilterFields, 'startDateFrom' | 'endDateTo' | 'startTimeFrom' | 'endTimeTo'>): boolean => Boolean(
+export const hasSharedAdvancedPostingFilters = (filters: Pick<SharedPostingFilterFields, 'startDateFrom' | 'endDateTo' | 'startTimeFrom' | 'endTimeTo' | 'postingFilter'>): boolean => Boolean(
   filters.startDateFrom
   || filters.endDateTo
   || filters.startTimeFrom
-  || filters.endTimeTo,
+  || filters.endTimeTo
+  || (filters.postingFilter && filters.postingFilter !== 'all'),
 );

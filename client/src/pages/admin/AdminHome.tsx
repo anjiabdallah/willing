@@ -74,7 +74,7 @@ function AdminHome() {
         </Card>
 
         <Card
-          title="Crisis"
+          title="Crises"
           description={
             crises === undefined
               ? 'Loading pinned crises...'

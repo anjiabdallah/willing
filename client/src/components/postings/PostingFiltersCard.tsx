@@ -96,6 +96,7 @@ function PostingFiltersCard<T extends FieldValues>({
   };
 
   const extraFieldsContent = extraFields ? extraFields(form) : null;
+  const hasExtraFieldsContent = extraFieldsContent !== null;
 
   return (
     <Card>
@@ -110,8 +111,15 @@ function PostingFiltersCard<T extends FieldValues>({
       )}
 
       <form className="space-y-4" onSubmit={applyFilters}>
-        <div className="flex gap-4">
-          <div className="mb-0 flex-2">
+        <div
+          className={`grid grid-cols-1 items-end gap-4 ${
+            hasExtraFieldsContent
+              ? 'md:grid-cols-[minmax(0,1fr)_12rem_12rem]'
+              : 'md:grid-cols-[minmax(0,1fr)_16rem]'
+          }`}
+        >
+          <div className="mb-0 min-w-0">
+
             <FormField
               form={form}
               name={searchFieldName}
@@ -121,13 +129,13 @@ function PostingFiltersCard<T extends FieldValues>({
             />
           </div>
 
-          {extraFieldsContent && (
-            <div className="flex-1">
+          {hasExtraFieldsContent && (
+            <div className="min-w-0">
               {extraFieldsContent}
             </div>
           )}
 
-          <div className="flex-1">
+          <div className="min-w-0">
             <FormField
               form={form}
               name={sortFieldName}

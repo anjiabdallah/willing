@@ -298,10 +298,12 @@ function createVolunteerRouter(db: Kysely<Database>) {
 
   volunteerRouter.get('/organizations', async (req, res: Response<VolunteerOrganizationSearchResponse>) => {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const certificateEnabled = typeof req.query.certificate_enabled === 'string' ? req.query.certificate_enabled : 'all';
 
     let query = db
       .selectFrom('organization_account')
       .leftJoin('organization_posting', 'organization_posting.organization_id', 'organization_account.id')
+      .leftJoin('organization_certificate_info', 'organization_certificate_info.id', 'organization_account.certificate_info_id')
       .select([
         'organization_account.id',
         'organization_account.name',
@@ -311,6 +313,15 @@ function createVolunteerRouter(db: Kysely<Database>) {
         sql<number>`COALESCE(COUNT(organization_posting.id), 0)`.as('posting_count'),
       ])
       .groupBy('organization_account.id');
+
+    if (certificateEnabled === 'enabled') {
+      query = query.where('organization_certificate_info.certificate_feature_enabled', '=', true);
+    } else if (certificateEnabled === 'disabled') {
+      query = query.where(({ or }) => or([
+        sql<boolean>`organization_certificate_info.certificate_feature_enabled = false`,
+        sql<boolean>`organization_certificate_info.certificate_feature_enabled IS NULL`,
+      ]));
+    }
 
     if (search) {
       const terms = normalizeSearchTerms(search);

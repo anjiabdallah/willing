@@ -27,6 +27,7 @@ Willing connects volunteers with organizations that publish real-world help oppo
 - **Posting**: A volunteer opportunity created by an organization (title, description, time window, location, skills, optional maximum number of volunteers, optional minimum age, optional linked crisis event, either open (anyone that applies is accepted) or review-based (requires acceptance from the organization), and can also be closed (closed manually by an organization to disallow volunteers from signing up anymore)).
 - **Enrollment application**: A volunteer's application to a posting (optional message included).
 - **Enrollment**: Accepted application record; later can be marked attended.
+- **Partial enrollment**: A posting-level behavior controlled by `allows_partial_attendance` that lets volunteers apply to selected posting dates instead of the full posting range.
 - **Crisis**: A specific real-world event bounded in time (for example, Beirut Port Explosion 2020, Lebanon War 2026), not a generic type or tag. Crises can be pinned to highlight priority events and surface urgent opportunities.
 
 ### High-Level User Journey
@@ -42,6 +43,17 @@ Willing connects volunteers with organizations that publish real-world help oppo
 9. The admin adds a signature, name, and position.
 10. Volunteers generate certificates with total number of hours, admin signature, and eligible organizations.
 11. Users check if certificates are valid through the website.
+
+### Partial Enrollment Flow
+
+1. Organizations choose `allows_partial_attendance` during posting creation.
+2. If partial attendance is disabled, volunteers apply for the full posting range and should not select dates.
+3. If partial attendance is enabled, volunteers select one or more posting dates, but not all posting dates.
+4. Pending requested dates are stored in `enrollment_application_date`.
+5. Accepted/enrolled dates are stored in `enrollment_date`.
+6. Review-based acceptance must copy requested dates from `enrollment_application_date` into `enrollment_date`.
+7. Withdrawal is currently full-withdraw only. Do not reintroduce per-day withdrawal UI or API behavior unless explicitly requested.
+8. Organization attendance is per day. Organizations can navigate any posting day, but volunteers should only appear on days they actually signed up for.
 
 ### Crisis Flow
 
@@ -65,6 +77,16 @@ Willing connects volunteers with organizations that publish real-world help oppo
 - Volunteers only manage their own profile, applications, and enrollments.
 - Organizations only manage their own postings and related applicant/enrollment decisions.
 - Admin does not run postings; admin governs organization access and the crisis event catalog.
+
+### Reporting & Moderation Flow
+
+- **Volunteer → Organization reports** are submitted from the organization profile page via `client/src/pages/OrganizationProfile.tsx`.
+- **Organization → Volunteer reports** are submitted from the organization volunteer profile page via `client/src/pages/organization/OrganizationVolunteerProfile.tsx`.
+- Both report forms reuse `client/src/components/reporting/ReportForm.tsx` and the shared report type constants in `client/src/components/reporting/reportType.constants.ts`.
+- Admin report review lives in `client/src/pages/admin/AdminReports.tsx` and report detail view in `client/src/pages/admin/AdminReportDetail.tsx`.
+- Backend report creation is handled in `server/src/api/routes/volunteer/index.ts` and `server/src/api/routes/organization/index.ts`.
+- Admin moderation and disable actions are handled in `server/src/api/routes/admin/index.ts`.
+- Disabling an account marks `is_disabled = true`, increments token version, removes related report rows, and prevents login in `server/src/api/routes/user.ts`.
 
 ## Repository Map
 
@@ -148,6 +170,14 @@ Every new route must have comprehensive tests covering **all behavioral paths an
 
 Create tests as `<name>.test.ts` alongside your route file.
 
+### Partial Enrollment Test Expectations
+
+- Cover both open and review-based posting behavior when partial attendance logic changes.
+- Test `GET` response shapes that expose `requested_dates`, `selected_dates`, or `posting_dates`.
+- Test date-range edge cases carefully; end dates must be included.
+- Avoid `toISOString().split('T')[0]` assertions for date-only DB values in tests. Prefer local calendar-date formatting helpers or SQL-side `YYYY-MM-DD` strings.
+- When using fixture helpers from `server/src/tests/fixtures/`, pass the active test transaction as the first argument.
+
 ## Core Engineering Rules
 
 1. Reuse canonical schemas and types from `server/src/db/tables.ts`.
@@ -157,6 +187,7 @@ Create tests as `<name>.test.ts` alongside your route file.
 5. Do not hardcode user IDs. Use auth context on client and `req.userJWT!.id` on server.
 6. Keep response and payload shapes consistent across client and server.
 7. Keep changes minimal and targeted; avoid unrelated refactors.
+8. For transactional DB logic, prefer `executeTransaction` from `server/src/db/executeTransaction.ts` instead of raw `db.transaction().execute(...)`, especially because tests often pass controlled transactions.
 
 ## Type Safety Requirements
 
@@ -265,11 +296,18 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 ### Posting Components (`client/src/components/postings/` + shared posting cards)
 
 - **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional prop: `organization`.
-- **`PostingSearchView`**: Reusable posting discovery shell with page header, search, date filters, and result states. Required props: `title`, `subtitle`. Optional props: `icon`, `badge`, `showBack`, `defaultBackTo`, `initialFilters`, `emptyMessage`, `filterPostings`, `fetchUrl`.
+- **`PostingSearchView`**: Reusable posting discovery shell with page header, search, date filters, and result states. Required props: `title`, `subtitle`. Optional props: `icon`, `badge`, `showBack`, `defaultBackTo`, `initialFilters`, `emptyMessage`, `filterPostings`, `fetchUrl`, `enableCrisisFilter`, `crisisOptions`, `enableOrganizationSearch`, `showEntityTabs`. Keep entity-specific top-row filters wired through `extraFields` so postings, organizations, and crises all use the same `search + extra field + sort` layout path.
+- **`PostingFiltersCard`**: Shared search/filter card used by posting discovery pages. Required props: `defaultValues`, `onApply`, `getHasAdvancedFiltersApplied`, `renderAdvancedFields`, `searchFieldName`, `searchPlaceholder`, `sortFieldName`, `sortOptions`. Optional props: `organizationSortOptions`, `showAdvanced`, `title`, `submitLabel`, `submitIcon`, `topContent`, `extraFields`. Prefer adding entity-specific selectors through `extraFields` rather than creating a custom top-row layout in the parent page.
 - **`HorizontalScrollSection`**: Horizontal carousel-style section with scroll controls, edge fades, and empty state. Required props: `title`, `hasItems`. Optional props: `subtitle`, `action`, `emptyState`, `children`.
 - **`PostingCollection`**: Shared renderer that switches between `PostingCard` and `PostingList` using global posting view mode context. Required prop: `postings`. Optional props: `showCrisis`, `crisisTagClickable` (default `true`), `variant`, `cardsContainerClassName`, `listContainerClassName`, `cardItemClassName`, `listItemClassName`, `emptyState`.
 - **`PostingViewModeToggle`**: Reusable cards/list toggle UI bound to global posting view mode context.
 - **`PostingViewModeProvider`** + **`usePostingViewMode`** (`PostingViewModeContext.tsx` and `PostingViewModeState.ts`): app-level context and hook for shared cards/list mode state with `localStorage` persistence.
+
+### Shared Posting Filter Rules
+
+1. `SharedPostingFilterFields` currently includes `postingFilter` and `organizationCertificateFilter` in addition to search/date/time fields. Any page-local filter type that extends it must provide defaults for both fields.
+2. When using `buildSharedPostingQuery(...)`, pass a fully populated object that includes those shared fields even if the current screen does not actively expose both controls.
+3. If a search screen needs an entity-specific top-row filter (for example certificate status), return it from `PostingSearchView.extraFields`; do not add a one-off field slot directly inside `PostingFiltersCard`.
 
 ### Form and Input Components
 
@@ -336,6 +374,10 @@ All components are in `client/src/components/`. **Use these instead of recreatin
    - Update `server/src/db/tables.ts`
    - Update affected insert paths (e.g., signup flows, seed scripts)
 4. Verify migration success locally after DB is running.
+5. Partial-enrollment schema currently spans both pending and accepted states:
+   - `enrollment_application_date` for requested dates
+   - `enrollment_date` for accepted/enrolled dates
+   Keep both paths in sync when changing partial-attendance behavior.
 
 ## Verification Checklist
 

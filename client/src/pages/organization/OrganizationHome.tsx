@@ -55,6 +55,8 @@ const defaultFilters: OrganizationPostingFilters = {
   endDateTo: '',
   startTimeFrom: '',
   endTimeTo: '',
+  postingFilter: 'all',
+  organizationCertificateFilter: 'all',
 };
 
 const defaultFormValues: OrganizationPostingFilterFormValues = {
@@ -67,6 +69,8 @@ const defaultFormValues: OrganizationPostingFilterFormValues = {
   endDateTo: defaultFilters.endDateTo,
   startTimeFrom: defaultFilters.startTimeFrom,
   endTimeTo: defaultFilters.endTimeTo,
+  postingFilter: defaultFilters.postingFilter,
+  organizationCertificateFilter: defaultFilters.organizationCertificateFilter,
 };
 
 const fromOrganizationPostingFilterFormValues = (
@@ -85,6 +89,8 @@ const fromOrganizationPostingFilterFormValues = (
     endDateTo: values.endDateTo,
     startTimeFrom: values.startTimeFrom,
     endTimeTo: values.endTimeTo,
+    postingFilter: values.postingFilter,
+    organizationCertificateFilter: values.organizationCertificateFilter,
   };
 };
 

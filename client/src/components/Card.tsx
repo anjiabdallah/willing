@@ -24,6 +24,7 @@ interface CardProps {
   right?: ReactNode;
   link?: string;
   padding?: boolean;
+  fillHeight?: boolean;
   className?: string;
 }
 
@@ -38,16 +39,17 @@ function Card({
   right,
   link,
   padding = true,
+  fillHeight = false,
   className = '',
 }: CardProps) {
   return (
 
-    <div className={`card bg-base-100 shadow-md border border-base-300 ${className}`.trim()}>
-      <div className={`card-body ${padding ? '' : 'p-0'}`}>
+    <div className={`card ${fillHeight ? 'h-full fill-height' : ''} flex flex-col bg-base-100 shadow-md border border-base-300 ${className}`.trim()}>
+      <div className={`card-body ${fillHeight ? 'flex-1' : ''} flex flex-col ${padding ? '' : 'p-0'}`}>
         {title && (
           <div className={`flex items-center gap-2 ${description ? '' : (children ? 'mb-3' : 'mb-0')}`}>
             { left }
-            <h5 className={`font-bold text-lg inline-flex items-center gap-2 text-${coloredText ? color : ''}`}>
+            <h5 className={`font-bold text-lg inline-flex items-center gap-2 ${coloredText ? `text-${color}` : ''}`}>
               {Icon && <Icon size={17} className={`text-${color}`} />}
               {link
                 ? (

@@ -11,6 +11,9 @@ export type VolunteerPostingSearchResponse = {
 
 export type VolunteerPostingResponse = {
   posting: PostingWithContext;
+  enrolled_dates?: string[];
+  selected_dates?: string[];
+  posting_dates?: string[];
 };
 
 export type VolunteerPostingEnrollResponse = {

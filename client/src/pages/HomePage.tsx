@@ -148,14 +148,13 @@ function HomePage() {
                     <p className="opacity-80">Discover volunteer opportunities that match your skills.</p>
                     {auth.user?.role === 'admin'
                       ? (
-                          <LinkButton
-                            to="/admin"
+                          <Button
+                            disabled
                             layout="wide"
                             color="primary"
-                            Icon={Users}
                           >
-                            Manage Volunteers
-                          </LinkButton>
+                            Admin Account Active
+                          </Button>
                         )
                       : auth.user?.role === 'organization'
                         ? (
@@ -213,9 +212,13 @@ function HomePage() {
                 <p className="opacity-80">Request to register your organization and find volunteers.</p>
                 {auth.user?.role === 'admin'
                   ? (
-                      <LinkButton to="/admin" color="secondary" layout="wide" Icon={Building2}>
-                        Manage Organizations
-                      </LinkButton>
+                      <Button
+                        disabled
+                        layout="wide"
+                        color="secondary"
+                      >
+                        Admin Account Active
+                      </Button>
                     )
                   : auth.user?.role === 'volunteer'
                     ? (

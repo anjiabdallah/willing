@@ -75,3 +75,5 @@ export type VolunteerCertificateIssueResponse = {
 };
 
 export type VolunteerResetPasswordResponse = ResetPasswordResponse;
+
+export type VolunteerReportOrganizationResponse = object;

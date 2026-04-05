@@ -1,7 +1,12 @@
-import { Building2, ClipboardList, Globe, Mail, MapPin, Phone } from 'lucide-react';
-import { useMemo } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Building2, ClipboardList, Flag, Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { useContext, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
+import zod from 'zod';
 
+import AuthContext from '../auth/AuthContext';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import ColumnLayout from '../components/layout/ColumnLayout';
@@ -11,14 +16,37 @@ import LocationPicker from '../components/LocationPicker';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture';
 import PostingCollection from '../components/postings/PostingCollection';
 import PostingViewModeToggle from '../components/postings/PostingViewModeToggle';
+import ReportForm from '../components/reporting/ReportForm';
+import { DEFAULT_REPORT_TYPE, REPORT_TYPE_VALUES } from '../components/reporting/reportType.constants';
+import useNotifications from '../notifications/useNotifications';
 import requestServer from '../utils/requestServer';
 import useAsync from '../utils/useAsync';
 
-import type { OrganizationProfileResponse } from '../../../server/src/api/types';
+import type { OrganizationProfileResponse, VolunteerReportOrganizationResponse } from '../../../server/src/api/types';
 import type { PostingWithContext } from '../../../server/src/types';
+
+const reportOrganizationSchema = zod.object({
+  title: zod.enum(REPORT_TYPE_VALUES),
+  message: zod.string().trim().min(1, 'Message is required').max(1000, 'Message must be at most 1000 characters'),
+});
+
+type ReportOrganizationFormData = zod.infer<typeof reportOrganizationSchema>;
 
 function OrganizationProfile() {
   const { id } = useParams<{ id: string }>();
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const notifications = useNotifications();
+  const { user } = useContext(AuthContext);
+  const isOrganization = user?.role === 'organization';
+  const reportForm = useForm<ReportOrganizationFormData>({
+    resolver: zodResolver(reportOrganizationSchema),
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      title: DEFAULT_REPORT_TYPE,
+      message: '',
+    },
+  });
 
   const { data, loading, error } = useAsync(
     async () => {
@@ -34,6 +62,53 @@ function OrganizationProfile() {
     },
     { immediate: !!id },
   );
+
+  const closeReportModal = () => {
+    setReportModalOpen(false);
+  };
+
+  const openReportModal = () => {
+    reportForm.reset({
+      title: DEFAULT_REPORT_TYPE,
+      message: '',
+    });
+    setReportModalOpen(true);
+  };
+
+  const {
+    loading: submittingReport,
+    trigger: submitOrganizationReport,
+  } = useAsync(async (reportData: ReportOrganizationFormData) => {
+    if (!id) throw new Error('Organization ID is missing.');
+
+    await requestServer<VolunteerReportOrganizationResponse>(`/volunteer/organization/${id}/report`, {
+      method: 'POST',
+      includeJwt: true,
+      body: reportData,
+    });
+  }, { notifyOnError: false });
+  const canSubmitReport = reportForm.formState.isValid && !submittingReport;
+
+  const submitReportForm = async (formData: ReportOrganizationFormData) => {
+    reportForm.clearErrors('root');
+
+    try {
+      await submitOrganizationReport(formData);
+      notifications.push({
+        type: 'success',
+        message: 'Report submitted successfully.',
+      });
+      closeReportModal();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to submit report.';
+      reportForm.setError('root', {
+        type: 'server',
+        message,
+      });
+    }
+  };
+
+  const handleSubmitReportForm = reportForm.handleSubmit(submitReportForm);
 
   const postingsWithContext = useMemo<PostingWithContext[]>(() => {
     if (!data) return [];
@@ -68,6 +143,19 @@ function OrganizationProfile() {
         icon={Building2}
         showBack
         defaultBackTo="/"
+        actions={
+          !isOrganization && (
+            <Button
+              color="error"
+              style="outline"
+              type="button"
+              Icon={Flag}
+              onClick={openReportModal}
+            >
+              Report organization
+            </Button>
+          )
+        }
       />
 
       {error && <div className="mb-4 text-sm text-base-content/70">Unable to load organization profile.</div>}
@@ -230,6 +318,19 @@ function OrganizationProfile() {
           </div>
         </ColumnLayout>
       )}
+
+      <ReportForm
+        open={reportModalOpen}
+        heading="Report Organization"
+        form={reportForm}
+        onClose={closeReportModal}
+        onSubmit={handleSubmitReportForm}
+        messagePlaceholder="Describe what happened and why you are reporting this organization."
+        submitLabel="Report organization"
+        submitting={submittingReport}
+        submitDisabled={!canSubmitReport}
+        maxMessageLength={1000}
+      />
     </PageContainer>
   );
 }

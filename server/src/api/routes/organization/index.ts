@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { Router, type Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { sql, type Kysely } from 'kysely';
 import zod from 'zod';
 
@@ -15,6 +15,7 @@ import {
   type OrganizationGetMeResponse,
   type OrganizationPinnedCrisesResponse,
   type OrganizationProfileResponse,
+  type OrganizationReportVolunteerResponse,
   type OrganizationRequestResponse,
   type OrganizationUpdateProfileResponse,
   type OrganizationVolunteerCvDownloadResponse,
@@ -24,7 +25,13 @@ import {
 import createOrganizationPostingRouter from './posting.ts';
 import authorizeOnly from '../../../auth/authorizeOnly.ts';
 import createResetPassword from '../../../auth/resetPassword.ts';
-import { newOrganizationRequestSchema, organizationAccountSchema, type PostingSkill, type Database } from '../../../db/tables/index.ts';
+import {
+  newOrganizationRequestSchema,
+  newVolunteerReportSchema,
+  organizationAccountSchema,
+  type PostingSkill,
+  type Database,
+} from '../../../db/tables/index.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { sendAdminOrganizationRequestEmail } from '../../../services/smtp/emails.ts';
 import { orgLogoMulter } from '../../../services/uploads/orgLogo.ts';
@@ -81,24 +88,36 @@ const organizationPostingResponseColumns = [
   'organization_posting.updated_at',
 ] as const;
 
-const organizationProfileUpdateSchema = organizationAccountSchema.omit({
-  id: true,
-  password: true,
-  email: true,
-  name: true,
-  url: true,
-  org_vector: true,
-  created_at: true,
-  updated_at: true,
-}).partial();
+const organizationProfileUpdateSchema = organizationAccountSchema
+  .omit({
+    id: true,
+    password: true,
+    email: true,
+    name: true,
+    url: true,
+    org_vector: true,
+    created_at: true,
+    updated_at: true,
+  })
+  .partial();
 
-const isSameNullableNumber = (left: number | undefined, right: number | undefined) => (left ?? null) === (right ?? null);
+const isSameNullableNumber = (
+  left: number | undefined,
+  right: number | undefined,
+) => (left ?? null) === (right ?? null);
 
 function createOrganizationRouter(db: Kysely<Database>) {
-  const hasVolunteerRelationshipWithOrganization = async (organizationId: number, volunteerId: number) => {
+  const hasVolunteerRelationshipWithOrganization = async (
+    organizationId: number,
+    volunteerId: number,
+  ) => {
     const relatedApplication = await db
       .selectFrom('enrollment_application')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
+      .innerJoin(
+        'organization_posting',
+        'organization_posting.id',
+        'enrollment_application.posting_id',
+      )
       .select('enrollment_application.id')
       .where('enrollment_application.volunteer_id', '=', volunteerId)
       .where('organization_posting.organization_id', '=', organizationId)
@@ -149,26 +168,27 @@ function createOrganizationRouter(db: Kysely<Database>) {
     const organization = await db
       .insertInto('organization_request')
       .values(body)
-      .returningAll().executeTakeFirst();
+      .returningAll()
+      .executeTakeFirst();
 
     if (!organization) {
       throw new Error('Failed to create organization request');
-    } else {
-      const adminEmails = (await db
-        .selectFrom('admin_account')
-        .select('email')
-        .execute())
-        .map(row => row.email);
-
-      await sendAdminOrganizationRequestEmail(organization, adminEmails);
-      res.json({});
     }
+
+    const adminEmails = (await db.selectFrom('admin_account').select('email').execute()).map(
+      row => row.email,
+    );
+
+    await sendAdminOrganizationRequestEmail(organization, adminEmails);
+    res.json({});
   });
 
   organizationRouter.get('/:id/logo', async (req, res: Response<OrganizationGetLogoFileResponse>, next) => {
-    const { id } = zod.object({
-      id: zod.coerce.number().int().positive('ID must be a positive number'),
-    }).parse(req.params);
+    const { id } = zod
+      .object({
+        id: zod.coerce.number().int().positive('ID must be a positive number'),
+      })
+      .parse(req.params);
 
     const organization = await db
       .selectFrom('organization_account')
@@ -195,45 +215,56 @@ function createOrganizationRouter(db: Kysely<Database>) {
     });
   });
 
-  organizationRouter.get('/:id/signature', async (req, res: Response<OrganizationGetSignatureFileResponse>, next) => {
-    const { id } = zod.object({
-      id: zod.coerce.number().int().positive('ID must be a positive number'),
-    }).parse(req.params);
+  organizationRouter.get(
+    '/:id/signature',
+    async (req, res: Response<OrganizationGetSignatureFileResponse>, next) => {
+      const { id } = zod
+        .object({
+          id: zod.coerce.number().int().positive('ID must be a positive number'),
+        })
+        .parse(req.params);
 
-    const organization = await db
-      .selectFrom('organization_account')
-      .leftJoin('organization_certificate_info', 'organization_certificate_info.id', 'organization_account.certificate_info_id')
-      .select(['organization_certificate_info.signature_path'])
-      .where('organization_account.id', '=', id)
-      .executeTakeFirst();
+      const organization = await db
+        .selectFrom('organization_account')
+        .leftJoin(
+          'organization_certificate_info',
+          'organization_certificate_info.id',
+          'organization_account.certificate_info_id',
+        )
+        .select(['organization_certificate_info.signature_path'])
+        .where('organization_account.id', '=', id)
+        .executeTakeFirst();
 
-    if (!organization?.signature_path) {
-      res.status(404);
-      throw new Error('Organization signature not found');
-    }
+      if (!organization?.signature_path) {
+        res.status(404);
+        throw new Error('Organization signature not found');
+      }
 
-    const ext = path.extname(organization.signature_path).toLowerCase();
-    if (ext === '.png') {
-      res.setHeader('Content-Type', 'image/png');
-    } else if (ext === '.svg') {
-      res.setHeader('Content-Type', 'image/svg+xml');
-    } else {
-      res.setHeader('Content-Type', 'image/jpeg');
-    }
-    res.setHeader('Content-Disposition', 'inline; filename="organization-signature"');
+      const ext = path.extname(organization.signature_path).toLowerCase();
+      if (ext === '.png') {
+        res.setHeader('Content-Type', 'image/png');
+      } else if (ext === '.svg') {
+        res.setHeader('Content-Type', 'image/svg+xml');
+      } else {
+        res.setHeader('Content-Type', 'image/jpeg');
+      }
+      res.setHeader('Content-Disposition', 'inline; filename="organization-signature"');
 
-    res.sendFile(organization.signature_path, { root: ORG_SIGNATURE_UPLOAD_DIR }, (error) => {
-      if (!error) return;
-      next(error);
-    });
-  });
+      res.sendFile(organization.signature_path, { root: ORG_SIGNATURE_UPLOAD_DIR }, (error) => {
+        if (!error) return;
+        next(error);
+      });
+    },
+  );
 
   organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResponse>, next) => {
     let orgId;
     try {
-      orgId = zod.object({
-        id: zod.coerce.number(),
-      }).parse(req.params).id;
+      orgId = zod
+        .object({
+          id: zod.coerce.number(),
+        })
+        .parse(req.params).id;
     } catch (_error: unknown) {
       next();
       return;
@@ -250,7 +281,6 @@ function createOrganizationRouter(db: Kysely<Database>) {
       throw new Error('Organization not found');
     }
 
-    // Fetch organization's postings
     const postings = await db
       .selectFrom('organization_posting')
       .select(organizationPostingResponseColumns)
@@ -259,7 +289,6 @@ function createOrganizationRouter(db: Kysely<Database>) {
       .orderBy('organization_posting.start_time', 'asc')
       .execute();
 
-    // Fetch skills for all postings
     const postingIds = postings.map(p => p.id);
     const skills = postingIds.length > 0
       ? await db
@@ -285,7 +314,6 @@ function createOrganizationRouter(db: Kysely<Database>) {
     res.json({ organization, postings: postingsWithSkills });
   });
 
-  // Protected organization routes
   organizationRouter.use(authorizeOnly('organization'));
 
   organizationRouter.get('/crises/pinned', async (_req, res: Response<OrganizationPinnedCrisesResponse>) => {
@@ -311,15 +339,13 @@ function createOrganizationRouter(db: Kysely<Database>) {
   });
 
   organizationRouter.get('/crises/:id', async (req, res: Response<OrganizationCrisisResponse>) => {
-    const { id } = zod.object({
-      id: zod.coerce.number().int().positive('ID must be a positive number'),
-    }).parse(req.params);
+    const { id } = zod
+      .object({
+        id: zod.coerce.number().int().positive('ID must be a positive number'),
+      })
+      .parse(req.params);
 
-    const crisis = await db
-      .selectFrom('crisis')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirst();
+    const crisis = await db.selectFrom('crisis').selectAll().where('id', '=', id).executeTakeFirst();
 
     if (!crisis) {
       res.status(404);
@@ -340,9 +366,11 @@ function createOrganizationRouter(db: Kysely<Database>) {
   });
 
   organizationRouter.get('/volunteer/:id', async (req, res: Response<OrganizationVolunteerProfileResponse>) => {
-    const { id: volunteerId } = zod.object({
-      id: zod.coerce.number().int().positive('Volunteer ID must be a positive number'),
-    }).parse(req.params);
+    const { id: volunteerId } = zod
+      .object({
+        id: zod.coerce.number().int().positive('Volunteer ID must be a positive number'),
+      })
+      .parse(req.params);
 
     const organizationId = req.userJWT!.id;
 
@@ -356,61 +384,83 @@ function createOrganizationRouter(db: Kysely<Database>) {
     res.json({ profile });
   });
 
-  organizationRouter.get('/volunteer/:id/cv', async (req, res: Response<OrganizationVolunteerCvDownloadResponse>, next) => {
-    const { id: volunteerId } = zod.object({
-      id: zod.coerce.number().int().positive('Volunteer ID must be a positive number'),
-    }).parse(req.params);
+  organizationRouter.post('/volunteer/:id/report', async (req, res: Response<OrganizationReportVolunteerResponse>) => {
+    const { id: volunteerId } = zod
+      .object({
+        id: zod.coerce.number().int().positive('Volunteer ID must be a positive number'),
+      })
+      .parse(req.params);
 
+    const body = newVolunteerReportSchema.parse(req.body);
     const organizationId = req.userJWT!.id;
-    const hasRelationship = await hasVolunteerRelationshipWithOrganization(organizationId, volunteerId);
-    if (!hasRelationship) {
-      res.status(403);
-      throw new Error('You can only access CVs of volunteers related to your postings.');
-    }
 
-    const volunteer = await db
-      .selectFrom('volunteer_account')
-      .select(['id', 'cv_path', 'first_name', 'last_name'])
-      .where('id', '=', volunteerId)
-      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('volunteer_report')
+      .values({
+        reported_volunteer_id: volunteerId,
+        reporter_organization_id: organizationId,
+        title: body.title,
+        message: body.message,
+      })
+      .execute();
 
-    if (!volunteer.cv_path) {
-      res.status(404);
-      throw new Error('Volunteer CV not found');
-    }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${volunteer.first_name}-${volunteer.last_name}-cv.pdf"`,
-    );
-
-    res.sendFile(volunteer.cv_path, { root: CV_UPLOAD_DIR }, (error) => {
-      if (!error) return;
-      next(error);
-    });
+    res.json({});
   });
+
+  organizationRouter.get(
+    '/volunteer/:id/cv',
+    async (req, res: Response<OrganizationVolunteerCvDownloadResponse>, next) => {
+      const { id: volunteerId } = zod
+        .object({
+          id: zod.coerce.number().int().positive('Volunteer ID must be a positive number'),
+        })
+        .parse(req.params);
+
+      const organizationId = req.userJWT!.id;
+      const hasRelationship = await hasVolunteerRelationshipWithOrganization(organizationId, volunteerId);
+      if (!hasRelationship) {
+        res.status(403);
+        throw new Error('You can only access CVs of volunteers related to your postings.');
+      }
+
+      const volunteer = await db
+        .selectFrom('volunteer_account')
+        .select(['id', 'cv_path', 'first_name', 'last_name'])
+        .where('id', '=', volunteerId)
+        .executeTakeFirstOrThrow();
+
+      if (!volunteer.cv_path) {
+        res.status(404);
+        throw new Error('Volunteer CV not found');
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${volunteer.first_name}-${volunteer.last_name}-cv.pdf"`,
+      );
+
+      res.sendFile(volunteer.cv_path, { root: CV_UPLOAD_DIR }, (error) => {
+        if (!error) return;
+        next(error);
+      });
+    },
+  );
 
   organizationRouter.put('/profile', async (req, res: Response<OrganizationUpdateProfileResponse>) => {
     const body = organizationProfileUpdateSchema.parse(req.body);
     const organizationId = req.userJWT!.id;
     const existingOrganization = await db
       .selectFrom('organization_account')
-      .select([
-        'description',
-        'location_name',
-        'latitude',
-        'longitude',
-      ])
+      .select(['description', 'location_name', 'latitude', 'longitude'])
       .where('id', '=', organizationId)
       .executeTakeFirstOrThrow();
 
-    const shouldRecomputeOrganizationVector = (
-      (body.description !== undefined && body.description !== existingOrganization.description)
-      || (body.location_name !== undefined && body.location_name !== existingOrganization.location_name)
-      || (body.latitude !== undefined && !isSameNullableNumber(body.latitude, existingOrganization.latitude))
-      || (body.longitude !== undefined && !isSameNullableNumber(body.longitude, existingOrganization.longitude))
-    );
+    const shouldUpdateDescription = body.description !== undefined && body.description !== existingOrganization.description;
+    const shouldUpdateLocationName = body.location_name !== undefined && body.location_name !== existingOrganization.location_name;
+    const shouldUpdateLatitude = body.latitude !== undefined && !isSameNullableNumber(body.latitude, existingOrganization.latitude);
+    const shouldUpdateLongitude = body.longitude !== undefined && !isSameNullableNumber(body.longitude, existingOrganization.longitude);
+    const shouldRecomputeOrganizationVector = shouldUpdateDescription || shouldUpdateLocationName || shouldUpdateLatitude || shouldUpdateLongitude;
 
     if (Object.keys(body).length > 0) {
       await db
@@ -436,7 +486,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
   organizationRouter.post(
     '/logo',
     uploadSingle(orgLogoMulter, 'logo'),
-    async (req, res: Response<OrganizationUploadLogoResponse>) => {
+    async (req: Request, res: Response<OrganizationUploadLogoResponse>) => {
       if (!req.file) {
         res.status(400);
         throw new Error('No logo file provided');
@@ -470,9 +520,10 @@ function createOrganizationRouter(db: Kysely<Database>) {
         .executeTakeFirstOrThrow();
 
       res.json({ organization });
-    });
+    },
+  );
 
-  organizationRouter.delete('/logo', async (req, res: Response<OrganizationDeleteLogoResponse>) => {
+  organizationRouter.delete('/logo', async (req: Request, res: Response<OrganizationDeleteLogoResponse>) => {
     const organizationId = req.userJWT!.id;
     const existingOrganization = await db
       .selectFrom('organization_account')
@@ -497,7 +548,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
       try {
         await fs.promises.unlink(path.join(ORG_LOGO_UPLOAD_DIR, existingOrganization.logo_path));
       } catch {
-      // ignore missing old logo file
+        // ignore missing old logo file
       }
     }
 

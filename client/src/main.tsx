@@ -12,6 +12,8 @@ import { PostingViewModeProvider } from './components/postings/PostingViewModeCo
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import AdminCrises from './pages/admin/AdminCrises';
 import AdminHome from './pages/admin/AdminHome';
+import AdminReportDetail from './pages/admin/AdminReportDetail';
+import AdminReports from './pages/admin/AdminReports';
 import AdminRequests from './pages/admin/AdminRequests';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogin from './pages/AdminLogin';
@@ -66,6 +68,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="admin" element={<AdminPage />}>
                 <Route index element={<AdminHome />} />
                 <Route path="requests" element={<AdminRequests />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="reports/:reportType/:reportId" element={<AdminReportDetail />} />
                 <Route path="crises" element={<AdminCrises />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>

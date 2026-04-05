@@ -37,7 +37,10 @@ describe('POST /user/login', () => {
   });
 
   test('logs in organization account with valid credentials', async () => {
-    const { organization, plainPassword } = await createOrganizationAccount(transaction);
+    const { organization, plainPassword } = await createOrganizationAccount(transaction, {
+      phone_number: '+10000000001',
+      url: 'https://test1.example.org',
+    });
 
     const response = await server
       .post('/user/login')
@@ -86,7 +89,10 @@ describe('POST /user/login', () => {
   });
 
   test('rejects login for organization account', async () => {
-    const { organization } = await createOrganizationAccount(transaction);
+    const { organization } = await createOrganizationAccount(transaction, {
+      phone_number: '+10000000002',
+      url: 'https://test2.example.org',
+    });
 
     const response = await server
       .post('/user/login')
@@ -105,6 +111,46 @@ describe('POST /user/login', () => {
       .expect(403);
 
     expect(response.body.message).toBe('Invalid email or password');
+  });
+
+  test('rejects login for disabled organization account', async () => {
+    const { organization, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'disabled-org-login@example.com',
+      phone_number: '+10000000003',
+      url: 'https://disabled-org.example.org',
+    });
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ is_disabled: true })
+      .where('id', '=', organization.id)
+      .execute();
+
+    const response = await server
+      .post('/user/login')
+      .send({ email: organization.email, password: plainPassword })
+      .expect(403);
+
+    expect(response.body.message).toBe('Account is disabled. If you think this is a mistake contact the Willing admin.');
+  });
+
+  test('rejects login for disabled volunteer account', async () => {
+    const { volunteer, plainPassword } = await createVolunteerAccount(transaction, {
+      email: 'disabled-volunteer-login@example.com',
+    });
+
+    await transaction
+      .updateTable('volunteer_account')
+      .set({ is_disabled: true })
+      .where('id', '=', volunteer.id)
+      .execute();
+
+    const response = await server
+      .post('/user/login')
+      .send({ email: volunteer.email, password: plainPassword })
+      .expect(403);
+
+    expect(response.body.message).toBe('Account is disabled. If you think this is a mistake contact the Willing admin.');
   });
 
   test('rejects login for correct admin credentials', async () => {
@@ -146,7 +192,10 @@ describe('POST /user/forgot-password', () => {
   });
 
   test('creates a reset token and emails organization', async () => {
-    const { organization } = await createOrganizationAccount(transaction);
+    const { organization } = await createOrganizationAccount(transaction, {
+      phone_number: '+10000000004',
+      url: 'https://test4.example.org',
+    });
 
     const response = await server
       .post('/user/forgot-password')

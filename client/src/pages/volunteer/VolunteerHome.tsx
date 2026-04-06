@@ -227,7 +227,7 @@ function VolunteerHome() {
                   <PostingCollection
                     postings={enrolledPostings?.postings ?? []}
                     showCrisis
-                    cardItemClassName="shrink-0 snap-start md:w-md w-sm"
+                    cardItemClassName="h-full shrink-0 snap-start md:w-md w-sm"
                   />
                 </HorizontalScrollSection>
               )
@@ -289,7 +289,7 @@ function VolunteerHome() {
                   <PostingCollection
                     postings={postings}
                     showCrisis
-                    cardItemClassName="shrink-0 snap-start md:w-md w-sm"
+                    cardItemClassName="h-full shrink-0 snap-start md:w-md w-sm"
                   />
                 </HorizontalScrollSection>
               )
@@ -346,7 +346,7 @@ function VolunteerHome() {
                 <PostingCollection
                   postings={forYouPostings}
                   showCrisis
-                  cardItemClassName="shrink-0 snap-start md:w-md w-sm"
+                  cardItemClassName="h-full shrink-0 snap-start md:w-md w-sm"
                 />
               </HorizontalScrollSection>
             )}

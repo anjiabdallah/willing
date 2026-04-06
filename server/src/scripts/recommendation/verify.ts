@@ -1,15 +1,15 @@
 import { sql } from 'kysely';
 
-import config from '../config.ts';
-import database from '../db/index.ts';
-import { hash } from '../services/bcrypt/index.ts';
-import { EMBEDDING_DIMENSIONS } from '../services/embeddings/index.ts';
+import config from '../../config.ts';
+import database from '../../db/index.ts';
+import { hash } from '../../services/bcrypt/index.ts';
+import { EMBEDDING_DIMENSIONS } from '../../services/embeddings/index.ts';
 import {
   recomputeOrganizationVector,
   recomputePostingVectors,
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
-} from '../services/embeddings/updates.ts';
+} from '../../services/embeddings/updates.ts';
 
 const TEST_PASSWORD_HASH = await hash('Willing123');
 
@@ -165,45 +165,56 @@ async function verifyEmbeddings() {
 
   await recomputeOrganizationVector(organizationId, database);
   const orgDims = await getVectorDims(sql`
-    SELECT vector_dims(org_vector) as org_vector_dims
+    SELECT
+      vector_dims(org_profile_vector) as org_profile_vector_dims,
+      vector_dims(org_history_vector) as org_history_vector_dims,
+      vector_dims(org_context_vector) as org_context_vector_dims
     FROM organization_account
     WHERE id = ${organizationId}
   `);
-  assertDim('organization.org_vector', orgDims?.org_vector_dims);
-  console.log('organization.org_vector dims:', orgDims?.org_vector_dims);
+  assertDim('organization.org_profile_vector', orgDims?.org_profile_vector_dims);
+  assertDim('organization.org_history_vector', orgDims?.org_history_vector_dims);
+  assertDim('organization.org_context_vector', orgDims?.org_context_vector_dims);
+  console.log('organization.org_profile_vector dims:', orgDims?.org_profile_vector_dims);
+  console.log('organization.org_history_vector dims:', orgDims?.org_history_vector_dims);
+  console.log('organization.org_context_vector dims:', orgDims?.org_context_vector_dims);
 
   await recomputePostingVectors(postingId, database);
   const postingDims = await getVectorDims(sql`
     SELECT
-      vector_dims(opportunity_vector) as opportunity_vector_dims,
+      vector_dims(posting_profile_vector) as posting_profile_vector_dims,
       vector_dims(posting_context_vector) as posting_context_vector_dims
     FROM organization_posting
     WHERE id = ${postingId}
   `);
-  assertDim('organization_posting.opportunity_vector', postingDims?.opportunity_vector_dims);
+  assertDim('organization_posting.posting_profile_vector', postingDims?.posting_profile_vector_dims);
   assertDim('organization_posting.posting_context_vector', postingDims?.posting_context_vector_dims);
-  console.log('organization_posting.opportunity_vector dims:', postingDims?.opportunity_vector_dims);
+  console.log('organization_posting.posting_profile_vector dims:', postingDims?.posting_profile_vector_dims);
   console.log('organization_posting.posting_context_vector dims:', postingDims?.posting_context_vector_dims);
-  console.log('posting context combine rule: 0.7 * opportunity + 0.3 * organization');
+  console.log('posting context combine rule: weighted mix of opportunity, organization, and enrolled volunteer vectors when available');
 
   await recomputeVolunteerProfileVector(volunteerId, database);
   const volunteerProfileDims = await getVectorDims(sql`
-    SELECT vector_dims(profile_vector) as profile_vector_dims
+    SELECT vector_dims(volunteer_profile_vector) as volunteer_profile_vector_dims, vector_dims(volunteer_context_vector) as volunteer_context_vector_dims
     FROM volunteer_account
     WHERE id = ${volunteerId}
   `);
-  assertDim('volunteer_account.profile_vector', volunteerProfileDims?.profile_vector_dims);
-  console.log('volunteer_account.profile_vector dims:', volunteerProfileDims?.profile_vector_dims);
+  assertDim('volunteer_account.volunteer_profile_vector', volunteerProfileDims?.volunteer_profile_vector_dims);
+  assertDim('volunteer_account.volunteer_context_vector', volunteerProfileDims?.volunteer_context_vector_dims);
+  console.log('volunteer_account.volunteer_profile_vector dims:', volunteerProfileDims?.volunteer_profile_vector_dims);
+  console.log('volunteer_account.volunteer_context_vector dims:', volunteerProfileDims?.volunteer_context_vector_dims);
 
   await ensureAttendedEnrollment(volunteerId, postingId);
   await recomputeVolunteerExperienceVector(volunteerId, database);
   const volunteerExperienceDims = await getVectorDims(sql`
-    SELECT vector_dims(experience_vector) as experience_vector_dims
+    SELECT vector_dims(volunteer_history_vector) as volunteer_history_vector_dims, vector_dims(volunteer_context_vector) as volunteer_context_vector_dims
     FROM volunteer_account
     WHERE id = ${volunteerId}
   `);
-  assertDim('volunteer_account.experience_vector', volunteerExperienceDims?.experience_vector_dims);
-  console.log('volunteer_account.experience_vector dims:', volunteerExperienceDims?.experience_vector_dims);
+  assertDim('volunteer_account.volunteer_history_vector', volunteerExperienceDims?.volunteer_history_vector_dims);
+  assertDim('volunteer_account.volunteer_context_vector', volunteerExperienceDims?.volunteer_context_vector_dims);
+  console.log('volunteer_account.volunteer_history_vector dims:', volunteerExperienceDims?.volunteer_history_vector_dims);
+  console.log('volunteer_account.volunteer_context_vector dims:', volunteerExperienceDims?.volunteer_context_vector_dims);
 
   console.log('Embedding verification completed successfully.');
 }

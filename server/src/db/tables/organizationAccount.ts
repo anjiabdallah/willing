@@ -17,7 +17,9 @@ export const organizationAccountSchema = zod.object({
   password: passwordSchema,
   logo_path: zod.string().optional(),
   certificate_info_id: zod.number().nullable().optional(),
-  org_vector: zod.string().optional(),
+  org_profile_vector: zod.string().optional(),
+  org_history_vector: zod.string().optional(),
+  org_context_vector: zod.string().optional(),
   token_version: zod.number().int().nonnegative().default(0),
   is_disabled: zod.boolean().default(false),
   is_deleted: zod.boolean().default(false),
@@ -31,16 +33,18 @@ export type OrganizationAccountTable = WithGeneratedIDAndTimestamps<
   WithGeneratedColumns<OrganizationAccount, 'is_disabled' | 'is_deleted' | 'token_version'>
 >;
 
-export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, certificate_info_id: true, org_vector: true, is_disabled: true, is_deleted: true, created_at: true, updated_at: true, token_version: true }).strict();
+export const newOrganizationAccountSchema = organizationAccountSchema.omit({ id: true, certificate_info_id: true, org_profile_vector: true, org_history_vector: true, org_context_vector: true, is_disabled: true, is_deleted: true, created_at: true, updated_at: true, token_version: true }).strict();
 export type NewOrganizationAccount = zod.infer<typeof newOrganizationAccountSchema>;
 
-export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, certificate_info_id: true, org_vector: true, is_disabled: true, is_deleted: true, token_version: true, created_at: true, updated_at: true }).partial().strict();
+export const organizationAccountUpdate = organizationAccountSchema.omit({ password: true, certificate_info_id: true, org_profile_vector: true, org_history_vector: true, org_context_vector: true, is_disabled: true, is_deleted: true, token_version: true, created_at: true, updated_at: true }).partial().strict();
 export type OrganizationAccountWithoutPassword = zod.infer<typeof organizationAccountUpdate>;
 
 export const organizationAccountWithoutPasswordAndVectorSchema = organizationAccountSchema.omit({
   password: true,
   certificate_info_id: true,
-  org_vector: true,
+  org_profile_vector: true,
+  org_history_vector: true,
+  org_context_vector: true,
   token_version: true,
   is_disabled: true,
   is_deleted: true,

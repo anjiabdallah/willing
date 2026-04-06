@@ -95,7 +95,7 @@ const organizationProfileUpdateSchema = organizationAccountSchema
     email: true,
     name: true,
     url: true,
-    org_vector: true,
+    org_context_vector: true,
     created_at: true,
     updated_at: true,
   })
@@ -257,7 +257,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
     },
   );
 
-  organizationRouter.get('/:id', authorizeOnly('volunteer', 'organization'), async (req, res: Response<OrganizationProfileResponse>, next) => {
+  organizationRouter.get('/:id', async (req, res: Response<OrganizationProfileResponse>, next) => {
     let orgId;
     try {
       orgId = zod

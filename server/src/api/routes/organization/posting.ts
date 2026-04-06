@@ -16,12 +16,37 @@ import {
 } from './posting.types.ts';
 import { getPostingEnrollments } from './postingEnrollments.ts';
 import executeTransaction from '../../../db/executeTransaction.ts';
-import { type Database, type OrganizationPostingWithoutVectors, type PostingSkill, type VolunteerSkill } from '../../../db/tables/index.ts';
-import { newOrganizationPostingSchema } from '../../../db/tables/index.ts';
-import { recomputePostingVectors, recomputeVolunteerExperienceVector } from '../../../services/embeddings/updates.ts';
-import { sendVolunteerApplicationAcceptedEmail, sendVolunteerApplicationRejectedEmail } from '../../../services/smtp/emails.ts';
-import { parseListQuery, parseOptionalBooleanQueryParam, parseOptionalNumberQueryParam } from '../utils/listQuery.ts';
-import { applyPostingDateTimeFilters, applySharedPostingSort, buildSearchRegexPattern, normalizeSearchTerms, parsePostingDateTimeFilters } from '../utils/postingList.ts';
+import {
+  type Database,
+  type OrganizationPostingWithoutVectors,
+  type PostingSkill,
+  type VolunteerSkill,
+  newOrganizationPostingSchema,
+} from '../../../db/tables/index.ts';
+import {
+  recomputeOrganizationCompositeVectorOnly,
+  recomputeOrganizationHistoryVectorOnly,
+  recomputePostingContextVectorOnly,
+  recomputePostingContextVectorsForOrganization,
+  recomputePostingVectors,
+  recomputeVolunteerExperienceVector,
+} from '../../../services/embeddings/updates.ts';
+import {
+  sendVolunteerApplicationAcceptedEmail,
+  sendVolunteerApplicationRejectedEmail,
+} from '../../../services/smtp/emails.ts';
+import {
+  parseListQuery,
+  parseOptionalBooleanQueryParam,
+  parseOptionalNumberQueryParam,
+} from '../utils/listQuery.ts';
+import {
+  applyPostingDateTimeFilters,
+  applySharedPostingSort,
+  buildSearchRegexPattern,
+  normalizeSearchTerms,
+  parsePostingDateTimeFilters,
+} from '../utils/postingList.ts';
 
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial().extend({
   crisis_id: zod.number().int().positive().nullable().optional(),
@@ -341,7 +366,20 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
 
     const posting = await db
       .selectFrom('organization_posting')
-      .select(['id', 'crisis_id', 'title', 'description', 'location_name', 'start_date', 'start_time', 'end_date', 'end_time', 'minimum_age', 'max_volunteers'])
+      .select([
+        'id',
+        'crisis_id',
+        'title',
+        'description',
+        'location_name',
+        'start_date',
+        'start_time',
+        'end_date',
+        'end_time',
+        'minimum_age',
+        'max_volunteers',
+        'is_closed',
+      ])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
       .executeTakeFirst();
@@ -379,6 +417,7 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       || (body.max_volunteers !== undefined && (body.max_volunteers ?? null) !== (posting.max_volunteers ?? null))
       || didSkillsChange
     );
+    const didClosedStateChange = body.is_closed !== undefined && body.is_closed !== posting.is_closed;
 
     await executeTransaction(db, async (trx) => {
       const postingFields: Record<string, unknown> = {};
@@ -424,6 +463,11 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
 
     if (shouldRecomputePostingVectors) {
       await recomputePostingVectors(postingId, db);
+    }
+    if (didClosedStateChange) {
+      await recomputeOrganizationHistoryVectorOnly(orgId, db);
+      await recomputeOrganizationCompositeVectorOnly(orgId, db);
+      await recomputePostingContextVectorsForOrganization(orgId, db);
     }
 
     const updatedPosting = await db
@@ -482,6 +526,9 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
 
     const impactedVolunteerIds = Array.from(new Set(impactedVolunteerRows.map(row => row.volunteer_id)));
     await Promise.all(impactedVolunteerIds.map(volunteerId => recomputeVolunteerExperienceVector(volunteerId, db)));
+    await recomputeOrganizationHistoryVectorOnly(orgId, db);
+    await recomputeOrganizationCompositeVectorOnly(orgId, db);
+    await recomputePostingContextVectorsForOrganization(orgId, db);
 
     res.json({});
   });
@@ -695,18 +742,20 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
         .execute();
     });
 
+    await recomputePostingContextVectorOnly(postingId, db);
     const acceptedDates = enrollmentDateStrings;
-
-    try {
-      await sendVolunteerApplicationAcceptedEmail({
-        volunteerEmail: emailContext.volunteer_email,
-        volunteerName: `${emailContext.first_name} ${emailContext.last_name}`,
-        organizationName: emailContext.organization_name,
-        postingTitle: emailContext.posting_title,
-        acceptedDates,
-      });
-    } catch (err) {
-      console.error('Failed to send acceptance email:', err);
+    if (emailContext) {
+      try {
+        await sendVolunteerApplicationAcceptedEmail({
+          volunteerEmail: emailContext.volunteer_email,
+          volunteerName: `${emailContext.first_name} ${emailContext.last_name}`,
+          organizationName: emailContext.organization_name,
+          postingTitle: emailContext.posting_title,
+          acceptedDates,
+        });
+      } catch (err) {
+        console.error('Failed to send acceptance email:', err);
+      }
     }
 
     res.json({});

@@ -54,8 +54,8 @@ const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
   password: true,
   email: true,
   date_of_birth: true,
-  profile_vector: true,
-  experience_vector: true,
+  volunteer_profile_vector: true,
+  volunteer_history_vector: true,
   created_at: true,
   updated_at: true,
 }).partial();

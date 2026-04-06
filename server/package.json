@@ -23,7 +23,13 @@
     "script:create-admin": "tsx src/scripts/create-admin.ts",
     "script:migrate": "tsx src/scripts/migrate.ts",
     "script:seed": "tsx src/scripts/seed.ts",
-    "script:verify-embeddings": "tsx src/scripts/verify-embeddings.ts",
+    "script:seed-recommendation": "tsx src/scripts/recommendation/seed.ts",
+    "script:audit-recommendation": "tsx src/scripts/recommendation/audit.ts",
+    "script:recompute-all-embeddings": "tsx src/scripts/recommendation/recompute-all.ts",
+    "script:recompute-composite-vectors": "tsx src/scripts/recommendation/recompute-composite.ts",
+    "script:verify-embeddings": "tsx src/scripts/recommendation/verify.ts",
+    "script:recommendation:generate-cvs": "tsx src/scripts/recommendation/generate-cvs.ts",
+    "script:recommendation:run": "tsx src/scripts/recommendation/run.ts",
     "script:test-smtp": "tsx src/scripts/test-smtp.ts"
   },
   "devDependencies": {

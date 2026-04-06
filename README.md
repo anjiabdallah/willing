@@ -60,6 +60,37 @@ npm start
 ```
 The client will run on `http://localhost:5173`.
 
+## Recommendation System Scripts
+
+Run these from `server/`.
+
+### One-command pipeline (recommended)
+```sh
+npm run script:recommendation:run
+```
+This runs, in order:
+1. `script:seed-recommendation`
+2. `script:recompute-all-embeddings`
+3. `script:audit-recommendation`
+
+### Individual scripts
+```sh
+npm run script:seed-recommendation
+npm run script:recompute-all-embeddings
+npm run script:recompute-composite-vectors
+npm run script:audit-recommendation
+npm run script:verify-embeddings
+npm run script:recommendation:generate-cvs
+```
+
+### OpenAI API warning behavior
+- `script:recompute-all-embeddings` now prints a warning and waits 5 seconds before starting, because it may call the OpenAI API and incur cost.
+- Use `--yes` to skip the countdown:
+  ```sh
+  npx tsx src/scripts/recommendation/recompute-all.ts --yes
+  ```
+- Or set `SKIP_OPENAI_WARNING=true`.
+
 ## Tools and Technologies
 
 This project is built using a modern frontend and backend stack with TypeScript, React, Node.js, and PostgreSQL. Below is a breakdown of the technologies and tools used.

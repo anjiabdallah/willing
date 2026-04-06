@@ -329,8 +329,8 @@ describe('POST /volunteer/verify-email', () => {
 
     expect(response.body.volunteer.email).toBe('verify-success@example.com');
     expect(response.body.volunteer.password).toBeUndefined();
-    expect(response.body.volunteer.profile_vector).toBeUndefined();
-    expect(response.body.volunteer.experience_vector).toBeUndefined();
+    expect(response.body.volunteer.volunteer_profile_vector).toBeUndefined();
+    expect(response.body.volunteer.volunteer_history_vector).toBeUndefined();
     expect(typeof response.body.token).toBe('string');
 
     expect(generateJWTSpy).toHaveBeenCalledWith({

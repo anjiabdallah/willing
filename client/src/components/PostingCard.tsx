@@ -139,7 +139,7 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fi
   );
 
   return (
-    <Card padding={false} fillHeight={fillHeight}>
+    <Card padding={false} fillHeight={fillHeight} className={fillHeight ? 'h-full min-h-[24rem]' : ''}>
       {showCrisis && posting.crisis_name && posting.crisis_id && (
         crisisTagClickable
           ? (
@@ -356,10 +356,10 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fi
 
       <div className="px-4 md:px-5 py-3 border-t border-base-200 bg-base-100 mb-4">
         {posting.skills && posting.skills.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-auto mb-2">
             <p className="text-xs opacity-70 mb-2">SKILLS</p>
             <div className="flex flex-wrap gap-2">
-              <SkillsList skills={posting.skills} limit={3} />
+              <SkillsList skills={posting.skills} limit={2} />
             </div>
           </div>
         )}

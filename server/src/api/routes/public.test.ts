@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 import supertest from 'supertest';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import createApp from '../../app.ts';
 import config from '../../config.ts';
@@ -14,6 +14,7 @@ import {
   CERTIFICATE_TYPE,
   signCertificateVerificationPayload,
 } from '../../services/certificates/token.ts';
+import * as certificateVerificationService from '../../services/certificates/verification.ts';
 import { PLATFORM_SIGNATURE_UPLOAD_DIR } from '../../services/uploads/paths.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../tests/fixtures/accounts.ts';
 import { createOrganizationPosting } from '../../tests/fixtures/organizationData.ts';
@@ -173,6 +174,37 @@ describe('GET /public/certificate-signature', () => {
         .expect(200);
 
       expect(response.headers['content-type']).toBe('image/jpeg');
+      expect(Buffer.isBuffer(response.body)).toBe(true);
+    } finally {
+      await fs.promises.rm(signatureAbsolutePath, { force: true });
+    }
+  });
+
+  test('returns svg content type when signature path is SVG', async () => {
+    const signatureFileName = 'platform-signature-test.svg';
+    const signatureContents = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>';
+    const signatureAbsolutePath = path.join(PLATFORM_SIGNATURE_UPLOAD_DIR, signatureFileName);
+
+    await fs.promises.mkdir(PLATFORM_SIGNATURE_UPLOAD_DIR, { recursive: true });
+    await fs.promises.writeFile(signatureAbsolutePath, signatureContents, 'utf8');
+
+    await transaction
+      .insertInto('platform_certificate_settings')
+      .values({
+        signatory_name: 'Signer',
+        signatory_position: 'Director',
+        signature_path: signatureFileName,
+        signature_uploaded_by_admin_id: null,
+      })
+      .execute();
+
+    try {
+      const response = await server
+        .get('/public/certificate-signature')
+        .buffer(true)
+        .expect(200);
+
+      expect(response.headers['content-type']).toBe('image/svg+xml');
       expect(Buffer.isBuffer(response.body)).toBe(true);
     } finally {
       await fs.promises.rm(signatureAbsolutePath, { force: true });
@@ -351,6 +383,96 @@ describe('POST /public/certificate/verify', () => {
     expect(response.body).toEqual({
       valid: false,
       message: 'Certificate is invalid.',
+    });
+  });
+
+  test('returns invalid when token refers to a missing volunteer', async () => {
+    const { payload } = await createValidCertificateVerificationContext();
+    const missingVolunteerToken = signCertificateVerificationPayload({
+      ...payload,
+      uid: '999999',
+    }, config.CERTIFICATE_VERIFICATION_SECRET);
+
+    const response = await server
+      .post('/public/certificate/verify')
+      .send({ token: missingVolunteerToken })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      valid: false,
+      message: 'Certificate is invalid.',
+    });
+  });
+
+  test('returns invalid when verifyCertificatePayloadAgainstDatabase passes but volunteer is missing', async () => {
+    const { payload } = await createValidCertificateVerificationContext();
+    const missingVolunteerToken = signCertificateVerificationPayload({
+      ...payload,
+      uid: '999999',
+    }, config.CERTIFICATE_VERIFICATION_SECRET);
+
+    const verifySpy = vi.spyOn(certificateVerificationService, 'verifyCertificatePayloadAgainstDatabase')
+      .mockResolvedValue({ valid: true } as const);
+
+    try {
+      const response = await server
+        .post('/public/certificate/verify')
+        .send({ token: missingVolunteerToken })
+        .expect(200);
+
+      expect(response.body).toEqual({
+        valid: false,
+        message: 'Certificate is invalid.',
+      });
+    } finally {
+      verifySpy.mockRestore();
+    }
+  });
+
+  test('returns certificate verification details when token has no organizations', async () => {
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'verify-no-org@example.com' });
+
+    const issuedAtDate = new Date();
+    issuedAtDate.setSeconds(issuedAtDate.getSeconds() - 30);
+    issuedAtDate.setMilliseconds(0);
+
+    const payload: CertificateVerificationPayload = {
+      v: CERTIFICATE_PAYLOAD_VERSION,
+      uid: String(volunteer.id),
+      issued_at: issuedAtDate.toISOString(),
+      org_ids: [],
+      total_hours: 0,
+      hours_per_org: {},
+      type: CERTIFICATE_TYPE,
+    };
+
+    const token = signCertificateVerificationPayload(payload, config.CERTIFICATE_VERIFICATION_SECRET);
+
+    const response = await server
+      .post('/public/certificate/verify')
+      .send({ token })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      valid: true,
+      message: 'Certificate is valid.',
+      issued_at: payload.issued_at,
+      certificate_type: CERTIFICATE_TYPE,
+      volunteer_name: `${volunteer.first_name} ${volunteer.last_name}`,
+      total_hours: payload.total_hours,
+      organizations: [],
+    });
+  });
+
+  test('returns 400 when token is empty or whitespace', async () => {
+    const response = await server
+      .post('/public/certificate/verify')
+      .send({ token: ' ' })
+      .expect(400);
+
+    expect(response.body).toEqual({
+      valid: false,
+      message: 'Invalid certificate token format.',
     });
   });
 

@@ -55,7 +55,7 @@ describe('POST /user/login', () => {
       name: organization.name,
     });
     expect(response.body.organization.password).toBeUndefined();
-    expect(response.body.organization.org_vector).toBeUndefined();
+    expect(response.body.organization.org_context_vector).toBeUndefined();
   });
 
   test('logs in volunteer account with valid credentials', async () => {
@@ -75,8 +75,8 @@ describe('POST /user/login', () => {
       first_name: volunteer.first_name,
     });
     expect(response.body.volunteer.password).toBeUndefined();
-    expect(response.body.volunteer.profile_vector).toBeUndefined();
-    expect(response.body.volunteer.experience_vector).toBeUndefined();
+    expect(response.body.volunteer.volunteer_profile_vector).toBeUndefined();
+    expect(response.body.volunteer.volunteer_history_vector).toBeUndefined();
   });
 
   test('rejects login for inexistent account', async () => {

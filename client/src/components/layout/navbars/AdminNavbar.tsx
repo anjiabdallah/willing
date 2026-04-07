@@ -1,4 +1,4 @@
-import { AlertCircle, ChevronDown, ClipboardCheck, Home, LogOut, Settings, ShieldUser } from 'lucide-react';
+import { AlertCircle, ChevronDown, ClipboardCheck, Flag, Home, LogOut, Settings, ShieldUser } from 'lucide-react';
 import { useCallback, useContext } from 'react';
 import { NavLink } from 'react-router';
 
@@ -37,6 +37,10 @@ function AdminNavbar() {
           <NavLink to="/admin/crises" className={softTabStyle}>
             <AlertCircle size={20} />
             Crises
+          </NavLink>
+          <NavLink to="/admin/reports" className={softTabStyle}>
+            <Flag size={20} />
+            Reports
           </NavLink>
           <NavLink to="/admin/settings" className={softTabStyle}>
             <Settings size={20} />

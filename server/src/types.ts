@@ -39,6 +39,8 @@ export type PostingWithContext = PostingWithSkills & {
   crisis_name: string | null;
   enrollment_count: number;
   application_status: PostingApplicationStatus;
+  date_capacity?: Record<string, number>;
+  confirmed_date_capacity?: Record<string, number>;
 };
 
 export type PostingEnrollment = {
@@ -53,6 +55,7 @@ export type PostingEnrollment = {
   gender: Gender;
   cv_path?: string | null;
   skills: VolunteerSkill[];
+  dates?: Array<{ id: number; date: string; attended: boolean }>;
 };
 
 export type PostingApplication = Omit<
@@ -64,4 +67,5 @@ export type PostingApplication = Omit<
   message: string | undefined;
   created_at: Date;
   application_id: number;
+  requested_dates?: string[];
 };

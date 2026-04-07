@@ -13,6 +13,7 @@ interface CalendarCommonProps {
   className?: string;
   inputType?: 'date' | 'datetime-local';
   disabledDates?: string[];
+  allowedDates?: string[];
   dateDetails?: Record<string, string>;
   showTopLabels?: boolean;
 }
@@ -108,6 +109,7 @@ export default function CalendarInfo<T extends FieldValues>({
           {...(props.dateLabel ? { singleLabel: props.dateLabel } : {})}
           {...(props.datePlaceholder ? { singlePlaceholder: props.datePlaceholder } : {})}
           {...(props.disabledDates ? { disabledDates: props.disabledDates } : {})}
+          {...(props.allowedDates ? { allowedDates: props.allowedDates } : {})}
           {...(props.dateDetails ? { dateDetails: props.dateDetails } : {})}
         />
       );
@@ -139,6 +141,7 @@ export default function CalendarInfo<T extends FieldValues>({
           });
         }}
         {...(props.disabledDates ? { disabledDates: props.disabledDates } : {})}
+        {...(props.allowedDates ? { allowedDates: props.allowedDates } : {})}
         {...(props.dateDetails ? { dateDetails: props.dateDetails } : {})}
       />
     );
@@ -195,6 +198,7 @@ export default function CalendarInfo<T extends FieldValues>({
       endLabel={endLabel}
       {...controlledModeProps}
       {...(props.disabledDates ? { disabledDates: props.disabledDates } : {})}
+      {...(props.allowedDates ? { allowedDates: props.allowedDates } : {})}
       {...(props.dateDetails ? { dateDetails: props.dateDetails } : {})}
     />
   );
@@ -204,12 +208,24 @@ function getDatePart(value: string) {
   return value.split('T')[0] ?? '';
 }
 
+function parseDatePartToLocalDate(datePart: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!match) return undefined;
+
+  const [, yearRaw, monthRaw, dayRaw] = match;
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const parsed = new Date(year, month - 1, day);
+
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 function parseSelectedDate(value: string) {
   const datePart = getDatePart(value);
   if (!datePart) return undefined;
 
-  const parsed = new Date(`${datePart}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseDatePartToLocalDate(datePart);
 }
 
 function formatInputDate(date: Date) {
@@ -265,6 +281,7 @@ function ControlledCalendarInfo({
   endPlaceholder,
   selectionMode,
   disabledDates,
+  allowedDates,
   dateDetails,
   rangeValue,
   onRangeChange,
@@ -281,6 +298,7 @@ function ControlledCalendarInfo({
 }: {
   selectionMode?: CalendarSelectionMode;
   disabledDates?: string[];
+  allowedDates?: string[];
   dateDetails?: Record<string, string>;
   startValue?: string;
   endValue?: string;
@@ -336,11 +354,24 @@ function ControlledCalendarInfo({
   const disabledDateSet = useMemo(() => {
     return new Set((disabledDates ?? []).map(getDatePart).filter(Boolean));
   }, [disabledDates]);
+  const allowedDateSet = useMemo(() => {
+    return new Set((allowedDates ?? []).map(getDatePart).filter(Boolean));
+  }, [allowedDates]);
 
-  const disabledMatchers: Matcher[] | undefined = disabledDateSet.size > 0
+  const disabledMatchers: Matcher[] | undefined = disabledDateSet.size > 0 || allowedDateSet.size > 0
     ? [
         (date: Date) => {
-          return disabledDateSet.has(formatInputDate(date));
+          const formattedDate = formatInputDate(date);
+
+          if (disabledDateSet.has(formattedDate)) {
+            return true;
+          }
+
+          if (allowedDateSet.size > 0 && !allowedDateSet.has(formattedDate)) {
+            return true;
+          }
+
+          return false;
         },
       ]
     : undefined;
@@ -356,7 +387,7 @@ function ControlledCalendarInfo({
       }
     : undefined;
 
-  const controlledClassName = className ?? 'relative';
+  const controlledClassName = className ?? 'relative overflow-visible';
   const actionButtonClassName = 'btn btn-sm';
   const secondaryActionButtonClassName = 'btn btn-ghost btn-sm';
   const dateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -671,6 +702,7 @@ function ControlledCalendarInfo({
               >
                 <DayPicker
                   className="willing-day-picker"
+                  style={{ maxHeight: '75vh', overflowY: 'auto' }}
                   mode="range"
                   selected={selectedRange}
                   disabled={disabledMatchers}
@@ -806,9 +838,13 @@ function ControlledCalendarInfo({
     );
   }
 
-  const dateListText = parsedSelectedDates.length
-    ? parsedSelectedDates.map(date => dateFormatter.format(date)).join(', ')
-    : (multiplePlaceholder ?? 'Select dates');
+  const MAX_DISPLAYED_DATES = 4;
+  const allSelectedDateText = parsedSelectedDates.map(date => dateFormatter.format(date)).join(', ');
+  const dateListText = parsedSelectedDates.length === 0
+    ? (multiplePlaceholder ?? 'Select dates')
+    : parsedSelectedDates.length <= MAX_DISPLAYED_DATES
+      ? allSelectedDateText
+      : `${parsedSelectedDates.slice(0, MAX_DISPLAYED_DATES).map(date => dateFormatter.format(date)).join(', ')} +${parsedSelectedDates.length - MAX_DISPLAYED_DATES} more`;
   const multipleFieldLabel = multipleLabel ?? 'Selected Dates';
 
   return (
@@ -826,7 +862,7 @@ function ControlledCalendarInfo({
             className="input input-bordered flex w-full items-center justify-between gap-2"
             onClick={() => openOrTogglePicker('start')}
           >
-            <span className="truncate text-left">{dateListText}</span>
+            <span className="truncate overflow-hidden whitespace-nowrap text-ellipsis block max-w-[calc(100%-2.5rem)]" title={allSelectedDateText || dateListText}>{dateListText}</span>
             <CalendarDays size={16} className="shrink-0 opacity-70" />
           </button>
 

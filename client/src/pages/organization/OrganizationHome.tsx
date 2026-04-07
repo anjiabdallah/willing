@@ -55,6 +55,8 @@ const defaultFilters: OrganizationPostingFilters = {
   endDateTo: '',
   startTimeFrom: '',
   endTimeTo: '',
+  postingFilter: 'all',
+  organizationCertificateFilter: 'all',
 };
 
 const defaultFormValues: OrganizationPostingFilterFormValues = {
@@ -67,6 +69,8 @@ const defaultFormValues: OrganizationPostingFilterFormValues = {
   endDateTo: defaultFilters.endDateTo,
   startTimeFrom: defaultFilters.startTimeFrom,
   endTimeTo: defaultFilters.endTimeTo,
+  postingFilter: defaultFilters.postingFilter,
+  organizationCertificateFilter: defaultFilters.organizationCertificateFilter,
 };
 
 const fromOrganizationPostingFilterFormValues = (
@@ -85,6 +89,8 @@ const fromOrganizationPostingFilterFormValues = (
     endDateTo: values.endDateTo,
     startTimeFrom: values.startTimeFrom,
     endTimeTo: values.endTimeTo,
+    postingFilter: values.postingFilter,
+    organizationCertificateFilter: values.organizationCertificateFilter,
   };
 };
 
@@ -145,6 +151,8 @@ function OrganizationHome() {
     await fetchPostings(fromOrganizationPostingFilterFormValues(formValues));
   }, [fetchPostings]);
 
+  const crisisNameById = useMemo(() => new Map((crises ?? []).map(crisis => [crisis.id, crisis.name])), [crises]);
+
   const postingsWithContext = useMemo<PostingWithContext[]>(() => {
     if (!postings) return [];
     const orgName = organizationMe?.organization.name ?? organization?.name ?? '';
@@ -154,11 +162,11 @@ function OrganizationHome() {
       ...posting,
       organization_name: orgName,
       organization_logo_path: orgLogoPath,
-      crisis_name: null,
-      enrollment_count: 0,
+      crisis_name: posting.crisis_id ? (crisisNameById.get(posting.crisis_id) ?? null) : null,
+      enrollment_count: posting.enrollment_count,
       application_status: 'none',
     }));
-  }, [organization?.logo_path, organization?.name, organizationMe?.organization.logo_path, organizationMe?.organization.name, postings]);
+  }, [crisisNameById, organization?.logo_path, organization?.name, organizationMe?.organization.logo_path, organizationMe?.organization.name, postings]);
 
   return (
     <PageContainer>
@@ -304,6 +312,7 @@ function OrganizationHome() {
       {!loading && postingsWithContext.length > 0 && (
         <PostingCollection
           postings={postingsWithContext}
+          crisisTagClickable={false}
           cardsContainerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         />
       )}

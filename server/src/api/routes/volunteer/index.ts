@@ -7,6 +7,7 @@ import zod from 'zod';
 
 import createVolunteerCvRouter from './cv.ts';
 import {
+  type VolunteerCertificateIssueResponse,
   type VolunteerCrisisResponse,
   type VolunteerCrisesResponse,
   type VolunteerCreateResponse,
@@ -15,14 +16,17 @@ import {
   type VolunteerOrganizationSearchResponse,
   type VolunteerPinnedCrisesResponse,
   type VolunteerProfileResponse,
+  type VolunteerReportOrganizationResponse,
   type VolunteerResendVerificationResponse,
   type VolunteerVerifyEmailResponse,
 } from './index.types.ts';
 import createVolunteerPostingRouter from './posting.ts';
 import authorizeOnly from '../../../auth/authorizeOnly.ts';
 import createResetPassword from '../../../auth/resetPassword.ts';
+import config from '../../../config.ts';
 import executeTransaction from '../../../db/executeTransaction.ts';
-import { type Database, type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, volunteerAccountSchema } from '../../../db/tables/index.ts';
+import { type Database, type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, newOrganizationReportSchema, volunteerAccountSchema } from '../../../db/tables/index.ts';
+import { CERTIFICATE_PAYLOAD_VERSION, CERTIFICATE_TYPE, signCertificateVerificationPayload } from '../../../services/certificates/token.ts';
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
@@ -45,11 +49,13 @@ const volunteerResponseColumns = [
 
 const volunteerProfileUserUpdateSchema = volunteerAccountSchema.omit({
   id: true,
+  first_name: true,
+  last_name: true,
   password: true,
   email: true,
   date_of_birth: true,
-  profile_vector: true,
-  experience_vector: true,
+  volunteer_profile_vector: true,
+  volunteer_history_vector: true,
   created_at: true,
   updated_at: true,
 }).partial();
@@ -60,6 +66,18 @@ const volunteerProfileUpdateSchema = volunteerProfileUserUpdateSchema.extend({
 
 const normalizeSkillList = (skills: string[]) =>
   Array.from(new Set(skills.map(skill => skill.trim()).filter(Boolean))).sort();
+
+const volunteerCertificateIssueSchema = zod.object({
+  org_ids: zod.array(zod.coerce.number().int().positive()).max(4).default([]),
+}).superRefine((data, ctx) => {
+  if (new Set(data.org_ids).size !== data.org_ids.length) {
+    ctx.addIssue({
+      code: zod.ZodIssueCode.custom,
+      path: ['org_ids'],
+      message: 'Organization IDs must be unique.',
+    });
+  }
+});
 
 const areSkillListsEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false;
@@ -168,13 +186,20 @@ function createVolunteerRouter(db: Kysely<Database>) {
       throw new Error('Invalid or expired verification token');
     }
 
-    const existingVolunteer = await db
-      .selectFrom('volunteer_account')
-      .select('id')
-      .where('email', '=', pendingVolunteer.email)
-      .executeTakeFirst();
+    const [existingVolunteer, existingOrganization] = await Promise.all([
+      db
+        .selectFrom('volunteer_account')
+        .select('id')
+        .where('email', '=', pendingVolunteer.email)
+        .executeTakeFirst(),
+      db
+        .selectFrom('organization_account')
+        .select('id')
+        .where('email', '=', pendingVolunteer.email)
+        .executeTakeFirst(),
+    ]);
 
-    if (existingVolunteer) {
+    if (existingVolunteer || existingOrganization) {
       await db
         .deleteFrom('volunteer_pending_account')
         .where('id', '=', pendingVolunteer.id)
@@ -268,6 +293,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(volunteerResponseColumns)
       .where('id', '=', req.userJWT!.id)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     res.json({ volunteer });
@@ -280,10 +307,12 @@ function createVolunteerRouter(db: Kysely<Database>) {
 
   volunteerRouter.get('/organizations', async (req, res: Response<VolunteerOrganizationSearchResponse>) => {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const certificateEnabled = typeof req.query.certificate_enabled === 'string' ? req.query.certificate_enabled : 'all';
 
     let query = db
       .selectFrom('organization_account')
       .leftJoin('organization_posting', 'organization_posting.organization_id', 'organization_account.id')
+      .leftJoin('organization_certificate_info', 'organization_certificate_info.id', 'organization_account.certificate_info_id')
       .select([
         'organization_account.id',
         'organization_account.name',
@@ -292,7 +321,18 @@ function createVolunteerRouter(db: Kysely<Database>) {
         'organization_account.logo_path',
         sql<number>`COALESCE(COUNT(organization_posting.id), 0)`.as('posting_count'),
       ])
+      .where('organization_account.is_deleted', '=', false)
+      .where('organization_account.is_disabled', '=', false)
       .groupBy('organization_account.id');
+
+    if (certificateEnabled === 'enabled') {
+      query = query.where('organization_certificate_info.certificate_feature_enabled', '=', true);
+    } else if (certificateEnabled === 'disabled') {
+      query = query.where(({ or }) => or([
+        sql<boolean>`organization_certificate_info.certificate_feature_enabled = false`,
+        sql<boolean>`organization_certificate_info.certificate_feature_enabled IS NULL`,
+      ]));
+    }
 
     if (search) {
       const terms = normalizeSearchTerms(search);
@@ -340,6 +380,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['id', 'first_name', 'last_name'])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     const hoursPerPostingExpr = sql<number>`GREATEST(
@@ -353,6 +395,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const totalHoursRow = await db
       .selectFrom('enrollment')
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .select(sql<number>`COALESCE(SUM(${hoursPerPostingExpr}), 0)`.as('total_hours'))
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment.attended', '=', true)
@@ -437,6 +480,71 @@ function createVolunteerRouter(db: Kysely<Database>) {
             signature_path: platformCertificate.signature_path ?? null,
           }
         : null,
+    });
+  });
+
+  volunteerRouter.post('/certificate/issue', async (req, res: Response<VolunteerCertificateIssueResponse>) => {
+    const volunteerId = req.userJWT!.id;
+    const body = volunteerCertificateIssueSchema.parse(req.body);
+    const issuedAt = new Date();
+    const selectedOrgIds = [...body.org_ids].sort((left, right) => left - right);
+
+    const hoursPerPostingExpr = sql<number>`GREATEST(
+      0,
+      EXTRACT(EPOCH FROM (
+        (organization_posting.end_date + organization_posting.end_time)
+        - (organization_posting.start_date + organization_posting.start_time)
+      )) / 3600.0
+    )`;
+
+    const rows = await db
+      .selectFrom('enrollment')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .select([
+        'organization_posting.organization_id as organization_id',
+        sql<number>`COALESCE(SUM(${hoursPerPostingExpr}), 0)`.as('hours'),
+      ])
+      .where('enrollment.volunteer_id', '=', volunteerId)
+      .where('enrollment.attended', '=', true)
+      .where('enrollment.created_at', '<=', issuedAt)
+      .groupBy('organization_posting.organization_id')
+      .execute();
+
+    const hoursByOrganizationId = new Map<number, number>();
+    rows.forEach((row) => {
+      hoursByOrganizationId.set(row.organization_id, Number(Number(row.hours ?? 0).toFixed(2)));
+    });
+
+    const totalHours = Number(rows.reduce((sum, row) => sum + Number(row.hours ?? 0), 0).toFixed(2));
+
+    for (const orgId of selectedOrgIds) {
+      const orgHours = hoursByOrganizationId.get(orgId);
+      if (!orgHours || orgHours <= 0) {
+        res.status(400);
+        throw new Error(`Organization ${orgId} cannot be included in this certificate.`);
+      }
+    }
+
+    const hoursPerOrg = selectedOrgIds.reduce<Record<string, number>>((record, orgId) => {
+      record[String(orgId)] = Number((hoursByOrganizationId.get(orgId) ?? 0).toFixed(2));
+      return record;
+    }, {});
+
+    const payload = {
+      v: CERTIFICATE_PAYLOAD_VERSION,
+      uid: String(volunteerId),
+      issued_at: issuedAt.toISOString(),
+      org_ids: selectedOrgIds.map(id => String(id)),
+      total_hours: totalHours,
+      hours_per_org: hoursPerOrg,
+      type: CERTIFICATE_TYPE,
+    };
+
+    const verificationToken = signCertificateVerificationPayload(payload, config.CERTIFICATE_VERIFICATION_SECRET);
+
+    res.json({
+      verification_token: verificationToken,
+      issued_at: payload.issued_at,
     });
   });
 
@@ -536,6 +644,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
         'description',
       ])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     const existingSkills = await db
@@ -552,9 +662,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
       : false;
 
     const shouldRecomputeProfileVector = (
-      (body.first_name !== undefined && body.first_name !== existingVolunteer.first_name)
-      || (body.last_name !== undefined && body.last_name !== existingVolunteer.last_name)
-      || (body.gender !== undefined && body.gender !== existingVolunteer.gender)
+      (body.gender !== undefined && body.gender !== existingVolunteer.gender)
       || (body.cv_path !== undefined && body.cv_path !== existingVolunteer.cv_path)
       || (body.description !== undefined && body.description !== existingVolunteer.description)
       || didSkillsChange
@@ -563,8 +671,6 @@ function createVolunteerRouter(db: Kysely<Database>) {
     await executeTransaction(db, async (executor) => {
       const volunteerUpdate: Partial<Omit<VolunteerAccountWithoutPassword, 'id'>> = {};
 
-      if (body.first_name !== undefined) volunteerUpdate.first_name = body.first_name;
-      if (body.last_name !== undefined) volunteerUpdate.last_name = body.last_name;
       if (body.gender !== undefined) volunteerUpdate.gender = body.gender;
       if (body.cv_path !== undefined) volunteerUpdate.cv_path = body.cv_path;
       if (body.description !== undefined) volunteerUpdate.description = body.description;
@@ -602,6 +708,40 @@ function createVolunteerRouter(db: Kysely<Database>) {
 
     const profile = await getVolunteerProfile(volunteerId);
     res.json(profile);
+  });
+
+  volunteerRouter.post('/organization/:id/report', async (req, res: Response<VolunteerReportOrganizationResponse>) => {
+    const { id: organizationId } = zod.object({
+      id: zod.coerce.number().int().positive('Organization ID must be a positive number'),
+    }).parse(req.params);
+
+    const body = newOrganizationReportSchema.parse(req.body);
+    const volunteerId = req.userJWT!.id;
+
+    const organization = await db
+      .selectFrom('organization_account')
+      .select('id')
+      .where('id', '=', organizationId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
+      .executeTakeFirst();
+
+    if (!organization) {
+      res.status(404);
+      throw new Error('Organization not found.');
+    }
+
+    await db
+      .insertInto('organization_report')
+      .values({
+        reported_organization_id: organizationId,
+        reporter_volunteer_id: volunteerId,
+        title: body.title,
+        message: body.message,
+      })
+      .execute();
+
+    res.json({});
   });
 
   volunteerRouter.use('/profile/cv', createVolunteerCvRouter(db));

@@ -17,11 +17,12 @@ import {
   X,
   Users,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { volunteerAccountSchema } from '../../../../server/src/db/tables';
+import AuthContext from '../../auth/AuthContext';
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
@@ -62,8 +63,9 @@ const profileFormSchema = volunteerAccountSchema.omit({
   id: true,
   password: true,
   email: true,
-  profile_vector: true,
-  experience_vector: true,
+  volunteer_profile_vector: true,
+  volunteer_history_vector: true,
+  volunteer_context_vector: true,
   created_at: true,
   updated_at: true,
   is_disabled: true,
@@ -133,6 +135,11 @@ function VolunteerProfile() {
   const [showAllExperiences, setShowAllExperiences] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cvBusy, setCvBusy] = useState(false);
+  const [accountDeletionBusy, setAccountDeletionBusy] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { deleteAccount } = useContext(AuthContext);
   const notifications = useNotifications();
 
   const form = useForm<ProfileFormData>({
@@ -178,8 +185,6 @@ function VolunteerProfile() {
 
   const { trigger: updateProfile } = useAsync(
     async (data: {
-      first_name: string;
-      last_name: string;
       gender: 'male' | 'female' | 'other';
       description: string;
       skills: string[];
@@ -345,8 +350,6 @@ function VolunteerProfile() {
       setSaving(true);
 
       const response = await updateProfile({
-        first_name: data.first_name,
-        last_name: data.last_name,
         gender: data.gender,
         description: data.description,
         skills,
@@ -446,6 +449,24 @@ function VolunteerProfile() {
       setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
     } finally {
       setCvBusy(false);
+    }
+  };
+
+  const onDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError('Please enter your password.');
+      return;
+    }
+    setDeleteError(null);
+
+    try {
+      setAccountDeletionBusy(true);
+      await deleteAccount(deletePassword);
+      notifications.push({ type: 'success', message: 'Your account was deleted.' });
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account.');
+    } finally {
+      setAccountDeletionBusy(false);
     }
   };
 
@@ -558,10 +579,28 @@ function VolunteerProfile() {
               ? (
                   <div className="space-y-3">
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                      <FormField form={form} name="first_name" label="First Name" />
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">First Name</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.volunteer.first_name}
+                          disabled
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
-                      <FormField form={form} name="last_name" label="Last Name" />
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Last Name</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.volunteer.last_name}
+                          disabled
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
                       <FormField
@@ -587,10 +626,13 @@ function VolunteerProfile() {
                     <div className={saving ? 'pointer-events-none opacity-70' : ''}>
                       <div className="space-y-1">
                         <label className="text-sm font-medium">Date of Birth</label>
-                        <div className="input input-bordered w-full flex items-center gap-2 opacity-80">
-                          <Calendar size={16} />
-                          <span>{formattedDateOfBirth}</span>
-                        </div>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={formattedDateOfBirth}
+                          disabled
+                          readOnly
+                        />
                       </div>
                     </div>
                   </div>
@@ -680,24 +722,26 @@ function VolunteerProfile() {
 
         <Card padding={false}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
-            <div className="stat place-items-center">
+            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
               <div className="stat-title text-base">Crisis-Related</div>
-              <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <div className="stat-value text-2xl text-primary/80 flex w-full items-center justify-center gap-2 self-center">
                 <AlertTriangle className="h-6 w-6 shrink-0 stroke-current" />
                 <span>{profile.experience_stats.crisis_related_experiences}</span>
               </div>
             </div>
-            <div className="stat place-items-center">
+            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
               <div className="stat-title text-base">Total Skills Used</div>
-              <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <div className="stat-value text-2xl text-primary/80 flex w-full items-center justify-center gap-2 self-center">
                 <Brain className="h-6 w-6 shrink-0 stroke-current" />
                 <span>{profile.experience_stats.total_skills_used}</span>
               </div>
             </div>
-            <div className="stat place-items-center">
+            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
               <div className="stat-title text-base">Most Volunteered Crisis</div>
-              <div className="stat-value text-lg text-primary/80 inline-flex w-full items-center justify-center gap-2 px-2">
-                <span className="max-w-full truncate text-center">{profile.experience_stats.most_volunteered_crisis ?? 'N/A'}</span>
+              <div className="stat-value text-lg text-primary/80 flex w-full min-w-0 items-center justify-center gap-2 px-2 self-center">
+                <span className="max-w-full text-center whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
+                  {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
+                </span>
               </div>
             </div>
           </div>
@@ -816,6 +860,75 @@ function VolunteerProfile() {
               </span>
             </div>
           </div>
+        </Card>
+
+        <Card
+          title="Delete Account"
+          description="Permanently delete your volunteer account."
+          Icon={Trash2}
+        >
+          {!showDeleteConfirm
+            ? (
+                <div>
+                  <Button
+                    type="button"
+                    color="error"
+                    style="outline"
+                    onClick={() => {
+                      setShowDeleteConfirm(true);
+                      setDeleteError(null);
+                      setDeletePassword('');
+                    }}
+                    Icon={Trash2}
+                  >
+                    I want to delete my account
+                  </Button>
+                </div>
+              )
+            : (
+                <div className="space-y-3">
+                  <Alert color="error">
+                    <strong>This cannot be undone.</strong>
+                    {' '}
+                    Your upcoming applications will be withdrawn. You will not be able to sign in or recover this account. Your profile will be hidden from the platform, and you will be signed out immediately.
+                  </Alert>
+                  <p className="text-sm font-medium">Enter your password to confirm:</p>
+                  <input
+                    type="password"
+                    className="input input-bordered w-full max-w-sm"
+                    placeholder="Your password"
+                    value={deletePassword}
+                    onChange={e => setDeletePassword(e.target.value)}
+                    disabled={accountDeletionBusy}
+                    onKeyDown={e => e.key === 'Enter' && void onDeleteAccount()}
+                  />
+                  {deleteError && <p className="text-sm text-error">{deleteError}</p>}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      color="error"
+                      onClick={() => void onDeleteAccount()}
+                      loading={accountDeletionBusy}
+                      Icon={Trash2}
+                    >
+                      Permanently Delete My Account
+                    </Button>
+                    <Button
+                      type="button"
+                      style="outline"
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteError(null);
+                        setDeletePassword('');
+                      }}
+                      disabled={accountDeletionBusy}
+                      Icon={X}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
         </Card>
       </ColumnLayout>
     </PageContainer>

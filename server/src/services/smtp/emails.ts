@@ -102,22 +102,44 @@ export async function sendAdminOrganizationRequestEmail(
     html,
   });
 }
+function formatEmailDate(dateString: string): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
 export async function sendVolunteerApplicationAcceptedEmail(opts: {
   volunteerEmail: string;
   volunteerName: string;
   organizationName: string;
   postingTitle: string;
+  acceptedDates?: string[];
 }) {
   const subject = 'You\'re in! Your volunteering application was accepted';
+
+  const rows = [
+    { label: 'Organization', value: opts.organizationName },
+    { label: 'Posting', value: opts.postingTitle },
+  ];
+
+  const paragraphs = ['Congratulations! Thank you for stepping up to help your community.'];
+
+  if (opts.acceptedDates && opts.acceptedDates.length > 0) {
+    const formattedDates = opts.acceptedDates
+      .map(date => formatEmailDate(date));
+    rows.push({ label: 'Accepted dates', value: formattedDates.join(', ') });
+  }
 
   const { html, text } = buildEmailBody({
     title: 'Application Accepted - Congratulations!',
     intro: `Hello ${opts.volunteerName}, your volunteering application was accepted.`,
-    rows: [
-      { label: 'Organization', value: opts.organizationName },
-      { label: 'Posting', value: opts.postingTitle },
-    ],
-    paragraphs: ['Congratulations! Thank you for stepping up to help your community.'],
+    rows,
+    paragraphs,
     tone: 'success',
   });
 
@@ -161,6 +183,29 @@ export async function sendVolunteerVerificationEmail(opts: {
     ctaUrl: verifyUrl,
     note: 'If you did not create this account, you can safely ignore this email.',
     tone: 'primary',
+  });
+
+  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+}
+
+export async function sendPostingDeletedEmail(opts: {
+  volunteerEmail: string;
+  volunteerName: string;
+  postingTitle: string;
+  organizationName: string;
+}) {
+  const subject = 'A posting you were enrolled in has been removed';
+
+  const { html, text } = buildEmailBody({
+    title: 'Posting Removed',
+    intro: `Hello ${opts.volunteerName}, a posting you were enrolled in has been removed.`,
+    rows: [
+      { label: 'Posting', value: opts.postingTitle },
+      { label: 'Organization', value: opts.organizationName },
+    ],
+    paragraphs: ['Your enrollment in this posting has been cancelled. We apologize for the inconvenience.'],
+    note: 'Keep an eye on new opportunities that match your skills.',
+    tone: 'error',
   });
 
   await sendEmail({ to: opts.volunteerEmail, subject, text, html });

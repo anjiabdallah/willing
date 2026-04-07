@@ -8,7 +8,7 @@ interface SkillsListProps {
   limit?: number;
 }
 
-const SKILL_COLORS = ['badge-primary', 'badge-secondary', 'badge-accent', 'badge-info'];
+const SKILL_COLORS = ['badge-secondary', 'badge-accent', 'badge-info', 'badge-primary'];
 const getSkillColor = (_skill: string, index: number) => {
   return SKILL_COLORS[index % SKILL_COLORS.length];
 };

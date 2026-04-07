@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 
 import requestServer from '../utils/requestServer';
 
-import type { AdminLoginResponse, AdminMeResponse, AdminResetPasswordResponse, OrganizationGetMeResponse, OrganizationResetPasswordResponse, UserLoginResponse, VolunteerCreateResponse, VolunteerMeResponse, VolunteerResendVerificationResponse, VolunteerResetPasswordResponse, VolunteerVerifyEmailResponse } from '../../../server/src/api/types';
+import type { AdminLoginResponse, AdminMeResponse, AdminResetPasswordResponse, OrganizationGetMeResponse, OrganizationResetPasswordResponse, UserDeleteAccountResponse, UserLoginResponse, VolunteerCreateResponse, VolunteerMeResponse, VolunteerResendVerificationResponse, VolunteerResetPasswordResponse, VolunteerVerifyEmailResponse } from '../../../server/src/api/types';
 import type { AdminAccountWithoutPassword, NewVolunteerAccount, OrganizationAccountWithoutPassword, VolunteerAccountWithoutPassword } from '../../../server/src/db/tables';
 import type { Role, UserJWT } from '../../../server/src/types';
 
@@ -53,6 +53,7 @@ type AuthContextType = {
   verifyVolunteerEmail: (key: string) => Promise<VolunteerVerifyEmailResponse>;
   resendVolunteerVerification: (email: string) => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   logout: () => void;
   restrictRoute: (role: Role, unauthenticatedRedirectPath: string) => AccountWithoutPassword;
 };
@@ -67,6 +68,7 @@ const AuthContext = createContext<AuthContextType>({
   verifyVolunteerEmail: async () => ({ volunteer: {} as VolunteerAccountWithoutPassword, token: '' }),
   resendVolunteerVerification: async () => {},
   changePassword: async () => {},
+  deleteAccount: async () => {},
   logout: () => {},
   restrictRoute: (() => {
     return undefined as unknown as AccountWithoutPassword;
@@ -258,6 +260,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(undefined);
   }, [user]);
 
+  const deleteAccount = useCallback(async (password: string) => {
+    await requestServer<UserDeleteAccountResponse>('/user/account', {
+      method: 'DELETE',
+      includeJwt: true,
+      body: { password },
+    });
+
+    logout();
+  }, [logout]);
+
   const restrictRoute = useCallback((allowedRole: Role, unauthenticatedRedirectPath: string) => {
     if (!user) {
       navigate(unauthenticatedRedirectPath, { replace: true });
@@ -276,7 +288,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, navigate]);
 
   return (
-    <AuthContext.Provider value={{ user, loaded, refreshUser, loginAdmin, loginUser, createVolunteer, verifyVolunteerEmail, resendVolunteerVerification, changePassword, logout, restrictRoute }}>
+    <AuthContext.Provider value={{ user, loaded, refreshUser, loginAdmin, loginUser, createVolunteer, verifyVolunteerEmail, resendVolunteerVerification, changePassword, deleteAccount, logout, restrictRoute }}>
       {children}
     </AuthContext.Provider>
   );

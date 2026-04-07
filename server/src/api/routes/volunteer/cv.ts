@@ -36,6 +36,7 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
         .selectFrom('volunteer_account')
         .select(['cv_path'])
         .where('id', '=', volunteerId)
+        .where('is_deleted', '=', false)
         .executeTakeFirst();
 
       if (existing?.cv_path) {
@@ -61,6 +62,7 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['cv_path'])
       .where('id', '=', req.userJWT!.id)
+      .where('is_deleted', '=', false)
       .executeTakeFirst();
 
     if (!profile?.cv_path) {
@@ -83,6 +85,7 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['cv_path'])
       .where('id', '=', req.userJWT!.id)
+      .where('is_deleted', '=', false)
       .executeTakeFirst();
 
     if (!profile?.cv_path) {
@@ -105,6 +108,7 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['cv_path'])
       .where('id', '=', req.userJWT!.id)
+      .where('is_deleted', '=', false)
       .executeTakeFirst();
 
     if (row?.cv_path) {

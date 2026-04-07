@@ -1,6 +1,9 @@
-import { AlertTriangle, Building2, Calendar, Clock3, Download, FileText, Mail, Mars, Users, Venus } from 'lucide-react';
-import { useMemo } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertTriangle, Building2, Calendar, Clock3, Download, FileText, Flag, Mail, Mars, Users, Venus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router';
+import zod from 'zod';
 
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
@@ -10,11 +13,14 @@ import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import PostingCollection from '../../components/postings/PostingCollection';
 import PostingViewModeToggle from '../../components/postings/PostingViewModeToggle';
+import ReportForm from '../../components/reporting/ReportForm';
+import { DEFAULT_REPORT_TYPE, REPORT_TYPE_VALUES } from '../../components/reporting/reportType.constants';
 import SkillsList from '../../components/skills/SkillsList';
+import useNotifications from '../../notifications/useNotifications';
 import requestServer, { SERVER_BASE_URL } from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { OrganizationVolunteerProfileResponse } from '../../../../server/src/api/types';
+import type { OrganizationReportVolunteerResponse, OrganizationVolunteerProfileResponse } from '../../../../server/src/api/types';
 import type { PostingWithContext } from '../../../../server/src/types';
 
 const toTimeString = (value: Date) => `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
@@ -28,9 +34,26 @@ const toDateFromParts = (dateValue: Date | string, timeValue?: string) => {
   return new Date(`${year}-${month}-${day}T${timePart}`);
 };
 
+const reportVolunteerSchema = zod.object({
+  title: zod.enum(REPORT_TYPE_VALUES),
+  message: zod.string().trim().min(1, 'Message is required').max(1000, 'Message must be at most 1000 characters'),
+});
+
+type ReportVolunteerFormData = zod.infer<typeof reportVolunteerSchema>;
+
 function OrganizationVolunteerProfile() {
   const { volunteerId } = useParams<{ volunteerId: string }>();
-
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const notifications = useNotifications();
+  const reportForm = useForm<ReportVolunteerFormData>({
+    resolver: zodResolver(reportVolunteerSchema),
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      title: DEFAULT_REPORT_TYPE,
+      message: '',
+    },
+  });
   const {
     data,
     loading,
@@ -79,6 +102,20 @@ function OrganizationVolunteerProfile() {
     },
     { notifyOnError: true },
   );
+
+  const {
+    loading: submittingReport,
+    trigger: submitVolunteerReport,
+  } = useAsync(async (reportData: ReportVolunteerFormData) => {
+    if (!volunteerId) throw new Error('Volunteer ID is missing.');
+
+    await requestServer<OrganizationReportVolunteerResponse>(`/organization/volunteer/${volunteerId}/report`, {
+      method: 'POST',
+      includeJwt: true,
+      body: reportData,
+    });
+  }, { notifyOnError: false });
+  const canSubmitReport = reportForm.formState.isValid && !submittingReport;
 
   const profile = data?.profile;
 
@@ -176,6 +213,38 @@ function OrganizationVolunteerProfile() {
     URL.revokeObjectURL(link.href);
   };
 
+  const closeReportModal = () => {
+    if (submittingReport) return;
+    setReportModalOpen(false);
+  };
+
+  const openReportModal = () => {
+    reportForm.reset({
+      title: DEFAULT_REPORT_TYPE,
+      message: '',
+    });
+    setReportModalOpen(true);
+  };
+
+  const submitReportForm = reportForm.handleSubmit(async (reportData) => {
+    reportForm.clearErrors('root');
+
+    try {
+      await submitVolunteerReport(reportData);
+      notifications.push({
+        type: 'success',
+        message: 'Report submitted successfully.',
+      });
+      closeReportModal();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to submit report.';
+      reportForm.setError('root', {
+        type: 'server',
+        message,
+      });
+    }
+  });
+
   if (loading && !profile) {
     return (
       <div className="grow bg-base-200">
@@ -213,6 +282,17 @@ function OrganizationVolunteerProfile() {
           icon={FileText}
           showBack
           defaultBackTo="/organization"
+          actions={(
+            <Button
+              color="error"
+              style="outline"
+              type="button"
+              Icon={Flag}
+              onClick={openReportModal}
+            >
+              Report volunteer
+            </Button>
+          )}
         />
 
         <div className="mt-4">
@@ -378,6 +458,19 @@ function OrganizationVolunteerProfile() {
           </ColumnLayout>
         </div>
       </div>
+
+      <ReportForm
+        open={reportModalOpen}
+        heading="Report Volunteer"
+        form={reportForm}
+        onClose={closeReportModal}
+        onSubmit={submitReportForm}
+        messagePlaceholder="Describe what happened and why you are reporting this volunteer."
+        submitLabel="Report volunteer"
+        submitting={submittingReport}
+        submitDisabled={!canSubmitReport}
+        maxMessageLength={1000}
+      />
     </div>
   );
 }

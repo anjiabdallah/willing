@@ -9,10 +9,73 @@ import type { PostingWithContext } from '../../../server/src/types';
 interface PostingListProps {
   posting: PostingWithContext;
   showCrisis?: boolean;
+  crisisTagClickable?: boolean;
   variant?: 'volunteer' | 'organization';
   compactOrganizationLayout?: boolean;
   volunteerOutsideMetaAt1700?: boolean;
 }
+
+const getPostingDates = (startDate: string | Date, endDate: string | Date | null | undefined) => {
+  const normalizeDateOnly = (value: string | Date | null | undefined) => {
+    if (value == null) return undefined;
+    if (value instanceof Date) {
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    }
+
+    const datePart = value.split('T')[0]?.trim();
+    return datePart || undefined;
+  };
+
+  const parseIsoDateParts = (value: string) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return undefined;
+
+    return {
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+    };
+  };
+
+  const formatDateToIso = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+
+  const normalizedStartDate = normalizeDateOnly(startDate);
+  const normalizedEndDate = normalizeDateOnly(endDate ?? startDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
+  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+};
+
+const isPostingFullyBooked = (posting: PostingWithContext) => {
+  if (posting.max_volunteers == null) {
+    return false;
+  }
+
+  if (!posting.allows_partial_attendance) {
+    return (posting.enrollment_count ?? 0) >= posting.max_volunteers;
+  }
+
+  const postingDates = getPostingDates(posting.start_date, posting.end_date);
+  if (postingDates.length === 0) {
+    return false;
+  }
+
+  return postingDates.every(date => (posting.date_capacity?.[date] ?? 0) >= posting.max_volunteers!);
+};
 
 const normalizeTimestamp = (value: string | Date | undefined | null) => {
   if (value == null) return null;
@@ -44,6 +107,7 @@ const formatCardDate = (dateValue: Date | null) => {
 function PostingList({
   posting,
   showCrisis = true,
+  crisisTagClickable = true,
   variant = 'volunteer',
   compactOrganizationLayout = false,
   volunteerOutsideMetaAt1700 = false,
@@ -71,7 +135,7 @@ function PostingList({
     ? `${volunteerFilled}/${posting.max_volunteers}`
     : `${volunteerFilled}`;
   const locationText = posting.location_name || 'TBA';
-  const isPostingFull = Boolean(posting.max_volunteers && volunteerFilled >= posting.max_volunteers);
+  const isPostingFull = isPostingFullyBooked(posting);
 
   const statusTag = posting.is_closed
     ? (
@@ -146,18 +210,32 @@ function PostingList({
     ? 'hidden min-[1700px]:block'
     : 'hidden lg:block 2xl:hidden';
 
+  const crisisTagContent = (
+    <>
+      <AlertCircle size={14} />
+      <span className="truncate max-w-40 font-semibold">{posting.crisis_name}</span>
+    </>
+  );
+
   return (
 
     <div className="relative overflow-visible">
       {showCrisis && posting.crisis_name && posting.crisis_id && (
-        <Link
-          to={`/volunteer/crises/${posting.crisis_id}/postings`}
-          onClick={event => event.stopPropagation()}
-          className="absolute -top-2 right-1 z-20 pointer-events-auto inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
-        >
-          <AlertCircle size={14} />
-          <span className="truncate max-w-40 font-semibold">{posting.crisis_name}</span>
-        </Link>
+        crisisTagClickable
+          ? (
+              <Link
+                to={`/volunteer/crises/${posting.crisis_id}/postings`}
+                onClick={event => event.stopPropagation()}
+                className="absolute -top-2 right-1 z-20 pointer-events-auto inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3 transition-transform duration-200 hover:rotate-0"
+              >
+                {crisisTagContent}
+              </Link>
+            )
+          : (
+              <span className="absolute -top-2 right-1 z-20 inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-sm text-accent-content shadow-sm rotate-3">
+                {crisisTagContent}
+              </span>
+            )
       )}
 
       <article className="collapse collapse-arrow relative border border-base-300 bg-base-100 shadow-sm hover:shadow-md transition-shadow">

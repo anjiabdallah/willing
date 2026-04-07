@@ -47,4 +47,6 @@ export type OrganizationVolunteerProfileResponse = {
   profile: VolunteerProfileData;
 };
 
+export type OrganizationReportVolunteerResponse = SuccessResponse;
+
 export type OrganizationResetPasswordResponse = ResetPasswordResponse;

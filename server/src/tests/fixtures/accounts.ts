@@ -1,8 +1,9 @@
+import database from '../../db/index.ts';
 import { hash } from '../../services/bcrypt/index.ts';
 import { generateJWT } from '../../services/jwt/index.ts';
 
-import type { Database } from '../../db/tables/index.ts';
-import type { ControlledTransaction } from 'kysely';
+import type { AdminAccount, Database, OrganizationAccount, VolunteerAccount } from '../../db/tables/index.ts';
+import type { Kysely } from 'kysely';
 
 type OrganizationFixtureOptions = {
   email?: string;
@@ -21,6 +22,13 @@ type VolunteerFixtureOptions = {
   created_at?: Date;
 };
 
+type AdminFixtureOptions = {
+  email?: string;
+  password?: string;
+  first_name?: string;
+  last_name?: string;
+};
+
 const DEFAULT_ORG_PASSWORD = 'OrgPassword123!';
 const HASHED_DEFAULT_ORG_PASSWORD = hash(DEFAULT_ORG_PASSWORD);
 
@@ -30,21 +38,40 @@ const HASHED_DEFAULT_VOL_PASSWORD = hash(DEFAULT_VOL_PASSWORD);
 const DEFAULT_ADMIN_PASSWORD = 'AdminPassword123!';
 const HASHED_DEFAULT_ADMIN_PASSWORD = hash(DEFAULT_ADMIN_PASSWORD);
 
-export async function createOrganizationAccount(
-  database: ControlledTransaction<Database>,
-  {
+type DbExecutor = Kysely<Database>;
+
+const isDbExecutor = (value: unknown): value is DbExecutor =>
+  typeof value === 'object'
+  && value !== null
+  && 'insertInto' in value
+  && 'selectFrom' in value;
+
+const resolveFixtureArgs = <T>(arg1?: DbExecutor | T, arg2?: T): [DbExecutor, T] => {
+  if (isDbExecutor(arg1)) {
+    return [arg1, (arg2 ?? {}) as T];
+  }
+
+  return [database, (arg1 ?? {}) as T];
+};
+
+export async function createOrganizationAccount(options?: OrganizationFixtureOptions): Promise<{ organization: OrganizationAccount; plainPassword: string; token: string }>;
+export async function createOrganizationAccount(db: DbExecutor, options?: OrganizationFixtureOptions): Promise<{ organization: OrganizationAccount; plainPassword: string; token: string }>;
+export async function createOrganizationAccount(arg1?: DbExecutor | OrganizationFixtureOptions, arg2?: OrganizationFixtureOptions) {
+  const [db, options] = resolveFixtureArgs<OrganizationFixtureOptions>(arg1, arg2);
+
+  const {
     email = 'org@example.com',
     password,
     name = 'Helping Hands',
     phone_number = '+10000000000',
     url = 'https://example.org',
     created_at = new Date(),
-  }: OrganizationFixtureOptions = {},
-) {
+  } = options;
+
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_ORG_PASSWORD : hash(password));
   const now = new Date();
 
-  const organization = await database
+  const organization = await db
     .insertInto('organization_account')
     .values({
       name,
@@ -68,20 +95,23 @@ export async function createOrganizationAccount(
   };
 }
 
-export async function createVolunteerAccount(
-  database: ControlledTransaction<Database>,
-  {
+export async function createVolunteerAccount(options?: VolunteerFixtureOptions): Promise<{ volunteer: VolunteerAccount; plainPassword: string; token: string }>;
+export async function createVolunteerAccount(db: DbExecutor, options?: VolunteerFixtureOptions): Promise<{ volunteer: VolunteerAccount; plainPassword: string; token: string }>;
+export async function createVolunteerAccount(arg1?: DbExecutor | VolunteerFixtureOptions, arg2?: VolunteerFixtureOptions) {
+  const [db, options] = resolveFixtureArgs<VolunteerFixtureOptions>(arg1, arg2);
+
+  const {
     email = 'vol@example.com',
     password,
     first_name = 'Jane',
     last_name = 'Doe',
     created_at = new Date(),
-  }: VolunteerFixtureOptions = {},
-) {
+  } = options;
+
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_VOL_PASSWORD : hash(password));
   const now = new Date();
 
-  const volunteer = await database
+  const volunteer = await db
     .insertInto('volunteer_account')
     .values({
       first_name,
@@ -105,26 +135,22 @@ export async function createVolunteerAccount(
   };
 }
 
-type AdminFixtureOptions = {
-  email?: string;
-  password?: string;
-  first_name?: string;
-  last_name?: string;
-};
+export async function createAdminAccount(options?: AdminFixtureOptions): Promise<{ admin: AdminAccount; plainPassword: string; token: string }>;
+export async function createAdminAccount(db: DbExecutor, options?: AdminFixtureOptions): Promise<{ admin: AdminAccount; plainPassword: string; token: string }>;
+export async function createAdminAccount(arg1?: DbExecutor | AdminFixtureOptions, arg2?: AdminFixtureOptions) {
+  const [db, options] = resolveFixtureArgs<AdminFixtureOptions>(arg1, arg2);
 
-export async function createAdminAccount(
-  database: ControlledTransaction<Database>,
-  {
+  const {
     email = 'admin@example.com',
     password,
     first_name = 'Admin',
     last_name = 'User',
-  }: AdminFixtureOptions = {},
-) {
+  } = options;
+
   const hashedPassword = await (password === undefined ? HASHED_DEFAULT_ADMIN_PASSWORD : hash(password));
   const now = new Date();
 
-  const admin = await database
+  const admin = await db
     .insertInto('admin_account')
     .values({
       first_name,

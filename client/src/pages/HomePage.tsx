@@ -1,4 +1,4 @@
-import { Handshake, BriefcaseMedical, HandHeart, AlertTriangle, ArrowRight, Award, Building2, Heart, Send, ShieldCheck, Users } from 'lucide-react';
+import { Handshake, BriefcaseMedical, HandHeart, AlertTriangle, ArrowRight, Award, Building2, FileSearch, Heart, Send, ShieldCheck, Users } from 'lucide-react';
 import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -88,7 +88,7 @@ function HomePage() {
       <UserNavbar />
 
       <main className="relative grow">
-        <section className="bg-base-200 relative overflow-hidden">
+        <section className="bg-base-200 relative overflow-visible">
 
           {[
             { Icon: BriefcaseMedical, top: '71%', left: '33%', size: 42 },
@@ -111,18 +111,18 @@ function HomePage() {
           ))}
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 pt-10 md:px-6 xl:px-8">
             <div className="px-4 pt-10 text-center md:px-6 xl:px-8">
-              <h1 className="text-5xl md:text-7xl font-extrabold mb-4 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">
+              <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.1] mb-4 pb-2 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">
                 Connecting volunteers to their
                 <br />
                 <span>vision of a better community</span>
               </h1>
             </div>
 
-            <div className="relative left-1/2 -mt-10 w-screen -translate-x-1/2 overflow-hidden">
+            <div className="relative left-1/2 -mt-10 w-screen -translate-x-1/2 overflow-visible">
               <div className="px-4 pb-24 pt-14 md:px-6 xl:px-8">
                 <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
                   <div className="max-w-2xl self-start pt-2 text-right lg:justify-self-end">
-                    <h2 className="text-3xl md:text-5xl font-black leading-[1.02] tracking-[-0.04em] text-base-content mt-8">
+                    <h2 className="text-3xl md:text-5xl font-black leading-[1.08] tracking-[-0.04em] text-base-content mt-8">
                       Volunteer and make a difference today
                     </h2>
                     <p className="mt-6 ml-auto max-w-xl text-base leading-8 text-base-content/72">
@@ -148,14 +148,13 @@ function HomePage() {
                     <p className="opacity-80">Discover volunteer opportunities that match your skills.</p>
                     {auth.user?.role === 'admin'
                       ? (
-                          <LinkButton
-                            to="/admin"
+                          <Button
+                            disabled
                             layout="wide"
                             color="primary"
-                            Icon={Users}
                           >
-                            Manage Volunteers
-                          </LinkButton>
+                            Admin Account Active
+                          </Button>
                         )
                       : auth.user?.role === 'organization'
                         ? (
@@ -213,9 +212,13 @@ function HomePage() {
                 <p className="opacity-80">Request to register your organization and find volunteers.</p>
                 {auth.user?.role === 'admin'
                   ? (
-                      <LinkButton to="/admin" color="secondary" layout="wide" Icon={Building2}>
-                        Manage Organizations
-                      </LinkButton>
+                      <Button
+                        disabled
+                        layout="wide"
+                        color="secondary"
+                      >
+                        Admin Account Active
+                      </Button>
                     )
                   : auth.user?.role === 'volunteer'
                     ? (
@@ -239,7 +242,7 @@ function HomePage() {
               </div>
 
               <div className="max-w-2xl self-start pt-2 lg:justify-self-end mt-8">
-                <h2 className="text-3xl md:text-5xl font-black leading-[0.98] tracking-[-0.04em] text-base-content">
+                <h2 className="text-3xl md:text-5xl font-black leading-[1.04] tracking-[-0.04em] text-base-content">
                   Join and find
                   <br />
                   <span className="whitespace-nowrap text-[0.9em]">passionate volunteers</span>
@@ -350,22 +353,52 @@ function HomePage() {
                   )}
           </section>
         </div>
+
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8">
+          <section className="rounded-[2rem] border border-primary/25 bg-base-100 p-8 shadow-[0_18px_60px_rgba(0,0,0,0.07)] md:p-10">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Public Verification</p>
+                <h2 className="mt-3 text-3xl font-black leading-tight tracking-[-0.03em] text-base-content md:text-4xl">
+                  Verify a Certificate
+                </h2>
+                <p className="mt-3 max-w-2xl text-base text-base-content/75">
+                  Check certificate authenticity instantly with a verification token. No login required.
+                </p>
+              </div>
+              <div className="md:shrink-0">
+                <LinkButton
+                  to="/certificate/verify"
+                  color="primary"
+                  layout="wide"
+                  Icon={FileSearch}
+                >
+                  Open Verification Page
+                </LinkButton>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <div className="w-full bg-base-200">
           <svg viewBox="0 0 1440 120" className="w-full text-base-100" preserveAspectRatio="none" height="120">
             <path d="M0,56L60,64C120,72,240,88,360,90.7C480,93,600,83,720,69.3C840,56,960,40,1080,42.7C1200,45,1320,67,1380,77.3L1440,88L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z" fill="currentColor" />
           </svg>
 
-          <div className="py-20 text-center min-h-96 flex flex-col items-center justify-center">
-            <h2 className="text-4xl font-extrabold tracking-tight text-base-content">Want to Learn More?</h2>
-            <p className="mt-4 text-lg text-base-content/80">Check out our guide page for full details!</p>
-            <LinkButton
-              to="/guide"
-              color="primary"
-              layout="wide"
-              className="mt-8"
-            >
-              Read Our Guide
-            </LinkButton>
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-20 md:px-6 xl:px-8">
+            <section className="text-center min-h-72 flex flex-col items-center justify-center">
+              <h2 className="text-4xl font-extrabold tracking-tight text-base-content">Want to Learn More?</h2>
+              <p className="mt-4 text-lg text-base-content/80">Check out our guide page for full details!</p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <LinkButton
+                  to="/guide"
+                  color="secondary"
+                  layout="wide"
+                >
+                  Read Our Guide
+                </LinkButton>
+              </div>
+            </section>
           </div>
         </div>
       </main>

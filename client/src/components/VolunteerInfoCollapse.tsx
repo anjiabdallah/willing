@@ -14,6 +14,23 @@ interface VolunteerInfoCollapseProps {
   profileLink?: string;
 }
 
+function formatDisplayDate(value: string) {
+  const [yearRaw, monthRaw, dayRaw] = value.split('T')[0]?.split('-') ?? [];
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+
+  if ([year, month, day].some(Number.isNaN)) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day));
+}
+
 function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInfoCollapseProps) {
   const [viewingCv, setViewingCv] = useState(false);
   const volunteerName = `${volunteer.first_name} ${volunteer.last_name}`;
@@ -59,6 +76,9 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
       setViewingCv(false);
     }
   };
+
+  const dates = 'dates' in volunteer ? volunteer.dates : undefined;
+  const requestedDates = 'requested_dates' in volunteer ? volunteer.requested_dates : undefined;
 
   return (
     <div className="collapse collapse-arrow border border-base-300 bg-base-100">
@@ -159,6 +179,19 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
           <Mail size={12} />
           {volunteer.email}
         </div>
+        {dates && dates.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold opacity-70 mb-1">Selected Dates</p>
+            <p className="text-sm">{dates.map(d => d.date).sort().map(formatDisplayDate).join(', ')}</p>
+          </div>
+        )}
+        {(!dates || dates.length === 0) && requestedDates && requestedDates.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold opacity-70 mb-1">Requested Dates</p>
+            <p className="text-sm">{[...requestedDates].sort().map(formatDisplayDate).join(', ')}</p>
+          </div>
+        )}
+
         {volunteer.skills && volunteer.skills.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-semibold opacity-70 mb-1">Skills</p>

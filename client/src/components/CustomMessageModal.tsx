@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Send, X } from 'lucide-react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import zod from 'zod';
 
@@ -19,6 +19,9 @@ type CustomMessageModalProps = {
   onClose: () => void;
   onSubmit: (message?: string) => Promise<void> | void;
   placeholder: string;
+  title?: string;
+  submitLabel?: string;
+  children?: React.ReactNode;
 };
 
 function CustomMessageModal({
@@ -27,6 +30,9 @@ function CustomMessageModal({
   onClose,
   onSubmit,
   placeholder,
+  title = 'Add a message',
+  submitLabel = 'Submit Application',
+  children,
 }: CustomMessageModalProps) {
   const form = useForm<CustomMessageFormData>({
     resolver: zodResolver(applyMessageSchema),
@@ -49,9 +55,9 @@ function CustomMessageModal({
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
-      <div className="modal-box border border-base-300">
+      <div className="modal-box border border-base-300 overflow-visible">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-lg">Add a message</h3>
+          <h3 className="font-bold text-lg">{title}</h3>
           <IconButton
             onClick={onClose}
             loading={submitting}
@@ -80,6 +86,12 @@ function CustomMessageModal({
             )}
           </div>
 
+          {children && (
+            <div className="mt-4 pt-4 border-t border-base-200">
+              {children}
+            </div>
+          )}
+
           <div className="modal-action">
             <Button
               type="button"
@@ -91,12 +103,12 @@ function CustomMessageModal({
               Cancel
             </Button>
             <Button
+              type="submit"
               color="primary"
-              onClick={onClose}
               loading={submitting}
               Icon={Send}
             >
-              Submit Application
+              {submitLabel}
             </Button>
           </div>
         </form>

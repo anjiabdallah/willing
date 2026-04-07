@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 type PostingCollectionProps = {
   postings: PostingWithContext[];
   showCrisis?: boolean;
+  crisisTagClickable?: boolean;
   variant?: 'volunteer' | 'organization';
   cardsContainerClassName?: string;
   listContainerClassName?: string;
@@ -19,6 +20,7 @@ type PostingCollectionProps = {
 function PostingCollection({
   postings,
   showCrisis = true,
+  crisisTagClickable = true,
   variant = 'volunteer',
   cardsContainerClassName,
   listContainerClassName,
@@ -38,19 +40,22 @@ function PostingCollection({
   const items = postings.map(posting => (
     <div
       key={posting.id}
-      className={isCards ? cardItemClassName : listItemClassName}
+      className={isCards ? `h-full min-h-[24rem] self-stretch flex flex-col ${cardItemClassName ?? ''}` : listItemClassName}
     >
       {isCards
         ? (
             <PostingCard
               posting={posting}
               showCrisis={showCrisis}
+              crisisTagClickable={crisisTagClickable}
+              fillHeight={isCards}
             />
           )
         : (
             <PostingList
               posting={posting}
               showCrisis={showCrisis}
+              crisisTagClickable={crisisTagClickable}
               variant={variant}
             />
           )}

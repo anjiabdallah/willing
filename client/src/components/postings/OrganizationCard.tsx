@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import Card from '../Card.tsx';
 import OrganizationProfilePicture from '../OrganizationProfilePicture.tsx';
 
@@ -21,9 +23,9 @@ function OrganizationCard({ organization }: OrganizationCardProps) {
 
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold">
-            <a href={`/organization/${organization.id}`} className="link link-primary link-hover no-underline hover:underline">
+            <Link to={`/organization/${organization.id}`} className="link link-primary link-hover no-underline hover:underline">
               {organization.name}
-            </a>
+            </Link>
           </h3>
           <p className="text-sm text-base-content/70 mt-1">
             {organization.location_name || 'Location not set'}

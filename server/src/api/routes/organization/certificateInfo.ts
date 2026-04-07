@@ -69,6 +69,7 @@ function createOrganizationCertificateInfoRouter(db: Kysely<Database>) {
       .selectFrom('organization_account')
       .select(['certificate_info_id'])
       .where('id', '=', organizationId)
+      .where('is_deleted', '=', false)
       .executeTakeFirstOrThrow();
 
     let certificateInfo = null;
@@ -96,6 +97,7 @@ function createOrganizationCertificateInfoRouter(db: Kysely<Database>) {
       .selectFrom('organization_account')
       .select(['certificate_info_id', 'logo_path'])
       .where('id', '=', organizationId)
+      .where('is_deleted', '=', false)
       .executeTakeFirstOrThrow();
 
     let certificateInfo;
@@ -206,6 +208,7 @@ function createOrganizationCertificateInfoRouter(db: Kysely<Database>) {
         .selectFrom('organization_account')
         .select(['certificate_info_id'])
         .where('id', '=', organizationId)
+        .where('is_deleted', '=', false)
         .executeTakeFirstOrThrow();
 
       let certificateInfo;
@@ -267,6 +270,7 @@ function createOrganizationCertificateInfoRouter(db: Kysely<Database>) {
         .selectFrom('organization_account')
         .select(['certificate_info_id'])
         .where('id', '=', organizationId)
+        .where('is_deleted', '=', false)
         .executeTakeFirstOrThrow();
 
       if (!organization.certificate_info_id) {

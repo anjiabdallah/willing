@@ -181,6 +181,7 @@ function createVolunteerPostingRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['volunteer_context_vector'])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
       .executeTakeFirstOrThrow();
 
     const volunteerContextVectorLiteral = volunteerVectors.volunteer_context_vector;
@@ -192,6 +193,8 @@ function createVolunteerPostingRouter(db: Kysely<Database>) {
       .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
       .select(postingWithContextSelectColumns)
       .where('organization_posting.is_closed', '=', false);
+    query = query.where('organization_account.is_deleted', '=', false);
+    query = query.where('organization_account.is_disabled', '=', false);
 
     if (!includeApplied) {
       query = query.where(({ not, exists, selectFrom, or }) => not(or([
@@ -493,13 +496,26 @@ function createVolunteerPostingRouter(db: Kysely<Database>) {
     const [posting, volunteer] = await Promise.all([
       db
         .selectFrom('organization_posting')
-        .select(['id', 'automatic_acceptance', 'is_closed', 'minimum_age', 'max_volunteers', 'allows_partial_attendance', 'start_date', 'end_date'])
-        .where('id', '=', id)
+        .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+        .select([
+          'organization_posting.id',
+          'organization_posting.automatic_acceptance',
+          'organization_posting.is_closed',
+          'organization_posting.minimum_age',
+          'organization_posting.max_volunteers',
+          'organization_posting.allows_partial_attendance',
+          'organization_posting.start_date',
+          'organization_posting.end_date',
+        ])
+        .where('organization_posting.id', '=', id)
+        .where('organization_account.is_deleted', '=', false)
+        .where('organization_account.is_disabled', '=', false)
         .executeTakeFirst(),
       db
         .selectFrom('volunteer_account')
         .select('date_of_birth')
         .where('id', '=', volunteerId)
+        .where('is_deleted', '=', false)
         .executeTakeFirst(),
     ]);
 

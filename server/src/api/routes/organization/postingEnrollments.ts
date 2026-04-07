@@ -23,6 +23,8 @@ export const getPostingEnrollments = async (
       'volunteer_account.cv_path',
     ])
     .where('enrollment.posting_id', '=', postingId)
+    .where('volunteer_account.is_deleted', '=', false)
+    .where('volunteer_account.is_disabled', '=', false)
     .orderBy('volunteer_account.last_name', 'asc')
     .orderBy('volunteer_account.first_name', 'asc')
     .execute();

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, ClipboardList, Flag, Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { AlertTriangle, Building2, ClipboardList, Flag, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useContext, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
@@ -12,6 +12,7 @@ import EmptyState from '../components/EmptyState';
 import ColumnLayout from '../components/layout/ColumnLayout';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
+import LinkButton from '../components/LinkButton';
 import LocationPicker from '../components/LocationPicker';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture';
 import PostingCollection from '../components/postings/PostingCollection';
@@ -158,7 +159,18 @@ function OrganizationProfile() {
         }
       />
 
-      {error && <div className="mb-4 text-sm text-base-content/70">Unable to load organization profile.</div>}
+      {error && !loading && !data && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <EmptyState
+            Icon={AlertTriangle}
+            title="Organization not available"
+            description="This organization can no longer be found. It may have been removed or is no longer active."
+          />
+          <LinkButton to="/" color="primary">
+            Back to Home
+          </LinkButton>
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-12">

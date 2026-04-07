@@ -570,6 +570,8 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
         'volunteer_account.cv_path',
       ])
       .where('enrollment_application.posting_id', '=', postingId)
+      .where('volunteer_account.is_deleted', '=', false)
+      .where('volunteer_account.is_disabled', '=', false)
       .execute();
 
     const volunteerIds = applications.map(a => a.volunteer_id);
@@ -665,17 +667,25 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
         'volunteer_account.email as volunteer_email',
         'volunteer_account.first_name',
         'volunteer_account.last_name',
+        'volunteer_account.is_deleted as volunteer_is_deleted',
+        'volunteer_account.is_disabled as volunteer_is_disabled',
         'organization_account.name as organization_name',
         'organization_posting.title as posting_title',
       ])
       .where('enrollment_application.id', '=', applicationId)
       .where('enrollment_application.posting_id', '=', postingId)
       .where('organization_posting.organization_id', '=', orgId)
+      .where('organization_account.is_deleted', '=', false)
       .executeTakeFirst();
 
     if (!emailContext) {
       res.status(404);
       throw new Error('Application not found');
+    }
+
+    if (emailContext.volunteer_is_deleted || emailContext.volunteer_is_disabled) {
+      res.status(400);
+      throw new Error('Cannot accept application from an inactive volunteer');
     }
 
     const appDates = await db
@@ -702,6 +712,19 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       if (!lockedPosting) {
         res.status(404);
         throw new Error('Posting not found');
+      }
+
+      if (lockedPosting.max_volunteers !== undefined && lockedPosting.max_volunteers !== null) {
+        const enrollmentCountRow = await trx
+          .selectFrom('enrollment')
+          .select(sql<number>`count(enrollment.id)`.as('count'))
+          .where('posting_id', '=', postingId)
+          .executeTakeFirst();
+
+        if (Number(enrollmentCountRow?.count ?? 0) >= lockedPosting.max_volunteers) {
+          res.status(403);
+          throw new Error('This posting has reached the maximum number of volunteers');
+        }
       }
 
       const enrollment = await trx
@@ -811,6 +834,9 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       .where('enrollment_application.id', '=', applicationId)
       .where('enrollment_application.posting_id', '=', postingId)
       .where('organization_posting.organization_id', '=', orgId)
+      .where('volunteer_account.is_deleted', '=', false)
+      .where('volunteer_account.is_disabled', '=', false)
+      .where('organization_account.is_deleted', '=', false)
       .executeTakeFirst();
 
     await executeTransaction(db, async (trx) => {

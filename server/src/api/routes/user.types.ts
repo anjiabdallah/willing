@@ -10,3 +10,5 @@ export type UserLoginResponse = {
 export type UserForgotPasswordResponse = object;
 
 export type UserForgotPasswordResetResponse = object;
+
+export type UserDeleteAccountResponse = object;

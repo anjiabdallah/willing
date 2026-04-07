@@ -6,6 +6,7 @@ import database from '../../db/index.ts';
 import { compare } from '../../services/bcrypt/index.ts';
 import * as emailService from '../../services/smtp/emails.ts';
 import { createAdminAccount, createOrganizationAccount, createVolunteerAccount } from '../../tests/fixtures/accounts.ts';
+import { createOrganizationPosting } from '../../tests/fixtures/organizationData.ts';
 
 import type { Database } from '../../db/tables/index.ts';
 import type { ControlledTransaction } from 'kysely';
@@ -162,6 +163,40 @@ describe('POST /user/login', () => {
       .expect(403);
 
     expect(response.body.message).toBe('Invalid email or password');
+  });
+
+  test('rejects login for deleted volunteer account', async () => {
+    const { volunteer, plainPassword } = await createVolunteerAccount(transaction, {
+      email: 'deleted-volunteer@example.com',
+    });
+
+    await transaction
+      .updateTable('volunteer_account')
+      .set({ is_deleted: true })
+      .where('id', '=', volunteer.id)
+      .execute();
+
+    await server
+      .post('/user/login')
+      .send({ email: volunteer.email, password: plainPassword })
+      .expect(403);
+  });
+
+  test('rejects login for disabled organization account', async () => {
+    const { organization, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'disabled-organization@example.com',
+    });
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ is_disabled: true })
+      .where('id', '=', organization.id)
+      .execute();
+
+    await server
+      .post('/user/login')
+      .send({ email: organization.email, password: plainPassword })
+      .expect(403);
   });
 });
 
@@ -493,5 +528,210 @@ describe('POST /user/forgot-password/reset', () => {
       .get('/volunteer/me')
       .set('Authorization', `Bearer ${newToken}`)
       .expect(200);
+  });
+});
+
+describe('DELETE /user/account', () => {
+  test('returns 403 when unauthenticated', async () => {
+    await server
+      .delete('/user/account')
+      .expect(403);
+  });
+
+  test('soft deletes volunteer account and invalidates current token', async () => {
+    const { volunteer, token, plainPassword } = await createVolunteerAccount(transaction, {
+      email: 'delete-volunteer@example.com',
+    });
+
+    await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(200);
+
+    const deletedVolunteer = await transaction
+      .selectFrom('volunteer_account')
+      .select(['is_deleted', 'token_version'])
+      .where('id', '=', volunteer.id)
+      .executeTakeFirstOrThrow();
+
+    expect(deletedVolunteer.is_deleted).toBe(true);
+
+    await server
+      .get('/volunteer/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  test('soft deletes organization account and invalidates current token', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'delete-organization@example.com',
+    });
+
+    await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(200);
+
+    const deletedOrganization = await transaction
+      .selectFrom('organization_account')
+      .select(['is_deleted', 'token_version'])
+      .where('id', '=', organization.id)
+      .executeTakeFirstOrThrow();
+
+    expect(deletedOrganization.is_deleted).toBe(true);
+
+    await server
+      .get('/organization/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  test('returns 403 when password is incorrect for volunteer', async () => {
+    const { token } = await createVolunteerAccount(transaction, {
+      email: 'wrong-pw-vol@example.com',
+    });
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'WrongPassword123!' })
+      .expect(403);
+
+    expect(response.body.message).toBe('Incorrect password');
+  });
+
+  test('returns 403 when password is incorrect for organization', async () => {
+    const { token } = await createOrganizationAccount(transaction, {
+      email: 'wrong-pw-org@example.com',
+      phone_number: '+10000000099',
+      url: 'https://wrong-pw.example.org',
+    });
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'WrongPassword123!' })
+      .expect(403);
+
+    expect(response.body.message).toBe('Incorrect password');
+  });
+
+  test('returns 409 when volunteer is enrolled in an active posting', async () => {
+    const { volunteer, token, plainPassword } = await createVolunteerAccount(transaction, {
+      email: 'enrolled-vol@example.com',
+    });
+    const { organization } = await createOrganizationAccount(transaction, {
+      email: 'org-for-active@example.com',
+      phone_number: '+10000000050',
+      url: 'https://active-org.example.org',
+    });
+
+    const today = new Date();
+    const futureEnd = new Date(today);
+    futureEnd.setDate(futureEnd.getDate() + 7);
+    const pastStart = new Date(today);
+    pastStart.setDate(pastStart.getDate() - 1);
+
+    const posting = await createOrganizationPosting(transaction, {
+      organizationId: organization.id,
+      overrides: { start_date: pastStart, end_date: futureEnd },
+    });
+
+    await transaction
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteer.id,
+        posting_id: posting.id,
+        attended: false,
+      })
+      .execute();
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(409);
+
+    expect(response.body.message).toContain('enrolled in active postings');
+  });
+
+  test('returns 409 when organization has a currently running posting', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'running-org@example.com',
+      phone_number: '+10000000051',
+      url: 'https://running-org.example.org',
+    });
+
+    const today = new Date();
+    const futureEnd = new Date(today);
+    futureEnd.setDate(futureEnd.getDate() + 7);
+    const pastStart = new Date(today);
+    pastStart.setDate(pastStart.getDate() - 1);
+
+    await createOrganizationPosting(transaction, {
+      organizationId: organization.id,
+      overrides: { start_date: pastStart, end_date: futureEnd },
+    });
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(409);
+
+    expect(response.body.message).toContain('currently running');
+  });
+
+  test('cleans up future postings when organization deletes account', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'cleanup-org@example.com',
+      phone_number: '+10000000052',
+      url: 'https://cleanup-org.example.org',
+    });
+
+    const futureStart = new Date();
+    futureStart.setDate(futureStart.getDate() + 10);
+    const futureEnd = new Date(futureStart);
+    futureEnd.setDate(futureEnd.getDate() + 5);
+
+    const posting = await createOrganizationPosting(transaction, {
+      organizationId: organization.id,
+      overrides: { start_date: futureStart, end_date: futureEnd },
+    });
+
+    await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(200);
+
+    const deletedPosting = await transaction
+      .selectFrom('organization_posting')
+      .select('id')
+      .where('id', '=', posting.id)
+      .executeTakeFirst();
+
+    expect(deletedPosting).toBeUndefined();
+  });
+
+  test('rejects login for deleted organization account', async () => {
+    const { organization, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'deleted-org@example.com',
+      phone_number: '+10000000053',
+      url: 'https://deleted-org.example.org',
+    });
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ is_deleted: true })
+      .where('id', '=', organization.id)
+      .execute();
+
+    await server
+      .post('/user/login')
+      .send({ email: organization.email, password: plainPassword })
+      .expect(403);
   });
 });

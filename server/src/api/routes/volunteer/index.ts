@@ -186,13 +186,20 @@ function createVolunteerRouter(db: Kysely<Database>) {
       throw new Error('Invalid or expired verification token');
     }
 
-    const existingVolunteer = await db
-      .selectFrom('volunteer_account')
-      .select('id')
-      .where('email', '=', pendingVolunteer.email)
-      .executeTakeFirst();
+    const [existingVolunteer, existingOrganization] = await Promise.all([
+      db
+        .selectFrom('volunteer_account')
+        .select('id')
+        .where('email', '=', pendingVolunteer.email)
+        .executeTakeFirst(),
+      db
+        .selectFrom('organization_account')
+        .select('id')
+        .where('email', '=', pendingVolunteer.email)
+        .executeTakeFirst(),
+    ]);
 
-    if (existingVolunteer) {
+    if (existingVolunteer || existingOrganization) {
       await db
         .deleteFrom('volunteer_pending_account')
         .where('id', '=', pendingVolunteer.id)
@@ -286,6 +293,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(volunteerResponseColumns)
       .where('id', '=', req.userJWT!.id)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     res.json({ volunteer });
@@ -312,6 +321,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
         'organization_account.logo_path',
         sql<number>`COALESCE(COUNT(organization_posting.id), 0)`.as('posting_count'),
       ])
+      .where('organization_account.is_deleted', '=', false)
+      .where('organization_account.is_disabled', '=', false)
       .groupBy('organization_account.id');
 
     if (certificateEnabled === 'enabled') {
@@ -369,6 +380,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .selectFrom('volunteer_account')
       .select(['id', 'first_name', 'last_name'])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     const hoursPerPostingExpr = sql<number>`GREATEST(
@@ -382,6 +395,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const totalHoursRow = await db
       .selectFrom('enrollment')
       .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .select(sql<number>`COALESCE(SUM(${hoursPerPostingExpr}), 0)`.as('total_hours'))
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment.attended', '=', true)
@@ -630,6 +644,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
         'description',
       ])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
     const existingSkills = await db
@@ -706,6 +722,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .selectFrom('organization_account')
       .select('id')
       .where('id', '=', organizationId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirst();
 
     if (!organization) {

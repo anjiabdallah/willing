@@ -5,16 +5,19 @@ import { sql, type Kysely } from 'kysely';
 import zod from 'zod';
 
 import {
+  type UserDeleteAccountResponse,
   type UserForgotPasswordResetResponse,
   type UserForgotPasswordResponse,
   type UserLoginResponse,
 } from './user.types.ts';
+import authorizeOnly from '../../auth/authorizeOnly.ts';
 import removePassword from '../../auth/removePassword.ts';
+import executeTransaction from '../../db/executeTransaction.ts';
 import { type Database } from '../../db/tables/index.ts';
 import { passwordSchema } from '../../schemas/index.ts';
 import { compare, hash } from '../../services/bcrypt/index.ts';
 import { generateJWT } from '../../services/jwt/index.ts';
-import { sendPasswordResetEmail } from '../../services/smtp/emails.ts';
+import { sendPasswordResetEmail, sendPostingDeletedEmail } from '../../services/smtp/emails.ts';
 import { loginInfoSchema } from '../../types.ts';
 
 const organizationLoginColumns = [
@@ -64,6 +67,7 @@ function createUserRouter(db: Kysely<Database>) {
       .selectFrom('organization_account')
       .select(organizationLoginColumns)
       .where('organization_account.email', '=', body.email)
+      .where('organization_account.is_deleted', '=', false)
       .executeTakeFirst();
 
     let volunteerAccount;
@@ -72,6 +76,7 @@ function createUserRouter(db: Kysely<Database>) {
         .selectFrom('volunteer_account')
         .select(volunteerLoginColumns)
         .where('volunteer_account.email', '=', body.email)
+        .where('volunteer_account.is_deleted', '=', false)
         .executeTakeFirst();
     }
 
@@ -119,6 +124,8 @@ function createUserRouter(db: Kysely<Database>) {
       .selectFrom('organization_account')
       .select(['id', 'name', 'email'])
       .where('organization_account.email', '=', body.email)
+      .where('organization_account.is_deleted', '=', false)
+      .where('organization_account.is_disabled', '=', false)
       .executeTakeFirst();
 
     let role: 'organization' | 'volunteer' | null = null;
@@ -131,6 +138,8 @@ function createUserRouter(db: Kysely<Database>) {
         .selectFrom('volunteer_account')
         .select(['id', 'first_name', 'last_name', 'email'])
         .where('volunteer_account.email', '=', body.email)
+        .where('volunteer_account.is_deleted', '=', false)
+        .where('volunteer_account.is_disabled', '=', false)
         .executeTakeFirst();
 
       if (volunteerAccount) {
@@ -189,23 +198,227 @@ function createUserRouter(db: Kysely<Database>) {
     const hashedPassword = await hash(body.password);
 
     if (resetToken.role === 'organization') {
-      await db
+      const updateResult = await db
         .updateTable('organization_account')
         .where('id', '=', resetToken.user_id)
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .set({ password: hashedPassword, token_version: sql`token_version + 1` })
-        .execute();
+        .executeTakeFirst();
+
+      if (Number(updateResult?.numUpdatedRows ?? 0) === 0) {
+        res.status(400);
+        throw new Error('Account is no longer active');
+      }
     } else if (resetToken.role === 'volunteer') {
-      await db
+      const updateResult = await db
         .updateTable('volunteer_account')
         .where('id', '=', resetToken.user_id)
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .set({ password: hashedPassword, token_version: sql`token_version + 1` })
-        .execute();
+        .executeTakeFirst();
+
+      if (Number(updateResult?.numUpdatedRows ?? 0) === 0) {
+        res.status(400);
+        throw new Error('Account is no longer active');
+      }
     }
 
     await db
       .deleteFrom('password_reset_token')
       .where('password_reset_token.id', '=', resetToken.id)
       .execute();
+
+    res.json({});
+  });
+
+  userRouter.delete('/account', authorizeOnly('organization', 'volunteer'), async (req, res: Response<UserDeleteAccountResponse>) => {
+    const { password } = zod.object({ password: zod.string().min(1) }).parse(req.body);
+    const userId = req.userJWT!.id;
+    const role = req.userJWT!.role as 'organization' | 'volunteer';
+
+    const table = role === 'organization' ? 'organization_account' as const : 'volunteer_account' as const;
+
+    const account = await db
+      .selectFrom(table)
+      .select('password')
+      .where('id', '=', userId)
+      .where('is_deleted', '=', false)
+      .executeTakeFirst();
+
+    if (!account) {
+      res.status(404);
+      throw new Error('Account not found');
+    }
+
+    const passwordMatch = await compare(password, account.password);
+    if (!passwordMatch) {
+      res.status(403);
+      throw new Error('Incorrect password');
+    }
+
+    const today = sql<Date>`CURRENT_DATE`;
+
+    if (role === 'volunteer') {
+      const activeEnrollment = await db
+        .selectFrom('enrollment')
+        .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+        .select('enrollment.id')
+        .where('enrollment.volunteer_id', '=', userId)
+        .where('enrollment.attended', '=', false)
+        .where('organization_posting.end_date', '>=', today)
+        .limit(1)
+        .executeTakeFirst();
+
+      if (activeEnrollment) {
+        res.status(409);
+        throw new Error('You cannot delete your account while you are enrolled in active postings. Please withdraw from all active postings first.');
+      }
+    }
+
+    let postingDeletedNotifications: { volunteerEmail: string; volunteerName: string; postingTitle: string; organizationName: string }[] = [];
+
+    await executeTransaction(db, async (trx) => {
+      if (role === 'organization') {
+        const runningPosting = await trx
+          .selectFrom('organization_posting')
+          .select('id')
+          .where('organization_id', '=', userId)
+          .where('start_date', '<=', today)
+          .where('end_date', '>=', today)
+          .forUpdate()
+          .limit(1)
+          .executeTakeFirst();
+
+        if (runningPosting) {
+          res.status(409);
+          throw new Error('You cannot delete your account while you have postings that are currently running. Please wait until they end or close them first.');
+        }
+      }
+
+      await trx
+        .updateTable(table)
+        .set({
+          is_deleted: true,
+          token_version: sql`token_version + 1`,
+        })
+        .where('id', '=', userId)
+        .where('is_deleted', '=', false)
+        .execute();
+
+      await trx
+        .deleteFrom('password_reset_token')
+        .where('role', '=', role)
+        .where('user_id', '=', userId)
+        .execute();
+
+      if (role === 'organization') {
+        // Hard-delete postings that haven't started yet (with FK cleanup)
+        const notStartedPostingIds = await trx
+          .selectFrom('organization_posting')
+          .select(['id', 'title'])
+          .where('organization_id', '=', userId)
+          .where('start_date', '>', today)
+          .execute();
+
+        const notStartedIds = notStartedPostingIds.map(p => p.id);
+
+        if (notStartedIds.length > 0) {
+          // Collect enrolled volunteers for email notification before deletion
+          const org = await trx
+            .selectFrom('organization_account')
+            .select('name')
+            .where('id', '=', userId)
+            .executeTakeFirstOrThrow();
+
+          const enrolledVolunteers = await trx
+            .selectFrom('enrollment')
+            .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+            .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+            .select([
+              'volunteer_account.email as volunteer_email',
+              'volunteer_account.first_name',
+              'volunteer_account.last_name',
+              'organization_posting.title as posting_title',
+            ])
+            .where('enrollment.posting_id', 'in', notStartedIds)
+            .execute();
+
+          postingDeletedNotifications = enrolledVolunteers.map(v => ({
+            volunteerEmail: v.volunteer_email,
+            volunteerName: `${v.first_name} ${v.last_name}`,
+            postingTitle: v.posting_title,
+            organizationName: org.name,
+          }));
+
+          await trx.deleteFrom('enrollment_application_date').where('application_id', 'in',
+            trx.selectFrom('enrollment_application').select('id').where('posting_id', 'in', notStartedIds),
+          ).execute();
+          await trx.deleteFrom('enrollment_date').where('posting_id', 'in', notStartedIds).execute();
+          await trx.deleteFrom('enrollment_application').where('posting_id', 'in', notStartedIds).execute();
+          await trx.deleteFrom('enrollment').where('posting_id', 'in', notStartedIds).execute();
+          await trx.deleteFrom('posting_skill').where('posting_id', 'in', notStartedIds).execute();
+          await trx.deleteFrom('organization_posting').where('id', 'in', notStartedIds).execute();
+        }
+
+        // Close remaining open postings (already ended, since running ones are blocked above)
+        await trx
+          .updateTable('organization_posting')
+          .set({ is_closed: true })
+          .where('organization_id', '=', userId)
+          .where('is_closed', '=', false)
+          .execute();
+      } else {
+        // Only delete upcoming applications (preserve past ones)
+        const upcomingAppIds = await trx
+          .selectFrom('enrollment_application')
+          .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
+          .select('enrollment_application.id')
+          .where('enrollment_application.volunteer_id', '=', userId)
+          .where('organization_posting.end_date', '>=', today)
+          .execute();
+
+        const appIds = upcomingAppIds.map(a => a.id);
+
+        if (appIds.length > 0) {
+          await trx
+            .deleteFrom('enrollment_application_date')
+            .where('application_id', 'in', appIds)
+            .execute();
+
+          await trx
+            .deleteFrom('enrollment_application')
+            .where('id', 'in', appIds)
+            .execute();
+        }
+
+        const nonAttendedEnrollmentIds = await trx
+          .selectFrom('enrollment')
+          .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+          .select('enrollment.id')
+          .where('enrollment.volunteer_id', '=', userId)
+          .where('enrollment.attended', '=', false)
+          .where('organization_posting.end_date', '>=', today)
+          .execute();
+
+        const enrollmentIds = nonAttendedEnrollmentIds.map(e => e.id);
+
+        if (enrollmentIds.length > 0) {
+          await trx
+            .deleteFrom('enrollment_date')
+            .where('enrollment_id', 'in', enrollmentIds)
+            .execute();
+
+          await trx
+            .deleteFrom('enrollment')
+            .where('id', 'in', enrollmentIds)
+            .execute();
+        }
+      }
+    });
+
+    await Promise.allSettled(postingDeletedNotifications.map(n => sendPostingDeletedEmail(n)));
 
     res.json({});
   });

@@ -352,6 +352,7 @@ export const recomputeOrganizationVector = async (organizationId: number, execut
       .selectFrom('organization_account')
       .select(['id', 'name', 'description', 'location_name'])
       .where('id', '=', organizationId)
+      .where('is_deleted', '=', false)
       .executeTakeFirstOrThrow();
 
     const orgProfileVector = await embedText(buildOrganizationText(organization));
@@ -403,6 +404,7 @@ const getOrganizationVectorOrCompute = async (organizationId: number, executor: 
     .selectFrom('organization_account')
     .select(['org_profile_vector', 'org_history_vector', 'org_context_vector'])
     .where('id', '=', organizationId)
+    .where('is_deleted', '=', false)
     .executeTakeFirstOrThrow();
 
   const contextVector = parseVectorLiteral(organization.org_context_vector);
@@ -533,6 +535,7 @@ export const recomputeVolunteerProfileVector = async (volunteerId: number, execu
       .selectFrom('volunteer_account')
       .select(['id', 'first_name', 'last_name', 'description', 'gender', 'cv_path'])
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
       .executeTakeFirstOrThrow();
 
     const skills = await executor
@@ -620,6 +623,7 @@ export const recomputePostingContextVectorsForOrganization = async (organization
     .selectFrom('organization_account')
     .select(['org_context_vector'])
     .where('id', '=', organizationId)
+    .where('is_deleted', '=', false)
     .executeTakeFirstOrThrow();
 
   const orgVector = parseVectorLiteral(organization.org_context_vector);

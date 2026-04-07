@@ -27,7 +27,7 @@ import { type Database } from '../../../db/tables/index.ts';
 import { compare, hash } from '../../../services/bcrypt/index.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
-import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail } from '../../../services/smtp/emails.ts';
+import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/smtp/emails.ts';
 import { loginInfoSchema } from '../../../types.ts';
 import { parseListQuery } from '../utils/listQuery.ts';
 import { getSingleQueryValue } from '../utils/queryValue.ts';
@@ -61,6 +61,149 @@ const parseOptionalDateQueryParam = (value: unknown, fieldName: 'startDate' | 'e
 
 function createAdminRouter(db: Kysely<Database>) {
   const adminRouter = Router();
+
+  const today = sql<Date>`CURRENT_DATE`;
+
+  interface PostingDeletedNotification {
+    volunteerEmail: string;
+    volunteerName: string;
+    postingTitle: string;
+    organizationName: string;
+  }
+
+  async function cleanupDisabledOrganization(trx: Kysely<Database>, organizationId: number): Promise<PostingDeletedNotification[]> {
+    const organization = await trx
+      .selectFrom('organization_account')
+      .select('name')
+      .where('id', '=', organizationId)
+      .executeTakeFirstOrThrow();
+
+    const notifications: PostingDeletedNotification[] = [];
+
+    // Delete postings that haven't started yet (with FK cleanup)
+    const notStartedPostingIds = await trx
+      .selectFrom('organization_posting')
+      .select(['id', 'title'])
+      .where('organization_id', '=', organizationId)
+      .where('start_date', '>', today)
+      .execute();
+
+    const notStartedIds = notStartedPostingIds.map(p => p.id);
+
+    if (notStartedIds.length > 0) {
+      // Collect enrolled volunteers for email notification before deletion
+      const enrolledVolunteers = await trx
+        .selectFrom('enrollment')
+        .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+        .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+        .select([
+          'volunteer_account.email as volunteer_email',
+          'volunteer_account.first_name',
+          'volunteer_account.last_name',
+          'organization_posting.title as posting_title',
+        ])
+        .where('enrollment.posting_id', 'in', notStartedIds)
+        .execute();
+
+      for (const v of enrolledVolunteers) {
+        notifications.push({
+          volunteerEmail: v.volunteer_email,
+          volunteerName: `${v.first_name} ${v.last_name}`,
+          postingTitle: v.posting_title,
+          organizationName: organization.name,
+        });
+      }
+
+      await trx.deleteFrom('enrollment_application_date').where('application_id', 'in',
+        trx.selectFrom('enrollment_application').select('id').where('posting_id', 'in', notStartedIds),
+      ).execute();
+      await trx.deleteFrom('enrollment_date').where('posting_id', 'in', notStartedIds).execute();
+      await trx.deleteFrom('enrollment_application').where('posting_id', 'in', notStartedIds).execute();
+      await trx.deleteFrom('enrollment').where('posting_id', 'in', notStartedIds).execute();
+      await trx.deleteFrom('posting_skill').where('posting_id', 'in', notStartedIds).execute();
+      await trx.deleteFrom('organization_posting').where('id', 'in', notStartedIds).execute();
+    }
+
+    // Drop enrolled (non-attended) volunteers from active postings belonging to this org
+    const activePostingIds = await trx
+      .selectFrom('organization_posting')
+      .select('id')
+      .where('organization_id', '=', organizationId)
+      .where('start_date', '<=', today)
+      .where('end_date', '>=', today)
+      .execute();
+
+    const activeIds = activePostingIds.map(p => p.id);
+
+    if (activeIds.length > 0) {
+      // Collect non-attended enrolled volunteers for email notification before dropping
+      const droppedVolunteers = await trx
+        .selectFrom('enrollment')
+        .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+        .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+        .select([
+          'volunteer_account.email as volunteer_email',
+          'volunteer_account.first_name',
+          'volunteer_account.last_name',
+          'organization_posting.title as posting_title',
+        ])
+        .where('enrollment.posting_id', 'in', activeIds)
+        .where('enrollment.attended', '=', false)
+        .execute();
+
+      for (const v of droppedVolunteers) {
+        notifications.push({
+          volunteerEmail: v.volunteer_email,
+          volunteerName: `${v.first_name} ${v.last_name}`,
+          postingTitle: v.posting_title,
+          organizationName: organization.name,
+        });
+      }
+
+      await trx.deleteFrom('enrollment_date').where('posting_id', 'in', activeIds)
+        .where('enrollment_id', 'in',
+          trx.selectFrom('enrollment').select('id').where('posting_id', 'in', activeIds).where('attended', '=', false),
+        ).execute();
+      await trx.deleteFrom('enrollment').where('posting_id', 'in', activeIds).where('attended', '=', false).execute();
+    }
+
+    return notifications;
+  }
+
+  async function cleanupDisabledVolunteer(trx: Kysely<Database>, volunteerId: number) {
+    // Drop volunteer from all active/upcoming postings they're enrolled in (non-attended only)
+    const activeEnrollmentIds = await trx
+      .selectFrom('enrollment')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .select('enrollment.id')
+      .where('enrollment.volunteer_id', '=', volunteerId)
+      .where('enrollment.attended', '=', false)
+      .where('organization_posting.end_date', '>=', today)
+      .execute();
+
+    const enrollmentIds = activeEnrollmentIds.map(e => e.id);
+
+    if (enrollmentIds.length > 0) {
+      await trx.deleteFrom('enrollment_date').where('enrollment_id', 'in', enrollmentIds).execute();
+      await trx.deleteFrom('enrollment').where('id', 'in', enrollmentIds).execute();
+    }
+
+    // Withdraw pending applications for upcoming postings only
+    const pendingAppIds = await trx
+      .selectFrom('enrollment_application')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
+      .select('enrollment_application.id')
+      .where('enrollment_application.volunteer_id', '=', volunteerId)
+      .where('organization_posting.end_date', '>=', today)
+      .execute();
+
+    const appIds = pendingAppIds.map(a => a.id);
+
+    if (appIds.length > 0) {
+      await trx.deleteFrom('enrollment_application_date').where('application_id', 'in', appIds).execute();
+      await trx.deleteFrom('enrollment_application').where('id', 'in', appIds).execute();
+    }
+  }
 
   adminRouter.post('/login', async (req, res: Response<AdminLoginResponse>) => {
     const body = loginInfoSchema.parse(req.body);
@@ -201,6 +344,8 @@ function createAdminRouter(db: Kysely<Database>) {
             'reporter_volunteer.last_name as reporter_volunteer_last_name',
             'reporter_volunteer.email as reporter_volunteer_email',
           ])
+          .where('reported_organization.is_deleted', '=', false)
+          .where('reported_organization.is_disabled', '=', false)
           .$if(Boolean(reportType), qb => qb.where('organization_report.title', '=', reportType!))
           .$if(Boolean(startDate), qb => qb.where('organization_report.created_at', '>=', startDate!))
           .$if(Boolean(endDate), qb => qb.where('organization_report.created_at', '<=', endDate!))
@@ -235,6 +380,8 @@ function createAdminRouter(db: Kysely<Database>) {
             'reporter_organization.name as reporter_organization_name',
             'reporter_organization.email as reporter_organization_email',
           ])
+          .where('reported_volunteer.is_deleted', '=', false)
+          .where('reported_volunteer.is_disabled', '=', false)
           .$if(Boolean(reportType), qb => qb.where('volunteer_report.title', '=', reportType!))
           .$if(Boolean(startDate), qb => qb.where('volunteer_report.created_at', '>=', startDate!))
           .$if(Boolean(endDate), qb => qb.where('volunteer_report.created_at', '<=', endDate!))
@@ -313,6 +460,8 @@ function createAdminRouter(db: Kysely<Database>) {
         'reporter_volunteer.email as reporter_volunteer_email',
       ])
       .where('organization_report.id', '=', reportId)
+      .where('reported_organization.is_deleted', '=', false)
+      .where('reported_organization.is_disabled', '=', false)
       .executeTakeFirst();
 
     if (!report) {
@@ -360,6 +509,8 @@ function createAdminRouter(db: Kysely<Database>) {
         'reporter_organization.email as reporter_organization_email',
       ])
       .where('volunteer_report.id', '=', reportId)
+      .where('reported_volunteer.is_deleted', '=', false)
+      .where('reported_volunteer.is_disabled', '=', false)
       .executeTakeFirst();
 
     if (!report) {
@@ -411,6 +562,8 @@ function createAdminRouter(db: Kysely<Database>) {
   adminRouter.post('/reports/organization/:reportId/accept', async (req, res: Response<AdminAcceptOrganizationReportResponse>) => {
     const reportId = zod.coerce.number().int().positive().parse(req.params.reportId);
 
+    let notifications: PostingDeletedNotification[] = [];
+
     try {
       await executeTransaction(db, async (trx) => {
         const report = await trx
@@ -442,6 +595,8 @@ function createAdminRouter(db: Kysely<Database>) {
             })
             .where('id', '=', organization.id)
             .execute();
+
+          notifications = await cleanupDisabledOrganization(trx, organization.id);
         }
 
         await trx
@@ -460,6 +615,8 @@ function createAdminRouter(db: Kysely<Database>) {
       }
       throw error;
     }
+
+    await Promise.allSettled(notifications.map(n => sendPostingDeletedEmail(n)));
 
     res.json({});
   });
@@ -520,6 +677,8 @@ function createAdminRouter(db: Kysely<Database>) {
             })
             .where('id', '=', volunteer.id)
             .execute();
+
+          await cleanupDisabledVolunteer(trx, volunteer.id);
         }
 
         await trx
@@ -545,6 +704,8 @@ function createAdminRouter(db: Kysely<Database>) {
   adminRouter.post('/reports/organization/:organizationId/disable', async (req, res: Response<AdminDisableOrganizationAccountResponse>) => {
     const organizationId = zod.coerce.number().int().positive().parse(req.params.organizationId);
 
+    let notifications: PostingDeletedNotification[] = [];
+
     try {
       await executeTransaction(db, async (trx) => {
         const organization = await trx
@@ -566,6 +727,8 @@ function createAdminRouter(db: Kysely<Database>) {
             })
             .where('id', '=', organizationId)
             .execute();
+
+          notifications = await cleanupDisabledOrganization(trx, organizationId);
         }
 
         await trx
@@ -584,6 +747,8 @@ function createAdminRouter(db: Kysely<Database>) {
       }
       throw error;
     }
+
+    await Promise.allSettled(notifications.map(n => sendPostingDeletedEmail(n)));
 
     res.json({});
   });
@@ -612,6 +777,8 @@ function createAdminRouter(db: Kysely<Database>) {
             })
             .where('id', '=', volunteerId)
             .execute();
+
+          await cleanupDisabledVolunteer(trx, volunteerId);
         }
 
         await trx
@@ -661,6 +828,28 @@ function createAdminRouter(db: Kysely<Database>) {
         .execute();
       res.json({});
       return;
+    }
+
+    const existingOrganization = await db
+      .selectFrom('organization_account')
+      .select('id')
+      .where('email', '=', organizationRequest.email)
+      .executeTakeFirst();
+
+    if (existingOrganization) {
+      res.status(409);
+      throw new Error('An organization account with this email already exists');
+    }
+
+    const existingVolunteer = await db
+      .selectFrom('volunteer_account')
+      .select('id')
+      .where('email', '=', organizationRequest.email)
+      .executeTakeFirst();
+
+    if (existingVolunteer) {
+      res.status(409);
+      throw new Error('A volunteer account with this email already exists');
     }
 
     const password = Math.random().toString(36).slice(-8);

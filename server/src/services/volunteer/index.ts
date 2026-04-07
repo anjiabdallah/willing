@@ -74,6 +74,8 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
         'description',
       ] as const)
       .where('id', '=', volunteerId)
+      .where('is_deleted', '=', false)
+      .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow(),
     database
       .selectFrom('volunteer_skill')

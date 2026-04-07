@@ -187,3 +187,26 @@ export async function sendVolunteerVerificationEmail(opts: {
 
   await sendEmail({ to: opts.volunteerEmail, subject, text, html });
 }
+
+export async function sendPostingDeletedEmail(opts: {
+  volunteerEmail: string;
+  volunteerName: string;
+  postingTitle: string;
+  organizationName: string;
+}) {
+  const subject = 'A posting you were enrolled in has been removed';
+
+  const { html, text } = buildEmailBody({
+    title: 'Posting Removed',
+    intro: `Hello ${opts.volunteerName}, a posting you were enrolled in has been removed.`,
+    rows: [
+      { label: 'Posting', value: opts.postingTitle },
+      { label: 'Organization', value: opts.organizationName },
+    ],
+    paragraphs: ['Your enrollment in this posting has been cancelled. We apologize for the inconvenience.'],
+    note: 'Keep an eye on new opportunities that match your skills.',
+    tone: 'error',
+  });
+
+  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+}

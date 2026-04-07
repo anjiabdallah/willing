@@ -17,6 +17,7 @@ const ensureOrganization = async () => {
   const existing = await database
     .selectFrom('organization_account')
     .select(['id'])
+    .where('is_deleted', '=', false)
     .orderBy('id', 'asc')
     .executeTakeFirst();
 
@@ -86,6 +87,7 @@ const ensureVolunteer = async () => {
   const existing = await database
     .selectFrom('volunteer_account')
     .select(['id'])
+    .where('is_deleted', '=', false)
     .orderBy('id', 'asc')
     .executeTakeFirst();
 

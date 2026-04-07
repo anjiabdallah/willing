@@ -24,30 +24,44 @@ function createPublicRouter(db: Kysely<Database>) {
     const [postingsResult, organizationsResult, volunteersResult, newPostingsResult, newOrganizationsResult, newVolunteersResult] = await Promise.all([
       db
         .selectFrom('organization_posting')
+        .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
         .select(eb => eb.fn.countAll().as('count'))
+        .where('organization_account.is_deleted', '=', false)
+        .where('organization_account.is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
         .selectFrom('organization_account')
         .select(eb => eb.fn.countAll().as('count'))
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
         .selectFrom('volunteer_account')
         .select(eb => eb.fn.countAll().as('count'))
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
         .selectFrom('organization_posting')
+        .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
         .select(eb => eb.fn.countAll().as('count'))
-        .where('created_at', '>=', weekAgo)
+        .where('organization_posting.created_at', '>=', weekAgo)
+        .where('organization_account.is_deleted', '=', false)
+        .where('organization_account.is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
         .selectFrom('organization_account')
         .select(eb => eb.fn.countAll().as('count'))
         .where('created_at', '>=', weekAgo)
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
         .selectFrom('volunteer_account')
         .select(eb => eb.fn.countAll().as('count'))
         .where('created_at', '>=', weekAgo)
+        .where('is_deleted', '=', false)
+        .where('is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
     ]);
 

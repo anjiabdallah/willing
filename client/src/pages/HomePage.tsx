@@ -354,7 +354,7 @@ function HomePage() {
           </section>
         </div>
 
-        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8 mt-12 mb-24">
           <section className="rounded-[2rem] border border-primary/25 bg-base-100 p-8 shadow-[0_18px_60px_rgba(0,0,0,0.07)] md:p-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>

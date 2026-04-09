@@ -42,6 +42,7 @@ import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import VolunteerInfoCollapse from '../components/VolunteerInfoCollapse.tsx';
+import { useModal } from '../contexts/useModal.ts';
 import useNotifications from '../notifications/useNotifications';
 import { organizationPostingEditFormSchema, type OrganizationPostingEditFormData } from '../schemas/posting';
 import { executeAndShowError, FormField } from '../utils/formUtils.tsx';
@@ -180,6 +181,7 @@ function PostingPage() {
   const [postingEnrollmentCount, setPostingEnrollmentCount] = useState(0);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string; logoPath?: string | null } | null>(null);
   const notifications = useNotifications();
+  const modal = useModal();
 
   const form = useForm<OrganizationPostingEditFormData>({
     resolver: zodResolver(organizationPostingEditFormSchema),
@@ -572,9 +574,20 @@ function PostingPage() {
     setIsEditMode(false);
   }, [form, posting]);
 
-  const onDelete = async () => {
+  const onDelete = useCallback(async () => {
     if (!id) return;
-    if (!confirm('Are you sure you want to delete this posting? This action cannot be undone.')) return;
+
+    const choice = await modal.promptModal({
+      title: 'Delete Posting',
+      content: 'Are you sure you want to delete this posting? This action cannot be undone.',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'delete', label: 'Delete posting', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'delete') return;
 
     try {
       setDeleting(true);
@@ -587,7 +600,7 @@ function PostingPage() {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [deletePosting, id, modal, navigate, notifications]);
 
   const onToggleClosed = async () => {
     if (!id || !posting) return;
@@ -648,8 +661,19 @@ function PostingPage() {
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
 
-    const withdrawConfirmed = confirm(isEnrolled ? 'Are you sure you want to leave this position?' : 'Are you sure you want to withdraw your application?');
-    if (!withdrawConfirmed) return;
+    const choice = await modal.promptModal({
+      title: isEnrolled ? 'Leave Position' : 'Withdraw Application',
+      content: isEnrolled
+        ? 'Are you sure you want to leave this position?'
+        : 'Are you sure you want to withdraw your application?',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'confirm', label: isEnrolled ? 'Leave position' : 'Withdraw application', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'confirm') return;
 
     try {
       setWithdrawing(true);
@@ -666,7 +690,7 @@ function PostingPage() {
     } finally {
       setWithdrawing(false);
     }
-  }, [id, hasPendingApplication, isEnrolled, notifications, withdrawFromPosting, loadPosting]);
+  }, [id, hasPendingApplication, isEnrolled, loadPosting, modal, notifications, withdrawFromPosting]);
 
   const acceptApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -691,7 +715,18 @@ function PostingPage() {
 
   const rejectApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
-    if (!confirm('Are you sure you want to reject this application?')) return;
+
+    const choice = await modal.promptModal({
+      title: 'Reject Application',
+      content: 'Are you sure you want to reject this application?',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'reject', label: 'Reject application', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'reject') return;
 
     try {
       setProcessingApplicationId(applicationId);
@@ -705,7 +740,7 @@ function PostingPage() {
     } finally {
       setProcessingApplicationId(null);
     }
-  }, [id, notifications, rejectPostingApplication]);
+  }, [id, modal, notifications, rejectPostingApplication]);
 
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);

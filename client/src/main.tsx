@@ -9,6 +9,7 @@ import OrganizationPage from './auth/pages/OrganizationPage';
 import SharedPage from './auth/pages/SharedPage';
 import VolunteerPage from './auth/pages/VolunteerPage';
 import { PostingViewModeProvider } from './components/postings/PostingViewModeContext';
+import { ModalProvider } from './contexts/ModalContext.tsx';
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import AdminCrises from './pages/admin/AdminCrises';
 import AdminHome from './pages/admin/AdminHome';
@@ -51,63 +52,65 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <NotificationsProvider>
-        <AuthProvider>
-          <PostingViewModeProvider>
-            <Routes>
-              <Route index element={<HomePage />} />
+        <ModalProvider>
+          <AuthProvider>
+            <PostingViewModeProvider>
+              <Routes>
+                <Route index element={<HomePage />} />
 
-              <Route element={<LoggedOutPage />}>
-                <Route path="login" element={<UserLogin />} />
-                <Route path="admin/login" element={<AdminLogin />} />
-                <Route path="volunteer/create" element={<VolunteerCreate />} />
-                <Route path="volunteer/verify-email" element={<VolunteerVerifyEmail />} />
-                <Route path="organization/request" element={<OrganizationRequest />} />
-                <Route path="forgot-password" element={<ForgotPassword />} />
-              </Route>
+                <Route element={<LoggedOutPage />}>
+                  <Route path="login" element={<UserLogin />} />
+                  <Route path="admin/login" element={<AdminLogin />} />
+                  <Route path="volunteer/create" element={<VolunteerCreate />} />
+                  <Route path="volunteer/verify-email" element={<VolunteerVerifyEmail />} />
+                  <Route path="organization/request" element={<OrganizationRequest />} />
+                  <Route path="forgot-password" element={<ForgotPassword />} />
+                </Route>
 
-              <Route path="admin" element={<AdminPage />}>
-                <Route index element={<AdminHome />} />
-                <Route path="requests" element={<AdminRequests />} />
-                <Route path="reports" element={<AdminReports />} />
-                <Route path="reports/:reportType/:reportId" element={<AdminReportDetail />} />
-                <Route path="crises" element={<AdminCrises />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
+                <Route path="admin" element={<AdminPage />}>
+                  <Route index element={<AdminHome />} />
+                  <Route path="requests" element={<AdminRequests />} />
+                  <Route path="reports" element={<AdminReports />} />
+                  <Route path="reports/:reportType/:reportId" element={<AdminReportDetail />} />
+                  <Route path="crises" element={<AdminCrises />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
 
-              <Route path="organization" element={<OrganizationPage />}>
-                <Route index element={<OrganizationHome />} />
-                <Route path="posting" element={<OrganizationPostingCreate />} />
-                <Route path="posting/:id/attendance" element={<OrganizationPostingAttendance />} />
-                <Route path="profile" element={<OrganizationOwnProfile />} />
-                <Route path="settings" element={<OrganizationSettings />} />
-                <Route path="volunteer/:volunteerId" element={<OrganizationVolunteerProfile />} />
-              </Route>
+                <Route path="organization" element={<OrganizationPage />}>
+                  <Route index element={<OrganizationHome />} />
+                  <Route path="posting" element={<OrganizationPostingCreate />} />
+                  <Route path="posting/:id/attendance" element={<OrganizationPostingAttendance />} />
+                  <Route path="profile" element={<OrganizationOwnProfile />} />
+                  <Route path="settings" element={<OrganizationSettings />} />
+                  <Route path="volunteer/:volunteerId" element={<OrganizationVolunteerProfile />} />
+                </Route>
 
-              <Route path="volunteer" element={<VolunteerPage />}>
-                <Route index element={<VolunteerHome />} />
-                <Route path="certificate" element={<VolunteerCertificateRequest />} />
-                <Route path="enrollments" element={<VolunteerEnrollments />} />
-                <Route path="for-you" element={<VolunteerForYou />} />
-                <Route path="crises/:crisisId/postings" element={<VolunteerCrisisPostings />} />
-                <Route path="profile" element={<VolunteerProfile />} />
-                <Route path="certificate" element={<VolunteerCertificateRequest />} />
-                <Route path="search" element={<VolunteerSearch />} />
-                <Route path="settings" element={<VolunteerSettings />} />
-              </Route>
+                <Route path="volunteer" element={<VolunteerPage />}>
+                  <Route index element={<VolunteerHome />} />
+                  <Route path="certificate" element={<VolunteerCertificateRequest />} />
+                  <Route path="enrollments" element={<VolunteerEnrollments />} />
+                  <Route path="for-you" element={<VolunteerForYou />} />
+                  <Route path="crises/:crisisId/postings" element={<VolunteerCrisisPostings />} />
+                  <Route path="profile" element={<VolunteerProfile />} />
+                  <Route path="certificate" element={<VolunteerCertificateRequest />} />
+                  <Route path="search" element={<VolunteerSearch />} />
+                  <Route path="settings" element={<VolunteerSettings />} />
+                </Route>
 
-              <Route path="guide" element={<GuidePage />} />
-              <Route path="certificate/verify" element={<CertificateVerification />} />
-              <Route path="calendar-demo" element={<CalendarInfoDemoPage />} />
+                <Route path="guide" element={<GuidePage />} />
+                <Route path="certificate/verify" element={<CertificateVerification />} />
+                <Route path="calendar-demo" element={<CalendarInfoDemoPage />} />
 
-              <Route path="/" element={<SharedPage roles={['volunteer', 'organization']} />}>
-                <Route path="posting/:id" element={<Posting />} />
-                <Route path="organization/:id" element={<OrganizationProfile />} />
-              </Route>
+                <Route path="/" element={<SharedPage roles={['volunteer', 'organization']} />}>
+                  <Route path="posting/:id" element={<Posting />} />
+                  <Route path="organization/:id" element={<OrganizationProfile />} />
+                </Route>
 
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </PostingViewModeProvider>
-        </AuthProvider>
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </PostingViewModeProvider>
+          </AuthProvider>
+        </ModalProvider>
       </NotificationsProvider>
     </BrowserRouter>
   </StrictMode>,

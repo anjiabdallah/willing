@@ -134,6 +134,7 @@ function HomePage() {
                         <Link
                           to="/login"
                           className="btn btn-primary rounded-full px-8 shadow-lg shadow-primary/20"
+                          data-testid="volunteer-login-button"
                         >
                           Log In
                         </Link>
@@ -324,37 +325,35 @@ function HomePage() {
           </section>
 
           <section className="overflow-hidden py-16">
-            {loading
-              ? (
-                  <div className="flex w-full items-center justify-center py-16">
-                    <span className="loading loading-spinner loading-lg text-primary" />
-                  </div>
-                )
-              : error
-                ? (
-                    <div className="flex w-full items-center justify-center py-16 text-error font-bold">{error}</div>
-                  )
-                : (
-                    <StatsCarousel
-                      totalVolunteers={stats?.totalVolunteers ?? null}
-                      totalOpportunities={stats?.totalOpportunities ?? null}
-                      totalOrganizations={stats?.totalOrganizations ?? null}
-                      newVolunteersThisWeek={stats?.newVolunteersThisWeek ?? null}
-                      newOpportunitiesThisWeek={stats?.newOpportunitiesThisWeek ?? null}
-                      newOrganizationsThisWeek={stats?.newOrganizationsThisWeek ?? null}
-                      explorePath={auth.user
-                        ? auth.user.role === 'admin'
-                          ? '/admin'
-                          : auth.user.role === 'organization'
-                            ? '/organization'
-                            : '/volunteer'
-                        : '/login'}
-                    />
-                  )}
+            {loading && (
+              <div className="flex w-full items-center justify-center py-4 loading-spinner">
+                <span className="loading loading-spinner loading-lg text-primary" />
+              </div>
+            )}
+            {error && (
+              <div className="flex w-full items-center justify-center py-4 text-error font-bold">{error}</div>
+            )}
+            {!error && (
+              <StatsCarousel
+                totalVolunteers={stats?.totalVolunteers ?? null}
+                totalOpportunities={stats?.totalOpportunities ?? null}
+                totalOrganizations={stats?.totalOrganizations ?? null}
+                newVolunteersThisWeek={stats?.newVolunteersThisWeek ?? null}
+                newOpportunitiesThisWeek={stats?.newOpportunitiesThisWeek ?? null}
+                newOrganizationsThisWeek={stats?.newOrganizationsThisWeek ?? null}
+                explorePath={auth.user
+                  ? auth.user.role === 'admin'
+                    ? '/admin'
+                    : auth.user.role === 'organization'
+                      ? '/organization'
+                      : '/volunteer'
+                  : '/login'}
+              />
+            )}
           </section>
         </div>
 
-        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6 xl:px-8 mt-12 mb-24">
           <section className="rounded-[2rem] border border-primary/25 bg-base-100 p-8 shadow-[0_18px_60px_rgba(0,0,0,0.07)] md:p-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>

@@ -145,7 +145,7 @@ Useful client scripts:
 - `npm run build`
 - `npm run lint`
 
-## Testing Conventions
+## Backend Testing Conventions
 
 1. Server tests are colocated with the modules they cover (e.g., `server/src/api/routes/posting.test.ts`). Use matching filenames to keep discovery simple.
 2. Shared infrastructure lives under `server/src/tests/`. Vitest is configured with `globalSetup: server/src/tests/globalSetup.ts` and `setupFiles: [server/src/tests/setup.ts]`.
@@ -177,6 +177,66 @@ Create tests as `<name>.test.ts` alongside your route file.
 - Test date-range edge cases carefully; end dates must be included.
 - Avoid `toISOString().split('T')[0]` assertions for date-only DB values in tests. Prefer local calendar-date formatting helpers or SQL-side `YYYY-MM-DD` strings.
 - When using fixture helpers from `server/src/tests/fixtures/`, pass the active test transaction as the first argument.
+
+## Frontend Testing Conventions
+
+Frontend tests use a single jsdom-based Vitest setup. We split them by **location and purpose**:
+
+- **Unit tests** live next to the component, hook, schema, or utility they cover.
+- **Integration tests** live under `client/src/tests/`, and may use subfolders there when grouping by feature or page improves organization.
+
+Frontend integration tests render components with mocked dependencies and verify UI behavior — they do **not** test the full client-to-DB flow, and that is intentional. This keeps tests simple to set up and fast to run.
+
+### Core Rules
+
+1. **Always mock `requestServer`** — never let frontend tests hit a real server or network. Every test file that involves a component which calls `requestServer` must mock it at the top of the file
+
+   Set the mock's resolved value in `beforeEach` and reset it in `afterEach`
+
+2. **Only test things that can break due to logic** — do not write tests that assert static JSX renders. 
+
+3. **Always wrap renders in `MemoryRouter` and `AuthContext.Provider`** — use a shared `renderPage(role?)` helper per test file to avoid repetition. Build auth context with a `buildAuthContext(role?)` factory that accepts an optional role.
+
+4. **Split role checks across focused tests** — do not bundle multiple role assertions in a single test. Each test should cover one condition and one expected outcome.
+
+5. **Use `data-testid` sparingly** — only add `data-testid` attributes to elements that cannot be reliably selected by role, label, or text, and where the test would otherwise be brittle. Document why the testid was needed.
+
+### What to Test on a Given Page
+
+Ask: *"Could this break silently if a developer changes the conditional logic?"* If yes, test it. If the element is always rendered regardless of any condition, skip it.
+
+### File Conventions
+
+- Use `@testing-library/react`, `@testing-library/jest-dom/vitest`, and `vitest`.
+- Use `screen` for queries after render; use destructured helpers (`getByText`, `queryByText`, etc.) only when it keeps the test more readable.
+- Unit test filenames should be `*.test.tsx` colocated with the file they cover.
+- Integration test filenames should be `*.test.tsx`, stored under `client/src/tests/`.
+- When integration coverage grows, create subfolders under `client/src/tests/` by feature, page, or domain instead of flattening everything into one directory.
+
+### Test Mode
+
+The current client test setup uses a single jsdom-based Vitest config:
+
+- Config: `vitest.config.ts`
+- Environment: `jsdom`
+- Use for rendered component tests, hooks, schema validation, DOM assertions, and pure logic tests
+- Discovery rules:
+  - `src/**/*.unit.test.{ts,tsx}` for colocated unit tests
+  - `src/tests/**/*.test.{ts,tsx}` for integration tests
+- Run with: `npm run test` or `npm run test:unit`
+
+### Mocking `requestServer`
+
+Every test file that renders a component calling `requestServer` must mock it:
+
+```typescript
+vi.mock('../utils/requestServer', () => ({
+  __esModule: true,
+  default: vi.fn(),
+}));
+```
+
+Set the mock's resolved value in `beforeEach`, reset in `afterEach`.
 
 ## Core Engineering Rules
 

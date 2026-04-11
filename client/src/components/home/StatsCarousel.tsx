@@ -116,7 +116,7 @@ function StatsCarousel({ totalVolunteers, totalOpportunities, totalOrganizations
           <div className="absolute bottom-6 left-5 right-5 flex justify-center items-center gap-2 text-sm whitespace-normal text-center">
             <span className="text-base-content/70 font-normal">{cards[active].detail}</span>
             <span className="text-base-content/70">|</span>
-            <Link to={explorePath} className="text-primary font-bold inline-flex items-center underline-offset-3 hover:underline">
+            <Link to={explorePath} data-testid="stats-explore-link" className="text-primary font-bold inline-flex items-center underline-offset-3 hover:underline">
               Explore
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="ml-1 h-4 w-4"><path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" /></svg>
             </Link>

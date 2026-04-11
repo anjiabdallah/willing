@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Calendar,
   Cake,
-  Clock,
   Edit3,
   House,
   ListChecks,
@@ -38,10 +37,12 @@ import LinkButton from '../components/LinkButton.tsx';
 import Loading from '../components/Loading.tsx';
 import LocationPicker from '../components/LocationPicker.tsx';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture.tsx';
+import PostingDateTime from '../components/PostingDateTime.tsx';
 import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import VolunteerInfoCollapse from '../components/VolunteerInfoCollapse.tsx';
+import { useModal } from '../contexts/useModal.ts';
 import useNotifications from '../notifications/useNotifications';
 import { organizationPostingEditFormSchema, type OrganizationPostingEditFormData } from '../schemas/posting';
 import { executeAndShowError, FormField } from '../utils/formUtils.tsx';
@@ -180,6 +181,7 @@ function PostingPage() {
   const [postingEnrollmentCount, setPostingEnrollmentCount] = useState(0);
   const [postingOrganization, setPostingOrganization] = useState<{ id: number; name: string; logoPath?: string | null } | null>(null);
   const notifications = useNotifications();
+  const modal = useModal();
 
   const form = useForm<OrganizationPostingEditFormData>({
     resolver: zodResolver(organizationPostingEditFormSchema),
@@ -572,9 +574,20 @@ function PostingPage() {
     setIsEditMode(false);
   }, [form, posting]);
 
-  const onDelete = async () => {
+  const onDelete = useCallback(async () => {
     if (!id) return;
-    if (!confirm('Are you sure you want to delete this posting? This action cannot be undone.')) return;
+
+    const choice = await modal.promptModal({
+      title: 'Delete Posting',
+      content: 'Are you sure you want to delete this posting? This action cannot be undone.',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'delete', label: 'Delete posting', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'delete') return;
 
     try {
       setDeleting(true);
@@ -587,7 +600,7 @@ function PostingPage() {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [deletePosting, id, modal, navigate, notifications]);
 
   const onToggleClosed = async () => {
     if (!id || !posting) return;
@@ -648,8 +661,19 @@ function PostingPage() {
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
 
-    const withdrawConfirmed = confirm(isEnrolled ? 'Are you sure you want to leave this position?' : 'Are you sure you want to withdraw your application?');
-    if (!withdrawConfirmed) return;
+    const choice = await modal.promptModal({
+      title: isEnrolled ? 'Leave Position' : 'Withdraw Application',
+      content: isEnrolled
+        ? 'Are you sure you want to leave this position?'
+        : 'Are you sure you want to withdraw your application?',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'confirm', label: isEnrolled ? 'Leave position' : 'Withdraw application', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'confirm') return;
 
     try {
       setWithdrawing(true);
@@ -666,7 +690,7 @@ function PostingPage() {
     } finally {
       setWithdrawing(false);
     }
-  }, [id, hasPendingApplication, isEnrolled, notifications, withdrawFromPosting, loadPosting]);
+  }, [id, hasPendingApplication, isEnrolled, loadPosting, modal, notifications, withdrawFromPosting]);
 
   const acceptApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -691,7 +715,18 @@ function PostingPage() {
 
   const rejectApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
-    if (!confirm('Are you sure you want to reject this application?')) return;
+
+    const choice = await modal.promptModal({
+      title: 'Reject Application',
+      content: 'Are you sure you want to reject this application?',
+      actions: [
+        { value: 'cancel', label: 'Cancel', color: 'ghost' },
+        { value: 'reject', label: 'Reject application', color: 'error' },
+      ],
+      cancelable: true,
+    });
+
+    if (choice !== 'reject') return;
 
     try {
       setProcessingApplicationId(applicationId);
@@ -705,7 +740,7 @@ function PostingPage() {
     } finally {
       setProcessingApplicationId(null);
     }
-  }, [id, notifications, rejectPostingApplication]);
+  }, [id, modal, notifications, rejectPostingApplication]);
 
   const onMapPositionPick = useCallback((coords: [number, number]) => {
     setPosition(coords);
@@ -758,9 +793,7 @@ function PostingPage() {
     return startDate !== endDate;
   }, [endDate, posting, startDate]);
 
-  const isMultiDayPartialPosting = useMemo(() => (
-    Boolean(posting?.allows_partial_attendance) && shouldShowCommitmentCard
-  ), [posting?.allows_partial_attendance, shouldShowCommitmentCard]);
+  const isSingleDayPosting = startDate === endDate;
 
   const fullPostingDates = useMemo(() => {
     if (!posting?.allows_partial_attendance) return [];
@@ -802,6 +835,7 @@ function PostingPage() {
   }, [isVolunteerView, posting, postingEnrollmentCount, enrollments.length]);
 
   const maxVolunteers = posting?.max_volunteers;
+  const shouldShowVolunteerProgress = Boolean(maxVolunteers != null && (!posting?.allows_partial_attendance || isSingleDayPosting));
 
   const overMaxVolunteerCount = useMemo(() => {
     if (!maxVolunteers) return 0;
@@ -1095,42 +1129,13 @@ function PostingPage() {
                         <MapPin size={16} className="text-primary" />
                         <span className="text-sm">{formValues.location_name}</span>
                       </div>
-                      <div className={`grid gap-4 ${formValues.end_date ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-primary" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START DATE</p>
-                              <span className="text-xs">{formattedStartDate}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-primary" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START TIME</p>
-                              <span className="text-xs">{formattedStartTime}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {formValues.end_date && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">END DATE</p>
-                                <span className="text-xs">{formattedEndDate}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">END TIME</p>
-                                <span className="text-xs">{formattedEndTime}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <PostingDateTime
+                        className="w-full"
+                        startDate={formattedStartDate}
+                        endDate={formValues.end_date ? formattedEndDate : undefined}
+                        startTime={formattedStartTime}
+                        endTime={formValues.end_time ? formattedEndTime : undefined}
+                      />
                       <div className="space-y-2">
                         {formValues.minimum_age && (
                           <div className="flex items-center gap-2">
@@ -1149,51 +1154,51 @@ function PostingPage() {
                   )}
             </Card>
 
-            {!isMultiDayPartialPosting && (
-              <Card
-                title="Capacity"
-                description="Number of volunteers still needed"
-                color="secondary"
-                Icon={Users}
-                right={
-                  maxVolunteers != null
-                    ? (
-                        <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
-                          {(remainingSpots ?? 0) > 0
-                            ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
-                            : 'No spots remaining'}
-                        </span>
-                      )
-                    : (
-                        <span className="text-sm opacity-70">{`${currentEnrollmentCount} volunteers`}</span>
-                      )
-                }
-              >
-                <div className="space-y-2">
-                  {maxVolunteers != null && (
+            <Card
+              title="Capacity"
+              description={shouldShowVolunteerProgress
+                ? 'Number of volunteers still needed'
+                : 'Number of volunteers registered across all dates'}
+              color="secondary"
+              Icon={Users}
+              right={shouldShowVolunteerProgress
+                ? (
+                    <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
+                      {(remainingSpots ?? 0) > 0
+                        ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
+                        : 'No spots remaining'}
+                    </span>
+                  )
+                : (
+                    <span className="text-sm opacity-70">
+                      {`${currentEnrollmentCount} volunteer${currentEnrollmentCount === 1 ? '' : 's'}`}
+                    </span>
+                  )}
+            >
+              <div className="space-y-2">
+                {shouldShowVolunteerProgress && (
+                  <>
                     <progress
                       className="progress progress-secondary w-full"
                       value={volunteerProgressPercent}
                       max={100}
                       aria-label="Volunteer capacity progress"
                     />
-                  )}
-                  <p className="text-xs opacity-70">
-                    {maxVolunteers
-                      ? `${currentEnrollmentCount} / ${maxVolunteers} volunteers`
-                      : `${currentEnrollmentCount} volunteers`}
-                  </p>
-                  {maxVolunteers == null && (
-                    <p className="text-xs opacity-70">No maximum number of volunteers set</p>
-                  )}
-                  {maxVolunteers != null && overMaxVolunteerCount > 0 && (
-                    <p className="text-xs text-error font-semibold">
-                      {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+                    <p className="text-xs opacity-70">
+                      {`${currentEnrollmentCount} / ${maxVolunteers} volunteers`}
                     </p>
-                  )}
-                </div>
-              </Card>
-            )}
+                  </>
+                )}
+                {!shouldShowVolunteerProgress && maxVolunteers == null && (
+                  <p className="text-xs opacity-70">No maximum number of volunteers set</p>
+                )}
+                {shouldShowVolunteerProgress && maxVolunteers != null && overMaxVolunteerCount > 0 && (
+                  <p className="text-xs text-error font-semibold">
+                    {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+                  </p>
+                )}
+              </div>
+            </Card>
 
             <Card
               title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'No Crisis'}

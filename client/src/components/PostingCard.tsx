@@ -1,8 +1,9 @@
-import { Calendar, Cake, Clock, ExternalLink, LockOpen, MapPin, Users, AlertCircle, Ban } from 'lucide-react';
+import { Cake, Calendar, Clock, ExternalLink, LockOpen, MapPin, Users, AlertCircle, Ban } from 'lucide-react';
 import { Link } from 'react-router';
 
 import Card from './Card';
 import OrganizationProfilePicture from './OrganizationProfilePicture';
+import PostingDateTime from './PostingDateTime.tsx';
 import SkillsList from './skills/SkillsList';
 
 import type { PostingWithContext } from '../../../server/src/types';
@@ -120,10 +121,14 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fi
   const startTimeStr = formatTime12Hour(startTimeValue) || (startDt ? startDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const endTimeStr = formatTime12Hour(endTimeValue) || (endDt ? endDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const isSingleDayPosting = !hasEndDate || startDateStr === endDateStr;
-  const shouldShowVolunteerCapacity = !posting.allows_partial_attendance || isSingleDayPosting;
+  const shouldShowVolunteerCapacity = posting.max_volunteers != null && (!posting.allows_partial_attendance || isSingleDayPosting);
+  const shouldShowVolunteerCountOnly = !shouldShowVolunteerCapacity;
 
   const volunteerFilled = posting.enrollment_count ?? 0;
   const volunteerPercent = posting.max_volunteers ? Math.round((volunteerFilled / posting.max_volunteers) * 100) : 0;
+  const volunteerCountLabel = shouldShowVolunteerCapacity && posting.max_volunteers != null
+    ? `${volunteerFilled}/${posting.max_volunteers}`
+    : `${volunteerFilled}`;
   const isPostingFull = isPostingFullyBooked(posting);
   let radialColor = 'text-primary';
   if (volunteerPercent >= 100) radialColor = 'text-error';
@@ -244,49 +249,13 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fi
 
       <div className="pt-1 pb-3 border-t border-base-200">
         <div className="px-4 md:px-5 flex justify-between items-start text-sm text-muted gap-6 pt-2">
-          <div className="flex items-center gap-3 grow h-22">
-            <div className="flex items-start gap-3">
-              <div className="flex flex-col items-center shrink-0 mt-1">
-                <Calendar size={16} className="text-primary" />
-                {(hasEndDate && startDateStr !== endDateStr) && <div className="w-0.5 h-6 bg-primary my-1" />}
-                {(hasEndDate && startDateStr !== endDateStr) && <Calendar size={16} className="text-primary" />}
-              </div>
-              <div>
-                <div className="text-sm">
-                  <p className="text-xs opacity-70">{(!hasEndDate || startDateStr === endDateStr) ? 'DATE' : 'START'}</p>
-                  <p className="font-medium">{startDateStr || 'TBA'}</p>
-                </div>
-                {(hasEndDate && startDateStr !== endDateStr) && (
-                  <div className="mt-3 text-sm">
-                    <p className="text-xs opacity-70">END</p>
-                    <p className="font-medium">{endDateStr}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grow" />
-
-            <div className="flex items-start gap-3">
-              <div className="text-right">
-                <div className="text-sm">
-                  <p className="text-xs opacity-70">{hasEndDate ? 'START' : 'TIME'}</p>
-                  <p className="font-medium">{startTimeStr || '—'}</p>
-                </div>
-                {hasEndDate && (
-                  <div className="mt-3 text-sm">
-                    <p className="text-xs opacity-70">END</p>
-                    <p className="font-medium">{endTimeStr || '—'}</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col items-center shrink-0 mt-1">
-                <Clock size={16} className="text-primary" />
-                {hasEndDate && <div className="w-0.5 h-6 bg-primary my-1" />}
-                {hasEndDate && <Clock size={16} className="text-primary" />}
-              </div>
-            </div>
-          </div>
+          <PostingDateTime
+            className="w-full"
+            startDate={startDateStr}
+            endDate={endDateStr}
+            startTime={startTimeStr}
+            endTime={endTimeStr}
+          />
         </div>
 
         <div className="px-4 md:px-5 mt-4 border-t border-base-200 pt-3">
@@ -328,11 +297,21 @@ function PostingCard({ posting, showCrisis = true, crisisTagClickable = true, fi
                     </span>
                     <div>
                       <p className="text-xs opacity-70">VOLUNTEERS</p>
-                      <p className="text-sm">{`${volunteerFilled}${posting.max_volunteers ? '/' + posting.max_volunteers : ''}`}</p>
+                      <p className="text-sm">{volunteerCountLabel}</p>
                     </div>
                   </div>
                 )
-              : <div />}
+              : shouldShowVolunteerCountOnly
+                ? (
+                    <div className="flex items-center gap-2">
+                      <Users size={16} className="text-primary shrink-0" />
+                      <div>
+                        <p className="text-xs opacity-70">VOLUNTEERS</p>
+                        <p className="text-sm">{volunteerCountLabel}</p>
+                      </div>
+                    </div>
+                  )
+                : <div />}
 
             {/* Right column: Age */}
             {posting.minimum_age

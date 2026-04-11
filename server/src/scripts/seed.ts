@@ -858,6 +858,22 @@ async function seed() {
         is_closed: false,
       },
       {
+        organization_id: orgByName.get('Arz Community')!,
+        crisis_id: undefined,
+        title: 'Community Garden Open Help Day',
+        description: 'Join a drop-in garden day with no fixed volunteer cap. Help is welcome '
+          + 'for planting, watering, and cleanup alongside local community gardeners.',
+        latitude: 34.4370,
+        longitude: 35.8340,
+        location_name: 'Tripoli Community Garden',
+        max_volunteers: null,
+        ...buildTemporalFields(`${nowYear}-03-27T09:00:00Z`, `${nowYear}-03-27T13:00:00Z`),
+        minimum_age: 12,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
         organization_id: orgByName.get('Cedar Response')!,
         crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
         title: 'Volunteer Helpline Shifts',
@@ -1188,6 +1204,12 @@ async function seed() {
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Label Checking' },
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Accuracy' },
 
+    // Community Garden Open Help Day
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Gardening' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Physical Stamina' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Outdoor Work' },
+
     // Volunteer Helpline Shifts
     { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Communication' },
     { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Active Listening' },
@@ -1386,22 +1408,12 @@ async function seed() {
   const applications = await database.insertInto('enrollment_application').values([
     // Field First Aid Support (org1, review-based)
     {
-      volunteer_id: volByEmail.get('vol3@willing.social')!,
-      posting_id: postingByTitle.get('First Aid Support')!,
-      message: 'Currently completing my paramedic diploma. I have first aid and triage training and am comfortable in high-pressure environments.',
-    },
-    {
       volunteer_id: volByEmail.get('vol1@willing.social')!,
       posting_id: postingByTitle.get('First Aid Support')!,
       message: 'I completed a 2-day first aid course last year. I am reliable and calm under pressure and would love to support the medical team.',
     },
 
     // Displaced Families Registration (org1, review-based)
-    {
-      volunteer_id: volByEmail.get('vol4@willing.social')!,
-      posting_id: postingByTitle.get('Displaced Families Registration')!,
-      message: 'I work as a com worker and speak Arabic fluently. Comfortable conducting intake interviews with empathy and care.',
-    },
     {
       volunteer_id: volByEmail.get('vol2@willing.social')!,
       posting_id: postingByTitle.get('Displaced Families Registration')!,
@@ -1420,19 +1432,7 @@ async function seed() {
       message: 'Background in com work and mental health support. Familiar with trauma-informed approaches and psychocom first aid frameworks.',
     },
 
-    // Psychological First Aid Sessions (org1, review-based)
-    {
-      volunteer_id: volByEmail.get('vol4@willing.social')!,
-      posting_id: postingByTitle.get('Psychological First Aid Sessions')!,
-      message: 'Background in com work and mental health support. Familiar with trauma-informed approaches and psychocom first aid frameworks.',
-    },
-
     // Remote Homework Support Hotline (org2, review-based)
-    {
-      volunteer_id: volByEmail.get('vol7@willing.social')!,
-      posting_id: postingByTitle.get('Remote Homework Support')!,
-      message: 'Software developer with a strong maths and science background. Can take evening slots and adapt explanations to different age groups.',
-    },
     {
       volunteer_id: volByEmail.get('vol2@willing.social')!,
       posting_id: postingByTitle.get('Remote Homework Support')!,
@@ -1440,11 +1440,6 @@ async function seed() {
     },
 
     // Medical Supplies Inventory & Sorting (org3, review-based)
-    {
-      volunteer_id: volByEmail.get('vol9@willing.social')!,
-      posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!,
-      message: 'Highly detail-oriented and experienced with inventory systems. Happy to handle medical supplies carefully.',
-    },
     {
       volunteer_id: volByEmail.get('vol1@willing.social')!,
       posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!,

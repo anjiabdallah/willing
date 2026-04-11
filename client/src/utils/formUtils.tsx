@@ -55,8 +55,10 @@ export function FormField<T extends FieldValues>({
 }: FormFieldProps<T>) {
   const { register, formState: { errors }, clearErrors } = form;
   const error = errors[name];
+  const id = `field-${String(name)}`;
 
   const commonProps = {
+    id,
     ...register(name, {
       onChange: () => clearErrors('root'),
       ...registerOptions,
@@ -92,7 +94,7 @@ export function FormField<T extends FieldValues>({
       {
         type !== 'date'
         && (
-          <label className="label">
+          <label className="label" htmlFor={id}>
             <span className="label-text font-medium">{label}</span>
           </label>
         )

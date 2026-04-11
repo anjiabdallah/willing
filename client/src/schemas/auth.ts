@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
-import { passwordSchema } from '../../../server/src/schemas';
-import { loginInfoSchema } from '../../../server/src/types';
+import { passwordSchema } from '../../../server/src/schemas/index.ts';
 
-export const loginFormSchema = loginInfoSchema.extend({
-  email: z.string().min(1, 'Email is required').email('Invalid email'),
+export { passwordSchema } from '../../../server/src/schemas/index.ts';
+
+export const loginFormSchema = z.object({
+  email: z.email('Invalid email'),
   password: z.string().min(1, 'Password is required'),
 });
 

@@ -111,9 +111,36 @@ function OrganizationPostingAttendance() {
   );
 
   const currentDate = availableDates[currentDateIndex] ?? null;
+  const isBatchAttendance = Boolean(data && (!data.posting.allows_partial_attendance || availableDates.length <= 1));
+
+  const getEnrollmentAttendance = useCallback((enrollment: PostingEnrollment) => {
+    const dates = enrollment.dates ?? [];
+    if (dates.length === 0) return false;
+
+    return dates.every((dateItem) => {
+      const draftValue = draftDateAttendance[enrollment.enrollment_id]?.[dateItem.date];
+      return typeof draftValue === 'boolean' ? draftValue : dateItem.attended;
+    });
+  }, [draftDateAttendance]);
 
   const toggleAttendance = useCallback(async (enrollment: PostingEnrollment) => {
-    if (saving || !currentDate) return;
+    if (saving) return;
+    const dates = enrollment.dates ?? [];
+    if (dates.length === 0) return;
+
+    if (isBatchAttendance) {
+      const currentlyAllPresent = getEnrollmentAttendance(enrollment);
+
+      setDraftDateAttendance(current => ({
+        ...current,
+        [enrollment.enrollment_id]: Object.fromEntries(
+          dates.map(dateItem => [dateItem.date, !currentlyAllPresent]),
+        ),
+      }));
+      return;
+    }
+
+    if (!currentDate) return;
 
     setDraftDateAttendance((current) => {
       const nextForEnrollment = {
@@ -128,7 +155,7 @@ function OrganizationPostingAttendance() {
         [enrollment.enrollment_id]: nextForEnrollment,
       };
     });
-  }, [currentDate, saving]);
+  }, [currentDate, getEnrollmentAttendance, isBatchAttendance, saving]);
 
   const markVolunteerAllDates = useCallback((enrollment: PostingEnrollment) => {
     const dates = enrollment.dates ?? [];
@@ -143,22 +170,29 @@ function OrganizationPostingAttendance() {
   }, []);
 
   const setAllAttendanceDraft = useCallback((attended: boolean) => {
-    if (!data || !currentDate) return;
+    if (!data) return;
     if (saving) return;
+    if (!isBatchAttendance && !currentDate) return;
 
     setDraftDateAttendance(
-      Object.fromEntries(data.enrollments.map(enrollment => [
-        enrollment.enrollment_id,
-        {
-          ...(draftDateAttendance[enrollment.enrollment_id] ?? {}),
-          [currentDate]: attended,
-        },
-      ])),
+      Object.fromEntries(data.enrollments.map((enrollment) => {
+        const dates = enrollment.dates ?? [];
+        const targetDates = isBatchAttendance
+          ? dates
+          : dates.filter(dateItem => dateItem.date === currentDate);
+
+        if (targetDates.length === 0) return [enrollment.enrollment_id, {}] as const;
+
+        return [
+          enrollment.enrollment_id,
+          Object.fromEntries(targetDates.map(dateItem => [dateItem.date, attended])),
+        ] as const;
+      })),
     );
-  }, [currentDate, data, draftDateAttendance, saving]);
+  }, [currentDate, data, isBatchAttendance, saving]);
 
   const submitAttendance = useCallback(async () => {
-    if (!id || !data || saving || !currentDate) return;
+    if (!id || !data || saving || (!currentDate && !isBatchAttendance)) return;
 
     const changes: Array<{ enrollmentDateId: number; attended: boolean }> = [];
 
@@ -252,10 +286,13 @@ function OrganizationPostingAttendance() {
 
   const displayedEnrollments = useMemo(() => {
     if (!data) return [];
+
     return data.enrollments.map((enrollment) => {
       let attended = false;
 
-      if (currentDate) {
+      if (isBatchAttendance) {
+        attended = getEnrollmentAttendance(enrollment);
+      } else if (currentDate) {
         const original = enrollment.dates?.find(d => d.date === currentDate)?.attended;
         const draft = draftDateAttendance[enrollment.enrollment_id]?.[currentDate];
         if (typeof draft === 'boolean') {
@@ -270,10 +307,11 @@ function OrganizationPostingAttendance() {
         attended,
       };
     }).filter((enrollment) => {
+      if (isBatchAttendance) return true;
       if (!currentDate) return true;
       return enrollment.dates?.some(dateItem => dateItem.date === currentDate) ?? false;
     });
-  }, [currentDate, data, draftDateAttendance]);
+  }, [currentDate, data, draftDateAttendance, getEnrollmentAttendance, isBatchAttendance]);
 
   const filteredAndSortedEnrollments = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -425,7 +463,7 @@ function OrganizationPostingAttendance() {
           </select>
         </div>
 
-        {availableDates.length > 0 && (
+        {!isBatchAttendance && availableDates.length > 0 && (
           <div className="mb-4 -mt-2">
             <div className="flex items-center gap-2 flex-nowrap">
               <span className="text-sm font-semibold relative top-1">Select date:</span>
@@ -462,6 +500,11 @@ function OrganizationPostingAttendance() {
             <span className="text-xs opacity-70">Showing attendance for one day at a time</span>
           </div>
         )}
+        {isBatchAttendance && (
+          <div className="mb-4 -mt-2">
+            <span className="text-xs opacity-70">Attendance is recorded for the whole posting at once.</span>
+          </div>
+        )}
 
         {data.enrollments.length === 0 && (
           <Alert>
@@ -492,19 +535,21 @@ function OrganizationPostingAttendance() {
                         type="checkbox"
                         className="toggle toggle-success"
                         checked={volunteer.attended}
-                        disabled={saving || !currentDate || !volunteer.dates?.some(d => d.date === currentDate)}
+                        disabled={saving || (!isBatchAttendance && (!currentDate || !volunteer.dates?.some(d => d.date === currentDate)))}
                         onChange={() => void toggleAttendance(volunteer)}
                       />
                     </label>
-                    <Button
-                      size="sm"
-                      color="secondary"
-                      style="outline"
-                      onClick={() => markVolunteerAllDates(volunteer)}
-                      disabled={saving || !volunteer.dates || volunteer.dates.length === 0}
-                    >
-                      All Days Present
-                    </Button>
+                    {!isBatchAttendance && (
+                      <Button
+                        size="sm"
+                        color="secondary"
+                        style="outline"
+                        onClick={() => markVolunteerAllDates(volunteer)}
+                        disabled={saving || !volunteer.dates || volunteer.dates.length === 0}
+                      >
+                        All Days Present
+                      </Button>
+                    )}
                   </div>
                 )}
               />

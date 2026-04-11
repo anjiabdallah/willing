@@ -858,6 +858,22 @@ async function seed() {
         is_closed: false,
       },
       {
+        organization_id: orgByName.get('Arz Community')!,
+        crisis_id: undefined,
+        title: 'Community Garden Open Help Day',
+        description: 'Join a drop-in garden day with no fixed volunteer cap. Help is welcome '
+          + 'for planting, watering, and cleanup alongside local community gardeners.',
+        latitude: 34.4370,
+        longitude: 35.8340,
+        location_name: 'Tripoli Community Garden',
+        max_volunteers: null,
+        ...buildTemporalFields(`${nowYear}-03-27T09:00:00Z`, `${nowYear}-03-27T13:00:00Z`),
+        minimum_age: 12,
+        automatic_acceptance: true,
+        allows_partial_attendance: true,
+        is_closed: false,
+      },
+      {
         organization_id: orgByName.get('Cedar Response')!,
         crisis_id: crisisByName.get('Beirut Port Explosion Aftermath')!,
         title: 'Volunteer Helpline Shifts',
@@ -1187,6 +1203,12 @@ async function seed() {
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Organisation' },
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Label Checking' },
     { posting_id: postingByTitle.get('Medical Supplies Inventory & Sorting')!, name: 'Accuracy' },
+
+    // Community Garden Open Help Day
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Gardening' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Teamwork' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Physical Stamina' },
+    { posting_id: postingByTitle.get('Community Garden Open Help Day')!, name: 'Outdoor Work' },
 
     // Volunteer Helpline Shifts
     { posting_id: postingByTitle.get('Volunteer Helpline Shifts')!, name: 'Communication' },

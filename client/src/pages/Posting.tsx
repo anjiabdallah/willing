@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Calendar,
   Cake,
-  Clock,
   Edit3,
   House,
   ListChecks,
@@ -38,6 +37,7 @@ import LinkButton from '../components/LinkButton.tsx';
 import Loading from '../components/Loading.tsx';
 import LocationPicker from '../components/LocationPicker.tsx';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture.tsx';
+import PostingDateTime from '../components/PostingDateTime.tsx';
 import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
@@ -793,9 +793,7 @@ function PostingPage() {
     return startDate !== endDate;
   }, [endDate, posting, startDate]);
 
-  const isMultiDayPartialPosting = useMemo(() => (
-    Boolean(posting?.allows_partial_attendance) && shouldShowCommitmentCard
-  ), [posting?.allows_partial_attendance, shouldShowCommitmentCard]);
+  const isSingleDayPosting = startDate === endDate;
 
   const fullPostingDates = useMemo(() => {
     if (!posting?.allows_partial_attendance) return [];
@@ -837,6 +835,7 @@ function PostingPage() {
   }, [isVolunteerView, posting, postingEnrollmentCount, enrollments.length]);
 
   const maxVolunteers = posting?.max_volunteers;
+  const shouldShowVolunteerProgress = Boolean(maxVolunteers != null && (!posting?.allows_partial_attendance || isSingleDayPosting));
 
   const overMaxVolunteerCount = useMemo(() => {
     if (!maxVolunteers) return 0;
@@ -1130,42 +1129,13 @@ function PostingPage() {
                         <MapPin size={16} className="text-primary" />
                         <span className="text-sm">{formValues.location_name}</span>
                       </div>
-                      <div className={`grid gap-4 ${formValues.end_date ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-primary" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START DATE</p>
-                              <span className="text-xs">{formattedStartDate}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-primary" />
-                            <div>
-                              <p className="text-xs opacity-70 font-semibold">START TIME</p>
-                              <span className="text-xs">{formattedStartTime}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {formValues.end_date && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">END DATE</p>
-                                <span className="text-xs">{formattedEndDate}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock size={16} className="text-primary" />
-                              <div>
-                                <p className="text-xs opacity-70 font-semibold">END TIME</p>
-                                <span className="text-xs">{formattedEndTime}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <PostingDateTime
+                        className="w-full"
+                        startDate={formattedStartDate}
+                        endDate={formValues.end_date ? formattedEndDate : undefined}
+                        startTime={formattedStartTime}
+                        endTime={formValues.end_time ? formattedEndTime : undefined}
+                      />
                       <div className="space-y-2">
                         {formValues.minimum_age && (
                           <div className="flex items-center gap-2">
@@ -1184,51 +1154,51 @@ function PostingPage() {
                   )}
             </Card>
 
-            {!isMultiDayPartialPosting && (
-              <Card
-                title="Capacity"
-                description="Number of volunteers still needed"
-                color="secondary"
-                Icon={Users}
-                right={
-                  maxVolunteers != null
-                    ? (
-                        <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
-                          {(remainingSpots ?? 0) > 0
-                            ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
-                            : 'No spots remaining'}
-                        </span>
-                      )
-                    : (
-                        <span className="text-sm opacity-70">{`${currentEnrollmentCount} volunteers`}</span>
-                      )
-                }
-              >
-                <div className="space-y-2">
-                  {maxVolunteers != null && (
+            <Card
+              title="Capacity"
+              description={shouldShowVolunteerProgress
+                ? 'Number of volunteers still needed'
+                : 'Number of volunteers registered across all dates'}
+              color="secondary"
+              Icon={Users}
+              right={shouldShowVolunteerProgress
+                ? (
+                    <span className={`text-sm font-semibold ${remainingSpots === 0 ? 'text-error' : 'text-success'}`}>
+                      {(remainingSpots ?? 0) > 0
+                        ? `${remainingSpots} spot${remainingSpots === 1 ? '' : 's'} remaining`
+                        : 'No spots remaining'}
+                    </span>
+                  )
+                : (
+                    <span className="text-sm opacity-70">
+                      {`${currentEnrollmentCount} volunteer${currentEnrollmentCount === 1 ? '' : 's'}`}
+                    </span>
+                  )}
+            >
+              <div className="space-y-2">
+                {shouldShowVolunteerProgress && (
+                  <>
                     <progress
                       className="progress progress-secondary w-full"
                       value={volunteerProgressPercent}
                       max={100}
                       aria-label="Volunteer capacity progress"
                     />
-                  )}
-                  <p className="text-xs opacity-70">
-                    {maxVolunteers
-                      ? `${currentEnrollmentCount} / ${maxVolunteers} volunteers`
-                      : `${currentEnrollmentCount} volunteers`}
-                  </p>
-                  {maxVolunteers == null && (
-                    <p className="text-xs opacity-70">No maximum number of volunteers set</p>
-                  )}
-                  {maxVolunteers != null && overMaxVolunteerCount > 0 && (
-                    <p className="text-xs text-error font-semibold">
-                      {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+                    <p className="text-xs opacity-70">
+                      {`${currentEnrollmentCount} / ${maxVolunteers} volunteers`}
                     </p>
-                  )}
-                </div>
-              </Card>
-            )}
+                  </>
+                )}
+                {!shouldShowVolunteerProgress && maxVolunteers == null && (
+                  <p className="text-xs opacity-70">No maximum number of volunteers set</p>
+                )}
+                {shouldShowVolunteerProgress && maxVolunteers != null && overMaxVolunteerCount > 0 && (
+                  <p className="text-xs text-error font-semibold">
+                    {`${overMaxVolunteerCount} volunteer${overMaxVolunteerCount === 1 ? '' : 's'} over max`}
+                  </p>
+                )}
+              </div>
+            </Card>
 
             <Card
               title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'No Crisis'}

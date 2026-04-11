@@ -6,9 +6,9 @@ import zod from 'zod';
 
 import Button from './Button';
 import Card from './Card';
-import { passwordSchema } from '../../../server/src/schemas';
 import AuthContext from '../auth/AuthContext';
 import useNotifications from '../notifications/useNotifications';
+import { passwordSchema } from '../schemas/auth';
 import { executeAndShowError, FormField, FormRootError } from '../utils/formUtils';
 
 const passwordResetSchema = zod.object({

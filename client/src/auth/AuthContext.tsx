@@ -40,7 +40,7 @@ const getCurrentUserAccount = async (currentRole?: Role) => {
   return undefined;
 };
 
-type AuthContextType = {
+export type AuthContextType = {
   user?: {
     role: Role;
     account?: AccountWithoutPassword;

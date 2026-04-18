@@ -230,7 +230,6 @@ describe('POST /volunteer/create', () => {
     expect(sendVolunteerVerificationEmailSpy).toHaveBeenCalledTimes(1);
   });
 });
-
 describe('POST /volunteer/verify-email', () => {
   test('returns 400 for an invalid verification token', async () => {
     await server
@@ -361,7 +360,6 @@ describe('POST /volunteer/verify-email', () => {
     recomputeExperienceSpy.mockRestore();
   });
 });
-
 describe('POST /volunteer/resend-verification', () => {
   test('returns 200 and does nothing when email already belongs to a volunteer', async () => {
     const { volunteer } = await createVolunteerAccount(transaction, { email: 'resend-existing@example.com' });
@@ -607,7 +605,7 @@ describe('GET /volunteer/certificate', () => {
         is_closed: false,
         allows_partial_attendance: false,
         location_name: 'Beirut',
-        crisis_id: undefined,
+        crisis_id: null,
         created_at: new Date('2026-01-01T00:00:00.000Z'),
         updated_at: new Date('2026-01-01T00:00:00.000Z'),
       })
@@ -727,7 +725,7 @@ describe('DELETE /volunteer/posting/:id/enroll withdrawal behavior', () => {
         is_closed: false,
         allows_partial_attendance: true,
         location_name: 'Test Location',
-        crisis_id: undefined,
+        crisis_id: null,
         created_at: new Date('2026-03-01T00:00:00.000Z'),
         updated_at: new Date('2026-03-01T00:00:00.000Z'),
       })
@@ -837,7 +835,7 @@ describe('GET /volunteer/posting/:id selected partial dates', () => {
         is_closed: false,
         allows_partial_attendance: true,
         location_name: 'Test Location',
-        crisis_id: undefined,
+        crisis_id: null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -1466,6 +1464,60 @@ describe('PUT /volunteer/profile', () => {
       .expect(403);
   });
 
+  test('skips profile vector recomputation when profile update recompute limit is exceeded', async () => {
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'profile-rate-limit@example.com' });
+    const recomputeProfileSpy = vi
+      .spyOn(embeddingUpdates, 'recomputeVolunteerProfileVector')
+      .mockResolvedValue(null);
+    const getVolunteerProfileSpy = vi
+      .spyOn(volunteerService, 'getVolunteerProfile')
+      .mockResolvedValue({
+        volunteer: {
+          id: volunteer.id,
+          first_name: volunteer.first_name,
+          last_name: volunteer.last_name,
+          email: volunteer.email,
+          date_of_birth: volunteer.date_of_birth,
+          gender: volunteer.gender,
+          cv_path: volunteer.cv_path,
+          description: volunteer.description ?? '',
+        },
+        skills: [],
+        experience_stats: {
+          total_completed_experiences: 0,
+          organizations_supported: 0,
+          crisis_related_experiences: 0,
+          total_hours_completed: 0,
+          total_skills_used: 0,
+          most_volunteered_crisis: null,
+        },
+        completed_experiences: [],
+      });
+
+    for (let index = 0; index < 3; index += 1) {
+      await server
+        .put('/volunteer/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          description: `Updated volunteer description ${index}`,
+        })
+        .expect(200);
+    }
+
+    await server
+      .put('/volunteer/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        description: 'Updated volunteer description 4',
+      })
+      .expect(200);
+
+    expect(recomputeProfileSpy).toHaveBeenCalledTimes(3);
+
+    recomputeProfileSpy.mockRestore();
+    getVolunteerProfileSpy.mockRestore();
+  });
+
   test('updates volunteer details, replaces skills, and recomputes profile vector', async () => {
     const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'profile-update@example.com' });
 
@@ -1486,7 +1538,7 @@ describe('PUT /volunteer/profile', () => {
         email: volunteer.email,
         date_of_birth: volunteer.date_of_birth,
         gender: volunteer.gender,
-        cv_path: undefined,
+        cv_path: null,
         description: 'Available evenings',
       },
       skills: ['First Aid', 'Logistics'],

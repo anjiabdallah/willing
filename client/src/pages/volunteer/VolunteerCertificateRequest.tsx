@@ -27,6 +27,37 @@ const CERTIFICATE_PREVIEW_WIDTH = 1123;
 const CERTIFICATE_PREVIEW_HEIGHT = 794;
 const formatHours = (value: number) => Math.floor(value);
 
+const getOrganizationEligibilityStatus = (organization: VolunteerCertificateResponse['organizations'][number]) => {
+  if (organization.eligible) {
+    return {
+      label: 'Eligible',
+      className: 'badge badge-success',
+    };
+  }
+
+  if (!organization.certificate_feature_enabled) {
+    return {
+      label: 'Certificates not enabled',
+      className: 'badge badge-warning',
+    };
+  }
+
+  if (
+    organization.hours_threshold !== null
+    && organization.hours < organization.hours_threshold
+  ) {
+    return {
+      label: 'Threshold not reached',
+      className: 'badge badge-info',
+    };
+  }
+
+  return {
+    label: 'Setup incomplete',
+    className: 'badge badge-ghost',
+  };
+};
+
 function VolunteerCertificateRequest() {
   const volunteer = useVolunteer();
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<number[]>([]);
@@ -60,7 +91,12 @@ function VolunteerCertificateRequest() {
   );
 
   const rankedOrganizations = useMemo(
-    () => [...(data?.organizations ?? [])].sort((left, right) => right.hours - left.hours),
+    () => [...(data?.organizations ?? [])].sort((left, right) => {
+      if (left.certificate_feature_enabled !== right.certificate_feature_enabled) {
+        return left.certificate_feature_enabled ? -1 : 1;
+      }
+      return right.hours - left.hours;
+    }),
     [data?.organizations],
   );
 
@@ -399,6 +435,8 @@ function VolunteerCertificateRequest() {
             <div className="space-y-2 mt-3">
               {organizationsWithEligibility.map((organization, index) => {
                 const selected = selectedOrganizationIds.includes(organization.id);
+                const eligibilityStatus = getOrganizationEligibilityStatus(organization);
+                const certificatesNotEnabled = !organization.certificate_feature_enabled;
 
                 return (
                   <label
@@ -411,23 +449,29 @@ function VolunteerCertificateRequest() {
                       <span className="badge badge-ghost">{`#${index + 1}`}</span>
                       <div>
                         <p className="font-semibold">{organization.name}</p>
-                        <p className="text-sm opacity-70">
-                          Hours:
-                          {' '}
-                          {formatHours(organization.hours)}
-                          {' '}
-                          |
-                          {' '}
-                          Threshold:
-                          {' '}
-                          {organization.hours_threshold ?? '-'}
-                        </p>
+                        {certificatesNotEnabled
+                          ? (
+                              <p className="text-sm opacity-70">Certificates not enabled</p>
+                            )
+                          : (
+                              <p className="text-sm opacity-70">
+                                Hours:
+                                {' '}
+                                {formatHours(organization.hours)}
+                                {' '}
+                                |
+                                {' '}
+                                Threshold:
+                                {' '}
+                                {organization.hours_threshold ?? '-'}
+                              </p>
+                            )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {organization.eligible
-                        ? <span className="badge badge-success">Eligible</span>
-                        : <span className="badge badge-ghost">Not eligible</span>}
+                      {!certificatesNotEnabled && (
+                        <span className={eligibilityStatus.className}>{eligibilityStatus.label}</span>
+                      )}
                       <input
                         type="checkbox"
                         className="checkbox checkbox-primary"

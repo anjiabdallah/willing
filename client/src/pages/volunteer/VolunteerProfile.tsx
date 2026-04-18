@@ -300,24 +300,24 @@ function VolunteerProfile() {
         organization_id: experience.organization_id,
         title: experience.posting_title,
         description: '',
-        latitude: undefined,
-        longitude: undefined,
-        max_volunteers: undefined,
+        latitude: null,
+        longitude: null,
+        max_volunteers: null,
         start_date: safeStartDate,
         start_time: toTimeString(safeStartDate),
         end_date: safeEndDate ?? safeStartDate,
         end_time: safeEndDate ? toTimeString(safeEndDate) : toTimeString(safeStartDate),
-        minimum_age: undefined,
+        minimum_age: null,
         automatic_acceptance: experience.automatic_acceptance,
         is_closed: experience.is_closed,
         allows_partial_attendance: false,
         location_name: experience.location_name,
         created_at: safeStartDate,
         updated_at: safeStartDate,
-        crisis_id: undefined,
+        crisis_id: null,
         skills: [],
         organization_name: experience.organization_name,
-        organization_logo_path: experience.organization_logo_path ?? undefined,
+        organization_logo_path: experience.organization_logo_path ?? null,
         crisis_name: experience.crisis_name,
         enrollment_count: experience.enrollment_count,
         application_status: 'none',
@@ -736,7 +736,7 @@ function VolunteerProfile() {
                 <span>{profile.experience_stats.total_skills_used}</span>
               </div>
             </div>
-            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
+            <div className="stat min-w-0 place-items-center h-full grid-rows-[auto,1fr]">
               <div className="stat-title text-base">Most Volunteered Crisis</div>
               <div className="stat-value text-lg text-primary/80 flex w-full min-w-0 items-center justify-center gap-2 px-2 self-center">
                 <span className="max-w-full text-center whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
@@ -785,7 +785,7 @@ function VolunteerProfile() {
                     <div className="flex justify-center pt-1">
                       <button
                         type="button"
-                        className="badge badge-outline badge-primary px-4 py-3"
+                        className="badge badge-outline badge-primary px-4 py-3 cursor-pointer transition-colors hover:bg-primary hover:text-primary-content"
                         onClick={() => setShowAllExperiences(current => !current)}
                       >
                         {showAllExperiences

@@ -9,7 +9,7 @@ import {
   LogIn,
   RotateCcw,
 } from 'lucide-react';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
@@ -50,6 +50,13 @@ export default function VolunteerCreate() {
       gender: 'male',
     },
   });
+
+  const passwordValue = form.watch('password');
+  const confirmPasswordValue = form.watch('confirmPassword');
+  useEffect(() => {
+    if (!confirmPasswordValue) return;
+    void form.trigger('confirmPassword');
+  }, [confirmPasswordValue, form, passwordValue]);
 
   const handleSubmit = form.handleSubmit(async (data) => {
     await executeAndShowError(form, async () => {

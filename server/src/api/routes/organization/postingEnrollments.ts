@@ -85,7 +85,7 @@ export const getPostingEnrollments = async (
       dates: datesByEnrollmentId.get(enrollment.enrollment_id) || [],
     };
 
-    if (enrollment.cv_path !== undefined) {
+    if (enrollment.cv_path != null) {
       payload.cv_path = enrollment.cv_path;
     }
 

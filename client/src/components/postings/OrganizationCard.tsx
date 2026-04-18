@@ -13,17 +13,22 @@ function OrganizationCard({ organization }: OrganizationCardProps) {
   return (
     <Card>
       <div className="flex items-center gap-4">
-        <OrganizationProfilePicture
-          organizationName={organization.name}
-          organizationId={organization.id}
-          logoPath={organization.logo_path}
-          size={48}
-          className="shrink-0"
-        />
+        <Link to={`/organization/${organization.id}`} className="shrink-0">
+          <OrganizationProfilePicture
+            organizationName={organization.name}
+            organizationId={organization.id}
+            logoPath={organization.logo_path}
+            size={48}
+            className="shrink-0"
+          />
+        </Link>
 
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold">
-            <Link to={`/organization/${organization.id}`} className="link link-primary link-hover no-underline hover:underline">
+            <Link
+              to={`/organization/${organization.id}`}
+              className="link link-primary link-hover no-underline hover:underline"
+            >
               {organization.name}
             </Link>
           </h3>
@@ -35,7 +40,7 @@ function OrganizationCard({ organization }: OrganizationCardProps) {
         <span className="badge badge-secondary text-sm py-2 whitespace-nowrap">
           {organization.posting_count}
           {' '}
-          postings
+          {organization.posting_count === 1 ? 'posting' : 'postings'}
         </span>
       </div>
 

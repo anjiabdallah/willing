@@ -7,7 +7,7 @@ import type { WithGeneratedIDAndCreatedAt } from './shared.ts';
 export const crisisSchema = zod.object({
   id: idSchema,
   name: zod.string().trim().min(1, 'Crisis name is required').max(256, 'Crisis name can at most be 256 characters'),
-  description: zod.string().trim().optional(),
+  description: zod.string().trim().nullable(),
   pinned: zod.boolean(),
   created_at: zod.date(),
 });

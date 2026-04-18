@@ -4,6 +4,7 @@ import zod from 'zod';
 
 import createAttendanceRouter from './attendance.ts';
 import {
+  type OrganizationPostingDiscoverResponse,
   type OrganizationPostingCreateResponse,
   type OrganizationPostingListResponse,
   type OrganizationPostingResponse,
@@ -47,6 +48,7 @@ import {
   normalizeSearchTerms,
   parsePostingDateTimeFilters,
 } from '../utils/postingList.ts';
+import { buildPostingsWithContext, postingWithContextSelectColumns } from '../volunteer/postingWithContext.ts';
 
 const organizationPostingUpdateSchema = newOrganizationPostingSchema.partial().extend({
   crisis_id: zod.number().int().positive().nullable().optional(),
@@ -157,7 +159,7 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
     const orgId = req.userJWT!.id;
     const { skills, ...postingBody } = body;
 
-    if (body.crisis_id !== undefined) {
+    if (body.crisis_id != null) {
       await assertCrisisExists(body.crisis_id, db, res);
     }
 
@@ -299,15 +301,129 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
     res.json({ postings: postingsWithSkills });
   });
 
+  postingRouter.get('/discover', async (req, res: Response<OrganizationPostingDiscoverResponse>) => {
+    const { location_name, skill } = req.query;
+    const dateTimeFilters = parsePostingDateTimeFilters(req.query);
+    const hideFull = parseOptionalBooleanQueryParam(req.query.hide_full) ?? false;
+    const crisisIdFilter = parseOptionalNumberQueryParam(req.query.crisis_id);
+    const postingFilter = typeof req.query.posting_filter === 'string' ? req.query.posting_filter : 'all';
+    const { search, sortBy, sortDir } = parseListQuery(req.query, {
+      allowedSortBy: ['recommended', 'start_date', 'created_at', 'title'],
+      defaultSortBy: 'recommended',
+      defaultSortDir: 'desc',
+    });
+    const skillFilter = typeof skill === 'string' ? skill.trim() : '';
+
+    let query = db
+      .selectFrom('organization_posting')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .leftJoin('crisis', 'crisis.id', 'organization_posting.crisis_id')
+      .select(postingWithContextSelectColumns)
+      .where('organization_posting.is_closed', '=', false)
+      .where('organization_account.is_deleted', '=', false)
+      .where('organization_account.is_disabled', '=', false);
+
+    if (skillFilter) {
+      query = query.where(({ exists, selectFrom }) => exists(
+        selectFrom('posting_skill')
+          .select('posting_skill.id')
+          .whereRef('posting_skill.posting_id', '=', 'organization_posting.id')
+          .where('posting_skill.name', 'ilike', `%${skillFilter}%`),
+      ));
+    }
+
+    if (location_name) {
+      query = query.where('organization_posting.location_name', 'ilike', `%${location_name}%`);
+    }
+
+    if (crisisIdFilter !== undefined) {
+      query = query.where('organization_posting.crisis_id', '=', crisisIdFilter);
+    }
+
+    if (postingFilter === 'open') {
+      query = query.where('organization_posting.automatic_acceptance', '=', true);
+    } else if (postingFilter === 'review') {
+      query = query.where('organization_posting.automatic_acceptance', '=', false);
+    } else if (postingFilter === 'partial') {
+      query = query.where('organization_posting.allows_partial_attendance', '=', true);
+    } else if (postingFilter === 'full') {
+      query = query.where('organization_posting.allows_partial_attendance', '=', false);
+    } else if (postingFilter === 'tagged') {
+      query = query.where('organization_posting.crisis_id', 'is not', null);
+    } else if (postingFilter === 'untagged') {
+      query = query.where('organization_posting.crisis_id', 'is', null);
+    }
+
+    if (search) {
+      const terms = normalizeSearchTerms(search);
+      query = query.where(({ and, exists, selectFrom, or }) => and(
+        terms.map((term) => {
+          const likePattern = `%${term}%`;
+
+          return or([
+            sql<boolean>`lower(organization_posting.title) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(organization_posting.title), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+            sql<boolean>`lower(organization_posting.description) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(organization_posting.description), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+            sql<boolean>`lower(organization_posting.location_name) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(organization_posting.location_name), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+            sql<boolean>`lower(organization_account.name) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(organization_account.name), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+            exists(
+              selectFrom('posting_skill')
+                .select('posting_skill.id')
+                .whereRef('posting_skill.posting_id', '=', 'organization_posting.id')
+                .where(sql<boolean>`lower(posting_skill.name) LIKE ${likePattern}`),
+            ),
+          ]);
+        }),
+      ));
+
+      const normalizedSearch = search.toLowerCase();
+      const titleRelevance = sql<number>`
+      CASE
+        WHEN lower(organization_posting.title) = ${normalizedSearch} THEN 3
+        WHEN lower(organization_posting.title) LIKE ${`${normalizedSearch}%`} THEN 2
+        WHEN lower(organization_posting.title) LIKE ${`%${normalizedSearch}%`} THEN 1
+        ELSE 0
+      END
+    `;
+      query = query.orderBy(sql`${titleRelevance} desc`);
+    }
+
+    query = applyPostingDateTimeFilters(query, dateTimeFilters);
+
+    const fallbackSortBy = sortBy === 'recommended' ? 'start_date' : sortBy;
+    query = applySharedPostingSort(query, fallbackSortBy, sortDir);
+
+    const postings = await query.execute();
+    const postingsWithContext = await buildPostingsWithContext(db, {
+      volunteerId: 0,
+      postings,
+    });
+
+    const normalizedPostings = postingsWithContext.map(posting => ({
+      ...posting,
+      application_status: 'none' as const,
+    }));
+
+    const visiblePostings = hideFull
+      ? normalizedPostings.filter(posting => !isPostingFull(posting.max_volunteers, posting.enrollment_count))
+      : normalizedPostings;
+
+    res.json({ postings: visiblePostings });
+  });
+
   postingRouter.get('/:id', async (req, res: Response<OrganizationPostingResponse>) => {
-    const orgId = req.userJWT!.id;
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
     const posting = await db
       .selectFrom('organization_posting')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
       .select(organizationPostingResponseColumns)
       .where('organization_posting.id', '=', postingId)
-      .where('organization_posting.organization_id', '=', orgId)
+      .where('organization_account.is_deleted', '=', false)
+      .where('organization_account.is_disabled', '=', false)
       .executeTakeFirst();
 
     if (!posting) {
@@ -611,6 +727,7 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
 
     const applicationsWithSkills = applications.map(app => ({
       ...app,
+      message: app.message,
       skills: skillsByVolunteerId.get(app.volunteer_id) ?? [],
       requested_dates: requestedDatesByApplicationId.get(app.application_id)?.sort() ?? [],
     }));

@@ -46,10 +46,24 @@ const defaultFilters: OrganizationRequestFilters = {
   sortBy: 'created_at',
   sortDir: 'desc',
 };
+const requestsFiltersStorageKey = 'admin-requests-filters';
 
 function AdminRequests() {
-  const [filters, setFilters] = useState<OrganizationRequestFilters>(defaultFilters);
-  const [activeFilters, setActiveFilters] = useState<OrganizationRequestFilters>(defaultFilters);
+  const [initialFilters] = useState<OrganizationRequestFilters>(() => {
+    if (typeof window === 'undefined') return defaultFilters;
+    const raw = window.sessionStorage.getItem(requestsFiltersStorageKey);
+    if (!raw) return defaultFilters;
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<OrganizationRequestFilters>;
+      return { ...defaultFilters, ...parsed };
+    } catch {
+      return defaultFilters;
+    }
+  });
+
+  const [filters, setFilters] = useState<OrganizationRequestFilters>(initialFilters);
+  const [activeFilters, setActiveFilters] = useState<OrganizationRequestFilters>(initialFilters);
 
   const getOrganizationRequests = useCallback(async (nextFilters: OrganizationRequestFilters) => {
     const query: Record<string, string> = {};
@@ -114,11 +128,17 @@ function AdminRequests() {
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setActiveFilters(filters);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(requestsFiltersStorageKey, JSON.stringify(filters));
+    }
   };
 
   const resetFilters = () => {
     setFilters(defaultFilters);
     setActiveFilters(defaultFilters);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(requestsFiltersStorageKey);
+    }
   };
 
   const refreshCurrentRequests = useCallback(

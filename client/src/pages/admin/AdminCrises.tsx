@@ -11,6 +11,7 @@ import EmptyState from '../../components/EmptyState';
 import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
+import CrisisCard from '../../components/postings/CrisisCard';
 import { useModal } from '../../contexts/useModal.ts';
 import useNotifications from '../../notifications/useNotifications';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
@@ -59,10 +60,24 @@ const defaultFilters: CrisisFilters = {
   sortDir: 'desc',
   pinned: 'all',
 };
+const crisisFiltersStorageKey = 'admin-crises-filters';
 
 function AdminCrises() {
-  const [filters, setFilters] = useState<CrisisFilters>(defaultFilters);
-  const [activeFilters, setActiveFilters] = useState<CrisisFilters>(defaultFilters);
+  const initialFilters = useMemo<CrisisFilters>(() => {
+    if (typeof window === 'undefined') return defaultFilters;
+    const raw = window.sessionStorage.getItem(crisisFiltersStorageKey);
+    if (!raw) return defaultFilters;
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<CrisisFilters>;
+      return { ...defaultFilters, ...parsed };
+    } catch {
+      return defaultFilters;
+    }
+  }, []);
+
+  const [filters, setFilters] = useState<CrisisFilters>(initialFilters);
+  const [activeFilters, setActiveFilters] = useState<CrisisFilters>(initialFilters);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [isCreatingCrisis, setIsCreatingCrisis] = useState(false);
   const [editingCrisisId, setEditingCrisisId] = useState<number | null>(null);
@@ -177,7 +192,7 @@ function AdminCrises() {
     setIsCreatingCrisis(false);
   });
 
-  const onStartEdit = (crisisId: number, name: string, description?: string) => {
+  const onStartEdit = (crisisId: number, name: string, description?: string | null) => {
     setEditingCrisisId(crisisId);
     setEditingName(name);
     setEditingDescription(description ?? '');
@@ -290,12 +305,18 @@ function AdminCrises() {
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setActiveFilters(filters);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(crisisFiltersStorageKey, JSON.stringify(filters));
+    }
   };
 
   const resetFilters = () => {
     setFilters(defaultFilters);
     setActiveFilters(defaultFilters);
     setShowAdvancedSearch(false);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(crisisFiltersStorageKey);
+    }
   };
 
   const selectedSortOption = crisisSortOptions.find(option => (
@@ -471,15 +492,15 @@ function AdminCrises() {
               : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {crises.map(crisis => (
-                      <Card
+                      <CrisisCard
                         key={crisis.id}
-                        title={crisis.name}
-                        description={editingCrisisId === crisis.id ? undefined : crisis.description || 'No description set'}
+                        crisis={crisis}
+                        link={undefined}
+                        descriptionFallback={editingCrisisId === crisis.id ? '' : 'No description set'}
                         right={
                           crisis.pinned
                           && <span className="badge badge-secondary">Pinned</span>
                         }
-                        Icon={AlertCircle}
                       >
 
                         {editingCrisisId === crisis.id
@@ -555,7 +576,7 @@ function AdminCrises() {
                                 </Button>
                               </div>
                             )}
-                      </Card>
+                      </CrisisCard>
                     ))}
                   </div>
                 )}

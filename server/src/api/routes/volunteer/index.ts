@@ -35,6 +35,7 @@ import { generateJWT } from '../../../services/jwt/index.ts';
 import { sendVolunteerVerificationEmail } from '../../../services/smtp/emails.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
 import { normalizeSearchTerms } from '../utils/postingList.js';
+import { canRecomputeProfileVector } from '../utils/rateLimit.ts';
 
 const volunteerResponseColumns = [
   'id',
@@ -702,7 +703,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
       }
     });
 
-    if (shouldRecomputeProfileVector) {
+    if (shouldRecomputeProfileVector && canRecomputeProfileVector(req)) {
       await recomputeVolunteerProfileVector(volunteerId, db);
     }
 

@@ -5,6 +5,7 @@ import { type Kysely } from 'kysely';
 import zod from 'zod';
 
 import { type PublicCertificateSignatureResponse, type PublicCertificateVerificationResponse, type PublicHomeStatsResponse } from './public.types.ts';
+import { createCertificateVerificationRateLimit } from './utils/rateLimit.ts';
 import config from '../../config.ts';
 import { type Database } from '../../db/tables/index.ts';
 import { verifySignedCertificateToken } from '../../services/certificates/token.ts';
@@ -17,6 +18,7 @@ const certificateVerificationBodySchema = zod.object({
 
 function createPublicRouter(db: Kysely<Database>) {
   const publicRouter = Router();
+  const certificateVerificationRateLimit = createCertificateVerificationRateLimit();
 
   publicRouter.get('/home-stats', async (_req, res: Response<PublicHomeStatsResponse>) => {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -103,7 +105,7 @@ function createPublicRouter(db: Kysely<Database>) {
     });
   });
 
-  publicRouter.post('/certificate/verify', async (req, res: Response<PublicCertificateVerificationResponse>) => {
+  publicRouter.post('/certificate/verify', certificateVerificationRateLimit, async (req, res: Response<PublicCertificateVerificationResponse>) => {
     const parsedBody = certificateVerificationBodySchema.safeParse(req.body);
     if (!parsedBody.success) {
       res.status(400).json({

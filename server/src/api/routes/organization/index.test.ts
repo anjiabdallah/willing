@@ -1,11 +1,12 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 
 import supertest from 'supertest';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import createApp from '../../../app.ts';
 import database from '../../../db/index.ts';
+import * as embeddingService from '../../../services/embeddings/updates.ts';
 import { CV_UPLOAD_DIR, ORG_LOGO_UPLOAD_DIR, ORG_SIGNATURE_UPLOAD_DIR } from '../../../services/uploads/paths.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../../tests/fixtures/accounts.ts';
 
@@ -42,6 +43,71 @@ describe('Organization index routes', () => {
     });
   });
 
+  test('GET /organization/organizations returns organizations with posting counts', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-search-viewer@example.com' });
+    const { organization: firstOrg } = await createOrganizationAccount(transaction, {
+      email: 'org-search-a@example.com',
+      name: 'Alpha Aid',
+      phone_number: '+96110000001',
+      url: 'https://alpha-aid.org',
+    });
+    const { organization: secondOrg } = await createOrganizationAccount(transaction, {
+      email: 'org-search-b@example.com',
+      name: 'Bravo Relief',
+      phone_number: '+96110000002',
+      url: 'https://bravo-relief.org',
+    });
+
+    await transaction
+      .insertInto('organization_posting')
+      .values([
+        {
+          organization_id: firstOrg.id,
+          title: 'Alpha Posting 1',
+          description: 'Support alpha area',
+          latitude: 33.9,
+          longitude: 35.5,
+          start_date: new Date('2026-10-01T00:00:00.000Z'),
+          start_time: '09:00:00',
+          end_date: new Date('2026-10-01T00:00:00.000Z'),
+          end_time: '17:00:00',
+          automatic_acceptance: true,
+          is_closed: false,
+          allows_partial_attendance: false,
+          location_name: 'Beirut',
+        },
+        {
+          organization_id: firstOrg.id,
+          title: 'Alpha Posting 2',
+          description: 'Support alpha area',
+          latitude: 33.91,
+          longitude: 35.51,
+          start_date: new Date('2026-10-02T00:00:00.000Z'),
+          start_time: '09:00:00',
+          end_date: new Date('2026-10-02T00:00:00.000Z'),
+          end_time: '17:00:00',
+          automatic_acceptance: true,
+          is_closed: false,
+          allows_partial_attendance: false,
+          location_name: 'Beirut',
+        },
+      ])
+      .execute();
+
+    const response = await server
+      .get('/organization/organizations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const alpha = response.body.organizations.find((organization: { id: number }) => organization.id === firstOrg.id);
+    const bravo = response.body.organizations.find((organization: { id: number }) => organization.id === secondOrg.id);
+
+    expect(alpha).toBeDefined();
+    expect(alpha.posting_count).toBe(2);
+    expect(bravo).toBeDefined();
+    expect(bravo.posting_count).toBe(0);
+  });
+
   test('PUT /organization/profile updates organization profile', async () => {
     const { token } = await createOrganizationAccount(transaction, { email: 'org-update-profile@example.com' });
 
@@ -58,6 +124,35 @@ describe('Organization index routes', () => {
       description: 'Updated organization description',
       location_name: 'Updated Location',
     });
+  });
+
+  test('PUT /organization/profile skips recomputing profile vector after the per-window limit is exceeded', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-profile-rate-limit@example.com' });
+    const recomputeOrganizationVectorSpy = vi
+      .spyOn(embeddingService, 'recomputeOrganizationVector')
+      .mockResolvedValue(null);
+
+    for (let index = 0; index < 3; index += 1) {
+      await server
+        .put('/organization/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          description: `Updated organization description ${index}`,
+        })
+        .expect(200);
+    }
+
+    await server
+      .put('/organization/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        description: 'Updated organization description 4',
+      })
+      .expect(200);
+
+    expect(recomputeOrganizationVectorSpy).toHaveBeenCalledTimes(3);
+
+    recomputeOrganizationVectorSpy.mockRestore();
   });
 
   test('GET /organization/:id returns public organization profile with postings and skills', async () => {
@@ -137,6 +232,8 @@ describe('Organization index routes', () => {
         phone_number: '+96100000000',
         url: 'https://example.org',
         location_name: 'Beirut',
+        latitude: 33.8938,
+        longitude: 35.5018,
       })
       .expect(400);
 
@@ -153,6 +250,8 @@ describe('Organization index routes', () => {
         phone_number: '+96100000001',
         url: 'https://example.org',
         location_name: 'Beirut',
+        latitude: 33.8938,
+        longitude: 35.5018,
       })
       .execute();
 
@@ -164,6 +263,8 @@ describe('Organization index routes', () => {
         phone_number: '+96100000002',
         url: 'https://example.org',
         location_name: 'Beirut',
+        latitude: 33.9012,
+        longitude: 35.5123,
       })
       .expect(400);
 

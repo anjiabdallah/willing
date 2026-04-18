@@ -505,4 +505,23 @@ describe('POST /public/certificate/verify', () => {
       ],
     });
   });
+
+  test('returns 429 when verification requests exceed rate limit window', async () => {
+    for (let index = 0; index < 20; index += 1) {
+      await server
+        .post('/public/certificate/verify')
+        .send({ token: 'not-a-valid-token' })
+        .expect(400);
+    }
+
+    const response = await server
+      .post('/public/certificate/verify')
+      .send({ token: 'not-a-valid-token' })
+      .expect(429);
+
+    expect(response.body).toEqual({
+      valid: false,
+      message: 'Too many verification attempts. Please try again later.',
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle, LockKeyhole, Mail, Send, LogIn } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -34,6 +34,13 @@ function ForgotPasswordPage() {
     mode: 'onTouched',
     reValidateMode: 'onChange',
   });
+
+  const resetPasswordValue = resetForm.watch('password');
+  const resetConfirmValue = resetForm.watch('confirmPassword');
+  useEffect(() => {
+    if (!resetConfirmValue) return;
+    void resetForm.trigger('confirmPassword');
+  }, [resetConfirmValue, resetForm, resetPasswordValue]);
 
   const submitRequest = requestForm.handleSubmit(async (data) => {
     await executeAndShowError(requestForm, async () => {

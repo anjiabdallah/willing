@@ -1,5 +1,5 @@
 import { type Crisis, type OrganizationPostingWithoutVectors, type PostingSkill } from '../../../db/tables/index.ts';
-import { type PostingWithSkills, type PostingEnrollment, type SuccessResponse, type PostingApplication } from '../../../types.ts';
+import { type PostingWithContext, type PostingWithSkills, type PostingEnrollment, type SuccessResponse, type PostingApplication } from '../../../types.ts';
 
 export type OrganizationPostingCreateResponse = {
   posting: OrganizationPostingWithoutVectors;
@@ -8,6 +8,10 @@ export type OrganizationPostingCreateResponse = {
 
 export type OrganizationPostingListResponse = {
   postings: (PostingWithSkills & { enrollment_count: number; is_full: boolean })[];
+};
+
+export type OrganizationPostingDiscoverResponse = {
+  postings: PostingWithContext[];
 };
 
 export type OrganizationPostingResponse = {

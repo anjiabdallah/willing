@@ -135,8 +135,8 @@ function OrganizationProfile() {
       phone_number: '',
       description: '',
       location_name: '',
-      latitude: undefined,
-      longitude: undefined,
+      latitude: null,
+      longitude: null,
     },
   });
 

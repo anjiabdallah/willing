@@ -11,6 +11,7 @@ import { cvMulter, validateCvMiddleware } from '../../../services/uploads/cv.ts'
 import { CV_UPLOAD_DIR } from '../../../services/uploads/paths.ts';
 import uploadSingle from '../../../services/uploads/uploadSingle.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
+import { canRecomputeProfileVector } from '../utils/rateLimit.ts';
 
 export const deleteCvFileIfExists = async (cvPath?: string | null) => {
   if (!cvPath) return;
@@ -50,7 +51,9 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
         .where('id', '=', volunteerId)
         .execute();
 
-      await recomputeVolunteerProfileVector(volunteerId, db);
+      if (canRecomputeProfileVector(req)) {
+        await recomputeVolunteerProfileVector(volunteerId, db);
+      }
 
       const profile = await getVolunteerProfile(volunteerId);
       res.status(201).json(profile);
@@ -121,7 +124,9 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
       .where('id', '=', req.userJWT!.id)
       .execute();
 
-    await recomputeVolunteerProfileVector(req.userJWT!.id, db);
+    if (canRecomputeProfileVector(req)) {
+      await recomputeVolunteerProfileVector(req.userJWT!.id, db);
+    }
 
     const profile = await getVolunteerProfile(req.userJWT!.id);
     res.json(profile);

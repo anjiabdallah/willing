@@ -37,6 +37,7 @@ const HASHED_DEFAULT_VOL_PASSWORD = hash(DEFAULT_VOL_PASSWORD);
 
 const DEFAULT_ADMIN_PASSWORD = 'AdminPassword123!';
 const HASHED_DEFAULT_ADMIN_PASSWORD = hash(DEFAULT_ADMIN_PASSWORD);
+let organizationPhoneCounter = 0;
 
 type DbExecutor = Kysely<Database>;
 
@@ -58,13 +59,16 @@ export async function createOrganizationAccount(options?: OrganizationFixtureOpt
 export async function createOrganizationAccount(db: DbExecutor, options?: OrganizationFixtureOptions): Promise<{ organization: OrganizationAccount; plainPassword: string; token: string }>;
 export async function createOrganizationAccount(arg1?: DbExecutor | OrganizationFixtureOptions, arg2?: OrganizationFixtureOptions) {
   const [db, options] = resolveFixtureArgs<OrganizationFixtureOptions>(arg1, arg2);
+  const generatedOrganizationIndex = organizationPhoneCounter++;
+  const generatedPhoneNumber = `+1${String(generatedOrganizationIndex).padStart(10, '0')}`;
+  const generatedUrl = `https://example-org-${generatedOrganizationIndex}.test`;
 
   const {
     email = 'org@example.com',
     password,
     name = 'Helping Hands',
-    phone_number = '+10000000000',
-    url = 'https://example.org',
+    phone_number = generatedPhoneNumber,
+    url = generatedUrl,
     created_at = new Date(),
   } = options;
 

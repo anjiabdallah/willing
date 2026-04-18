@@ -192,7 +192,7 @@ async function seed() {
 
   const orgByName = new Map(orgs.map(o => [o.name, o.id]));
 
-  // ─── Pending Onboarding Requests ──────────────────────────────────────────────
+  // --- Pending Onboarding Requests ----------------------------------------------
 
   await database.insertInto('organization_request').values([
     {
@@ -224,7 +224,7 @@ async function seed() {
     },
   ]).execute();
 
-  // ─── Volunteers ───────────────────────────────────────────────────────────────
+  // --- Volunteers ---------------------------------------------------------------
 
   const volunteers = await database.insertInto('volunteer_account')
     .values([
@@ -474,7 +474,7 @@ async function seed() {
     },
   ]).execute();
 
-  // ─── Crises ───────────────────────────────────────────────────────────────────
+  // --- Crises -------------------------------------------------------------------
 
   const crises = await database.insertInto('crisis')
     .values([
@@ -532,7 +532,7 @@ async function seed() {
 
   const crisisByName = new Map(crises.map(c => [c.name, c.id]));
 
-  // ─── Temporal helpers ─────────────────────────────────────────────────────────
+  // --- Temporal helpers ---------------------------------------------------------
 
   const nowYear = 2026;
 
@@ -590,7 +590,7 @@ async function seed() {
     return dates;
   };
 
-  // ─── Postings ─────────────────────────────────────────────────────────────────
+  // --- Postings -----------------------------------------------------------------
 
   const postings = await database.insertInto('organization_posting')
     .values([
@@ -762,7 +762,7 @@ async function seed() {
 
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Inclusive Sports Day',
         description: 'Help organise and run an inclusive sports day for children and young adults '
           + 'with physical disabilities. Volunteers assist with activities, mobility support, and '
@@ -794,7 +794,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Remote Homework Support',
         description: 'Provide online academic support to public school students in South Lebanon '
           + 'via phone or video call. Each volunteer takes 2–3 one-hour slots per week. '
@@ -811,7 +811,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Winter Clothing Distribution',
         description: 'Sort and distribute donated winter clothing to families in Saida and '
           + 'surrounding villages. Volunteers sort by size, pack, and hand out items at distribution points.',
@@ -844,7 +844,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Arz Community')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Medical Supplies Inventory & Sorting',
         description: 'Organise and verify incoming donations of medical supplies at the Tripoli '
           + 'depot. Tasks include labelling, expiry checking, and stacking. Attention to detail critical.',
@@ -995,7 +995,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Arz Community')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Children\'s Art & Story Workshop',
         description: 'Run creative storytelling and art sessions for underprivileged children '
           + 'at the Tripoli community centre. Materials provided. Sessions run every Saturday morning.',
@@ -1010,7 +1010,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Community Storytelling Circle',
         description: 'Lead a welcoming storytelling and conversation circle for women and youth in Saida. No prior experience is required and all ages are encouraged to participate.',
         latitude: 33.3560,
@@ -1024,7 +1024,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Youth Reading Circle',
         description: 'Host a youth reading circle for students and pre-teens at the Saida library. All ages are welcome and no previous experience is needed.',
         latitude: 33.3545,
@@ -1038,7 +1038,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Ajialouna')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Junior Sports Field Prep',
         description: 'Prepare a local youth sports field with line marking, equipment setup, and light groundskeeping before community games.',
         latitude: 33.3560,
@@ -1052,7 +1052,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Arz Community')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Youth Garden Helpers',
         description: 'Support a community garden project by planting, weeding, and watering garden beds with local youth volunteers.',
         latitude: 34.4370,
@@ -1066,7 +1066,7 @@ async function seed() {
       },
       {
         organization_id: orgByName.get('Arz Community')!,
-        crisis_id: undefined,
+        crisis_id: null,
         title: 'Family Water Station Support',
         description: 'Support a community water station in Tripoli by handing out water and refreshments to families. This shift is suitable for younger volunteers and focuses on friendly, helpful service.',
         latitude: 34.4360,
@@ -1099,7 +1099,7 @@ async function seed() {
 
   const postingByTitle = new Map(postings.map(p => [p.title, p.id]));
 
-  // ─── Posting Skills ───────────────────────────────────────────────────────────
+  // --- Posting Skills -----------------------------------------------------------
 
   await database.insertInto('posting_skill').values([
     // Field First Aid Support
@@ -1170,7 +1170,7 @@ async function seed() {
     { posting_id: postingByTitle.get('Inclusive Sports Day')!, name: 'Teamwork' },
     { posting_id: postingByTitle.get('Inclusive Sports Day')!, name: 'Communication' },
 
-    // Community Kitchen – Saida
+    // Community Kitchen - Saida
     { posting_id: postingByTitle.get('Community Kitchen')!, name: 'Cooking' },
     { posting_id: postingByTitle.get('Community Kitchen')!, name: 'Food Preparation' },
     { posting_id: postingByTitle.get('Community Kitchen')!, name: 'Serving' },
@@ -1252,7 +1252,7 @@ async function seed() {
     { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Remote Support' },
     { posting_id: postingByTitle.get('Crisis Hotline Coverage Week')!, name: 'Data Entry' },
 
-    // Coastal Cleanup – Tyre
+    // Coastal Cleanup - Tyre
     { posting_id: postingByTitle.get('Coastal Cleanup')!, name: 'Physical Stamina' },
     { posting_id: postingByTitle.get('Coastal Cleanup')!, name: 'Environmental Awareness' },
     { posting_id: postingByTitle.get('Coastal Cleanup')!, name: 'Teamwork' },
@@ -1302,7 +1302,7 @@ async function seed() {
     { posting_id: postingByTitle.get('Debris Clearance')!, name: 'Safety Awareness' },
   ]).execute();
 
-  // ─── Volunteer Skills ─────────────────────────────────────────────────────────
+  // --- Volunteer Skills ---------------------------------------------------------
 
   await database.insertInto('volunteer_skill').values([
     // vol1 – logistics / physical
@@ -1390,20 +1390,20 @@ async function seed() {
     { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Communication' },
     { volunteer_id: volByEmail.get('vol12@willing.social')!, name: 'Patience' },
 
-    // vol13 – tech / coordination
+    // vol13 - tech / coordination
     { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Remote Support' },
     { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Data Entry' },
     { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Communication' },
     { volunteer_id: volByEmail.get('vol13@willing.social')!, name: 'Problem Solving' },
 
-    // vol14 – admin / events
+    // vol14 - admin / events
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Organisation' },
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Communication' },
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Data Entry' },
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Teamwork' },
   ]).execute();
 
-  // ─── Enrollment Applications ──────────────────────────────────────────────────
+  // --- Enrollment Applications --------------------------------------------------
 
   const applications = await database.insertInto('enrollment_application').values([
     // Field First Aid Support (org1, review-based)
@@ -1469,11 +1469,11 @@ async function seed() {
     .returning(['id', 'volunteer_id', 'posting_id'])
     .execute();
 
-  // ─── Enrollments ──────────────────────────────────────────────────────────────
+  // --- Enrollments --------------------------------------------------------------
 
   const enrollments = await database.insertInto('enrollment').values([
 
-    // ── Approved from review-based postings ────────────────────────────────────
+    // -- Approved from review-based postings ------------------------------------
 
     {
       volunteer_id: volByEmail.get('vol3@willing.social')!,
@@ -1506,7 +1506,7 @@ async function seed() {
       attended: false,
     },
 
-    // ── Direct enrollments (automatic_acceptance: true) ────────────────────────
+    // -- Direct enrollments (automatic_acceptance: true) ------------------------
 
     // Emergency Shelter Setup
     {
@@ -1534,7 +1534,7 @@ async function seed() {
     {
       volunteer_id: volByEmail.get('vol8@willing.social')!,
       posting_id: postingByTitle.get('Meals for the Displaced')!,
-      message: 'Catering background — comfortable with large-scale food prep and service.',
+      message: 'Catering background - comfortable with large-scale food prep and service.',
       attended: true,
     },
     {
@@ -1558,7 +1558,7 @@ async function seed() {
       attended: false,
     },
 
-    // Blood Drive Coordination (closed – historical)
+    // Blood Drive Coordination (closed - historical)
     {
       volunteer_id: volByEmail.get('vol2@willing.social')!,
       posting_id: postingByTitle.get('Blood Drive Coordination')!,
@@ -1600,7 +1600,7 @@ async function seed() {
       attended: false,
     },
 
-    // Community Kitchen – Saida
+    // Community Kitchen - Saida
     {
       volunteer_id: volByEmail.get('vol8@willing.social')!,
       posting_id: postingByTitle.get('Community Kitchen')!,
@@ -1614,7 +1614,7 @@ async function seed() {
       attended: false,
     },
 
-    // Winter Clothing Distribution (closed – historical)
+    // Winter Clothing Distribution (closed - historical)
     {
       volunteer_id: volByEmail.get('vol1@willing.social')!,
       posting_id: postingByTitle.get('Winter Clothing Distribution')!,
@@ -1648,7 +1648,7 @@ async function seed() {
       attended: false,
     },
 
-    // Coastal Cleanup – Tyre
+    // Coastal Cleanup - Tyre
     {
       volunteer_id: volByEmail.get('vol5@willing.social')!,
       posting_id: postingByTitle.get('Coastal Cleanup')!,
@@ -1676,7 +1676,7 @@ async function seed() {
       attended: false,
     },
 
-    // Debris Clearance – Akkar Villages (closed – historical)
+    // Debris Clearance - Akkar Villages (closed - historical)
     {
       volunteer_id: volByEmail.get('vol1@willing.social')!,
       posting_id: postingByTitle.get('Debris Clearance')!,
@@ -1908,7 +1908,7 @@ async function seed() {
     }),
   ).execute();
 
-  console.log('─────────────────────────────────────────────');
+  console.log('---------------------------------------------');
   console.log('Seed complete.');
   console.log('Password (all accounts):', PASSWORD_PLAIN);
   console.log('');

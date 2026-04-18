@@ -28,6 +28,17 @@ export default function PageHeader({
   const location = useLocation();
 
   const onBack = () => {
+    const backTo = typeof location.state === 'object'
+      && location.state !== null
+      && 'backTo' in location.state
+      ? (location.state as { backTo?: string }).backTo
+      : undefined;
+
+    if (backTo) {
+      navigate(backTo);
+      return;
+    }
+
     if (location.key !== 'default') {
       navigate(-1);
       return;

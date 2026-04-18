@@ -36,11 +36,25 @@ const defaultFilters: ReportsFilters = {
   sortBy: 'created_at',
   sortDir: 'desc',
 };
+const reportsFiltersStorageKey = 'admin-reports-filters';
 
 function AdminReports() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<ReportsFilters>(defaultFilters);
-  const [activeFilters, setActiveFilters] = useState<ReportsFilters>(defaultFilters);
+  const [initialFilters] = useState<ReportsFilters>(() => {
+    if (typeof window === 'undefined') return defaultFilters;
+    const raw = window.sessionStorage.getItem(reportsFiltersStorageKey);
+    if (!raw) return defaultFilters;
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<ReportsFilters>;
+      return { ...defaultFilters, ...parsed };
+    } catch {
+      return defaultFilters;
+    }
+  });
+
+  const [filters, setFilters] = useState<ReportsFilters>(initialFilters);
+  const [activeFilters, setActiveFilters] = useState<ReportsFilters>(initialFilters);
 
   const fetchReports = useCallback(async (nextFilters: ReportsFilters) => {
     const query: Record<string, string> = {
@@ -79,12 +93,18 @@ function AdminReports() {
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setActiveFilters(filters);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(reportsFiltersStorageKey, JSON.stringify(filters));
+    }
     void trigger(filters);
   };
 
   const resetFilters = () => {
     setFilters(defaultFilters);
     setActiveFilters(defaultFilters);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(reportsFiltersStorageKey);
+    }
     void trigger(defaultFilters);
   };
 

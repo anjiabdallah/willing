@@ -38,6 +38,7 @@ import Loading from '../components/Loading.tsx';
 import LocationPicker from '../components/LocationPicker.tsx';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture.tsx';
 import PostingDateTime from '../components/PostingDateTime.tsx';
+import CrisisCard from '../components/postings/CrisisCard.tsx';
 import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
@@ -53,7 +54,6 @@ import { useOrganization } from '../utils/useUsers.ts';
 import type {
   OrganizationCrisisResponse,
   OrganizationCrisesResponse,
-  OrganizationGetMeResponse,
   OrganizationPostingApplicationsReponse,
   OrganizationPostingEnrollmentsResponse,
   OrganizationPostingResponse,
@@ -347,10 +347,8 @@ function PostingPage() {
       return;
     }
 
-    const [postingResponse, enrollmentsResponse] = await Promise.all([
-      requestServer<OrganizationPostingResponse>(`/organization/posting/${id}`, { includeJwt: true }),
-      requestServer<OrganizationPostingEnrollmentsResponse>(`/organization/posting/${id}/enrollments`, { includeJwt: true }),
-    ]);
+    const postingResponse = await requestServer<OrganizationPostingResponse>(`/organization/posting/${id}`, { includeJwt: true });
+    const canManageFetchedPosting = account?.id === postingResponse.posting.organization_id;
 
     const postingWithSkills = {
       ...postingResponse.posting,
@@ -359,15 +357,25 @@ function PostingPage() {
 
     setPosting(postingWithSkills);
     setCurrentPostingCrisis(postingResponse.crisis);
-    setEnrollments(enrollmentsResponse.enrollments);
-    setPostingEnrollmentCount(enrollmentsResponse.enrollments.length);
+    if (canManageFetchedPosting) {
+      const enrollmentsResponse = await requestServer<OrganizationPostingEnrollmentsResponse>(`/organization/posting/${id}/enrollments`, { includeJwt: true });
+      setEnrollments(enrollmentsResponse.enrollments);
+      setPostingEnrollmentCount(enrollmentsResponse.enrollments.length);
 
-    if (!postingResponse.posting.automatic_acceptance) {
-      const applicationsResponse = await requestServer<OrganizationPostingApplicationsReponse>(
-        `/organization/posting/${id}/applications`,
-        { includeJwt: true },
-      );
-      setApplications(applicationsResponse.applications);
+      if (!postingResponse.posting.automatic_acceptance) {
+        const applicationsResponse = await requestServer<OrganizationPostingApplicationsReponse>(
+          `/organization/posting/${id}/applications`,
+          { includeJwt: true },
+        );
+        setApplications(applicationsResponse.applications);
+      } else {
+        setApplications([]);
+      }
+    } else {
+      setIsEditMode(false);
+      setEnrollments([]);
+      setApplications([]);
+      setPostingEnrollmentCount(0);
     }
 
     setIsEnrolled(false);
@@ -380,34 +388,24 @@ function PostingPage() {
       postingResponse.posting.longitude ?? 35.477959277880416,
     ]);
 
-    let organizationId = postingResponse.posting.organization_id;
-    let organizationName = account?.name ?? 'Organization';
-    let organizationLogoPath = account?.logo_path;
-
     try {
-      const meResponse = await requestServer<OrganizationGetMeResponse>('/organization/me', { includeJwt: true });
-      organizationId = meResponse.organization.id ?? organizationId;
-      organizationName = meResponse.organization.name ?? organizationName;
-      organizationLogoPath = meResponse.organization.logo_path ?? organizationLogoPath;
-    } catch {
-      try {
-        const organizationResponse = await requestServer<OrganizationProfileResponse>(
-          `/organization/${postingResponse.posting.organization_id}`,
-          { includeJwt: false },
-        );
-        organizationId = organizationResponse.organization.id;
-        organizationName = organizationResponse.organization.name;
-        organizationLogoPath = organizationResponse.organization.logo_path;
-      } catch {
-        // Keep fallback values from auth context/posting response.
-      }
-    }
+      const organizationResponse = await requestServer<OrganizationProfileResponse>(
+        `/organization/${postingResponse.posting.organization_id}`,
+        { includeJwt: true },
+      );
 
-    setPostingOrganization({
-      id: organizationId,
-      name: organizationName,
-      logoPath: organizationLogoPath,
-    });
+      setPostingOrganization({
+        id: organizationResponse.organization.id,
+        name: organizationResponse.organization.name,
+        logoPath: organizationResponse.organization.logo_path,
+      });
+    } catch {
+      setPostingOrganization({
+        id: postingResponse.posting.organization_id,
+        name: 'Organization',
+        logoPath: undefined,
+      });
+    }
 
     form.reset({
       title: postingResponse.posting.title,
@@ -828,6 +826,10 @@ function PostingPage() {
     if (isVolunteerView || !posting) return false;
     return new Date() >= getPostingStartDateTime(posting);
   }, [isVolunteerView, posting]);
+  const canManagePosting = useMemo(() => {
+    if (isVolunteerView || !posting || !account?.id) return false;
+    return posting.organization_id === account.id;
+  }, [isVolunteerView, posting, account?.id]);
 
   const currentEnrollmentCount = useMemo(() => {
     if (!posting) return 0;
@@ -926,11 +928,15 @@ function PostingPage() {
 
       <PageHeader
         title="Posting Details"
-        subtitle={isVolunteerView ? 'Review details before applying' : 'View and manage your posting'}
+        subtitle={isVolunteerView
+          ? 'Review details before applying'
+          : canManagePosting
+            ? 'View and manage your posting'
+            : 'Review posting details'}
         icon={ListChecks}
         showBack
         defaultBackTo={isVolunteerView ? '/volunteer' : '/organization'}
-        actions={!isVolunteerView && (isEditMode
+        actions={canManagePosting && (isEditMode
           ? (
               <>
                 <Button style="outline" onClick={onCancelEdit} disabled={saving} Icon={X}>
@@ -1200,45 +1206,56 @@ function PostingPage() {
               </div>
             </Card>
 
-            <Card
-              title={isEditMode ? 'Crisis Tag' : selectedCrisisName || 'No Crisis'}
-              description={isEditMode
-                ? 'Add a crisis tag to this posting.'
-                : selectedCrisis
-                  ? (selectedCrisis.description || 'No crisis description provided.')
-                  : undefined}
-              link={isVolunteerView && selectedCrisisId != null ? `/volunteer/crises/${selectedCrisisId}/postings` : undefined}
-              color="accent"
-              coloredText={true}
-              Icon={AlertTriangle}
-            >
-              {isEditMode && (
-                <fieldset className="fieldset">
-                  <label className="label">
-                    <span className="label-text font-medium">Selected Crisis</span>
-                  </label>
-                  <select
-                    className="select select-bordered w-full"
-                    value={selectedCrisisId?.toString() ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setSelectedCrisisId(value ? Number(value) : undefined);
-                    }}
-                    disabled={saving || loadingCrises}
+            {isEditMode
+              ? (
+                  <Card
+                    title="Crisis Tag"
+                    description="Add a crisis tag to this posting."
+                    color="accent"
+                    coloredText={true}
+                    Icon={AlertTriangle}
                   >
-                    <option value="">No crisis tag</option>
-                    {availableCrises.map(crisis => (
-                      <option key={crisis.id} value={crisis.id.toString()}>
-                        {crisis.name}
-                        {!crisis.pinned ? ' (Unpinned)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {loadingCrises && <span className="label-text-alt opacity-70">Loading crisis tags...</span>}
-                  {crisesError && <span className="label-text-alt text-error">{crisesError.message}</span>}
-                </fieldset>
-              )}
-            </Card>
+                    <fieldset className="fieldset">
+                      <label className="label">
+                        <span className="label-text font-medium">Selected Crisis</span>
+                      </label>
+                      <select
+                        className="select select-bordered w-full"
+                        value={selectedCrisisId?.toString() ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setSelectedCrisisId(value ? Number(value) : undefined);
+                        }}
+                        disabled={saving || loadingCrises}
+                      >
+                        <option value="">No crisis tag</option>
+                        {availableCrises.map(crisis => (
+                          <option key={crisis.id} value={crisis.id.toString()}>
+                            {crisis.name}
+                            {!crisis.pinned ? ' (Unpinned)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {loadingCrises && <span className="label-text-alt opacity-70">Loading crisis tags...</span>}
+                      {crisesError && <span className="label-text-alt text-error">{crisesError.message}</span>}
+                    </fieldset>
+                  </Card>
+                )
+              : selectedCrisis
+                ? (
+                    <CrisisCard
+                      crisis={selectedCrisis}
+                      link={isVolunteerView ? `/volunteer/crises/${selectedCrisis.id}/postings` : `/organization/crises/${selectedCrisis.id}/postings`}
+                    />
+                  )
+                : (
+                    <Card
+                      title={selectedCrisisName || 'No Crisis'}
+                      color="accent"
+                      coloredText={true}
+                      Icon={AlertTriangle}
+                    />
+                  )}
 
             <Card
               title="Status"
@@ -1287,12 +1304,12 @@ function PostingPage() {
                     ? 'Volunteers are accepted automatically.'
                     : 'Volunteers must be accepted by the organization.'}
               </p>
-              {!isEditMode && !isVolunteerView && (
+              {!isEditMode && canManagePosting && (
                 null
               )}
             </Card>
 
-            {!isVolunteerView && (
+            {canManagePosting && (
               <Card
                 title="Location"
                 description={isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
@@ -1305,6 +1322,7 @@ function PostingPage() {
                 />
               </Card>
             )}
+
           </>
         )}
       >
@@ -1390,7 +1408,7 @@ function PostingPage() {
               )}
         </Card>
 
-        {isVolunteerView && (
+        {(isVolunteerView || !canManagePosting) && (
           <Card
             title="Location"
             description={isEditMode ? 'Pick the location on the map.' : 'Posting location on map.'}
@@ -1404,7 +1422,7 @@ function PostingPage() {
           </Card>
         )}
 
-        {!isVolunteerView && !isOpen && (
+        {canManagePosting && !isOpen && (
           <Card
             title="Enrollment Applications"
             description="Enrollment applications description."
@@ -1454,7 +1472,7 @@ function PostingPage() {
           </Card>
         )}
 
-        {!isVolunteerView && (
+        {canManagePosting && (
           <Card
             title="Enrolled Volunteers"
             // description="Enrolled volunteers description"

@@ -39,12 +39,15 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
   const age = useMemo(() => {
     const now = new Date();
     const birthDate = new Date(volunteer.date_of_birth);
+    if (Number.isNaN(birthDate.getTime())) return 0;
+
     let ageNum = now.getFullYear() - birthDate.getFullYear();
     const monthDiff = now.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
-      ageNum--;
+      ageNum -= 1;
     }
-    return ageNum;
+
+    return Math.max(0, ageNum);
   }, [volunteer.date_of_birth]);
 
   const genderBadgeStyles

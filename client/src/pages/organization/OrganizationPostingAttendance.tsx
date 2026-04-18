@@ -1,5 +1,5 @@
 import { CheckCheck, Download, RotateCcw, Save, Undo2, Users } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 
 import Alert from '../../components/Alert';
@@ -19,15 +19,45 @@ import type { PostingEnrollment } from '../../../../server/src/types';
 
 function OrganizationPostingAttendance() {
   const { id } = useParams<{ id: string }>();
+  const attendanceFiltersStorageKey = useMemo(
+    () => `organization-posting-attendance-filters:${id ?? 'unknown'}`,
+    [id],
+  );
 
   const [saving, setSaving] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [currentDateIndex, setCurrentDateIndex] = useState(0);
   const [draftDateAttendance, setDraftDateAttendance] = useState<Record<number, Record<string, boolean>>>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'attended_first' | 'absent_first'>('name_asc');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const raw = window.sessionStorage.getItem(attendanceFiltersStorageKey);
+      const parsed = raw ? JSON.parse(raw) as { searchTerm?: string } : null;
+      return parsed?.searchTerm ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'attended_first' | 'absent_first'>(() => {
+    if (typeof window === 'undefined') return 'name_asc';
+    try {
+      const raw = window.sessionStorage.getItem(attendanceFiltersStorageKey);
+      const parsed = raw ? JSON.parse(raw) as { sortBy?: 'name_asc' | 'name_desc' | 'attended_first' | 'absent_first' } : null;
+      return parsed?.sortBy ?? 'name_asc';
+    } catch {
+      return 'name_asc';
+    }
+  });
   const notifications = useNotifications();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(attendanceFiltersStorageKey, JSON.stringify({
+      searchTerm,
+      sortBy,
+    }));
+  }, [attendanceFiltersStorageKey, searchTerm, sortBy]);
 
   const {
     data,

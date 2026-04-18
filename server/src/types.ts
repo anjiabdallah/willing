@@ -35,7 +35,7 @@ export type PostingApplicationStatus = 'none' | 'pending' | 'registered';
 
 export type PostingWithContext = PostingWithSkills & {
   organization_name: string;
-  organization_logo_path: string | undefined;
+  organization_logo_path: string | null;
   crisis_name: string | null;
   enrollment_count: number;
   application_status: PostingApplicationStatus;
@@ -46,7 +46,7 @@ export type PostingWithContext = PostingWithSkills & {
 export type PostingEnrollment = {
   enrollment_id: number;
   volunteer_id: number;
-  message: string | undefined;
+  message: string | null;
   attended: boolean;
   first_name: string;
   last_name: string;
@@ -64,7 +64,7 @@ export type PostingApplication = Omit<
 > & {
   skills: VolunteerSkill[];
   volunteer_id: number;
-  message: string | undefined;
+  message: string | null;
   created_at: Date;
   application_id: number;
   requested_dates?: string[];

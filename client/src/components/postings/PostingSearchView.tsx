@@ -1,5 +1,6 @@
 import { TextSearch, ClipboardList, Building2, AlertTriangle, type LucideIcon } from 'lucide-react';
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 import {
   buildSharedPostingQuery,
@@ -31,7 +32,13 @@ import PostingCollection from './PostingCollection.tsx';
 import PostingFiltersCard from './PostingFiltersCard.tsx';
 import Button from '../Button.tsx';
 
-import type { VolunteerCrisesResponse, VolunteerOrganizationSearchResponse, VolunteerPostingSearchResponse, VolunteerEnrollmentsResponse } from '../../../../server/src/api/types.ts';
+import type {
+  VolunteerCrisesResponse,
+  VolunteerEnrollmentsResponse,
+  VolunteerOrganizationSearchResponse,
+  VolunteerOrganizationSearchResult,
+  VolunteerPostingSearchResponse,
+} from '../../../../server/src/api/types.ts';
 import type { Crisis } from '../../../../server/src/db/tables/index.ts';
 import type { PostingWithContext } from '../../../../server/src/types.ts';
 
@@ -62,15 +69,6 @@ type PostingSearchFormValues = Omit<PostingSearchFilters, 'sortBy' | 'sortDir'> 
   entity: PostingSearchFilters['entity'];
 };
 
-type VolunteerOrganizationSearchResult = {
-  id: number;
-  name: string;
-  description: string | null;
-  location_name: string | null;
-  logo_path: string | null;
-  posting_count: number;
-};
-
 type PostingSearchViewProps = {
   title: string;
   subtitle: string;
@@ -83,6 +81,9 @@ type PostingSearchViewProps = {
   emptyMessage?: string;
   filterPostings?: (postings: PostingWithContext[]) => PostingWithContext[];
   fetchUrl?: string;
+  organizationsFetchUrl?: string;
+  crisisBasePath?: string;
+  crisesFetchBasePath?: string;
   enableCrisisFilter?: boolean;
   crisisOptions?: PostingCrisisOption[];
   enableOrganizationSearch?: boolean;
@@ -143,6 +144,22 @@ const fromPostingSearchFormValues = (values: PostingSearchFormValues): PostingSe
     crisisFilter, organizationCertificateFilter: values.organizationCertificateFilter ?? 'all' } as PostingSearchFilters;
 };
 
+const getCleanDefaultsForEntity = (entity: PostingSearchFilters['entity']): PostingSearchFilters => ({
+  search: '',
+  sortBy: entity === 'postings' ? 'recommended' : 'title',
+  sortDir: entity === 'postings' ? 'desc' : 'asc',
+  startDateFrom: '',
+  endDateTo: '',
+  startTimeFrom: '',
+  endTimeTo: '',
+  hideFull: false,
+  crisisId: 'all',
+  entity,
+  crisisFilter: 'all',
+  postingFilter: 'all',
+  organizationCertificateFilter: 'all',
+});
+
 function PostingSearchView({
   title,
   subtitle,
@@ -155,11 +172,52 @@ function PostingSearchView({
   emptyMessage = 'No postings found yet',
   filterPostings,
   fetchUrl,
+  organizationsFetchUrl = '/volunteer/organizations',
+  crisisBasePath = '/volunteer/crises',
+  crisesFetchBasePath = '/volunteer/crises',
   enableCrisisFilter = false,
   crisisOptions = [],
   enableOrganizationSearch = false,
   showEntityTabs = true,
 }: PostingSearchViewProps) {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const storageKey = useMemo(() => `posting-search-filters:${location.pathname}`, [location.pathname]);
+
+  const [persistedFilters, setPersistedFilters] = useState<Partial<PostingSearchFilters> | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const raw = window.sessionStorage.getItem(storageKey);
+    if (!raw) return undefined;
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<PostingSearchFilters>;
+      return parsed && typeof parsed === 'object' ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setPersistedFilters(undefined);
+      return;
+    }
+
+    const raw = window.sessionStorage.getItem(storageKey);
+    if (!raw) {
+      setPersistedFilters(undefined);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<PostingSearchFilters>;
+      setPersistedFilters(parsed && typeof parsed === 'object' ? parsed : undefined);
+    } catch {
+      setPersistedFilters(undefined);
+    }
+  }, [storageKey]);
+
   const defaultFilters = useMemo<PostingSearchFilters>(() => ({
     search: '',
     sortBy: 'recommended',
@@ -174,18 +232,37 @@ function PostingSearchView({
     crisisFilter: 'all',
     postingFilter: 'all',
     organizationCertificateFilter: 'all',
+    ...persistedFilters,
     ...initialFilters,
-  }), [initialFilters]);
+  }), [initialFilters, persistedFilters]);
 
   const [activeEntity, setActiveEntity] = useState<PostingSearchFilters['entity']>(defaultFilters.entity);
+  const cleanEntityDefaults = useMemo(() => getCleanDefaultsForEntity(activeEntity), [activeEntity]);
 
-  const activeFilters = useMemo(() => ({
-    ...defaultFilters,
-    entity: activeEntity,
-    sortBy: activeEntity === 'organizations' || activeEntity === 'crises' ? 'title' : defaultFilters.sortBy,
-    sortDir: activeEntity === 'organizations' || activeEntity === 'crises' ? 'asc' : defaultFilters.sortDir,
-    crisisFilter: activeEntity === 'crises' ? defaultFilters.crisisFilter ?? 'all' : 'all',
-  }), [defaultFilters, activeEntity]);
+  useEffect(() => {
+    setActiveEntity(defaultFilters.entity);
+  }, [defaultFilters.entity]);
+
+  const activeFilters = useMemo(() => {
+    if (activeEntity === 'organizations' || activeEntity === 'crises') {
+      const keepUserTitleSort = defaultFilters.sortBy === 'title';
+      return {
+        ...defaultFilters,
+        entity: activeEntity,
+        sortBy: 'title' as const,
+        sortDir: keepUserTitleSort ? defaultFilters.sortDir : 'asc' as const,
+        crisisFilter: activeEntity === 'crises' ? defaultFilters.crisisFilter ?? 'all' : 'all',
+      };
+    }
+
+    return {
+      ...defaultFilters,
+      entity: activeEntity,
+      sortBy: defaultFilters.sortBy,
+      sortDir: defaultFilters.sortDir,
+      crisisFilter: 'all' as const,
+    };
+  }, [defaultFilters, activeEntity]);
 
   const defaultFormValues = useMemo(() => toPostingSearchFormValues(activeFilters), [activeFilters]);
 
@@ -232,7 +309,7 @@ function PostingSearchView({
             if (activeFilters.organizationCertificateFilter && activeFilters.organizationCertificateFilter !== 'all') {
               orgQuery.append('certificate_enabled', activeFilters.organizationCertificateFilter);
             }
-            const orgUrl = orgQuery.toString() ? `/volunteer/organizations?${orgQuery.toString()}` : '/volunteer/organizations';
+            const orgUrl = orgQuery.toString() ? `${organizationsFetchUrl}?${orgQuery.toString()}` : organizationsFetchUrl;
             return requestServer<VolunteerOrganizationSearchResponse>(orgUrl, { includeJwt: true });
           })()
         : Promise.resolve({ organizations: [] } as VolunteerOrganizationSearchResponse);
@@ -254,7 +331,7 @@ function PostingSearchView({
               crisisQuery.append('sort_by', 'title_asc');
             }
 
-            const crisisUrl = crisisQuery.toString() ? `/volunteer/crises?${crisisQuery.toString()}` : '/volunteer/crises';
+            const crisisUrl = crisisQuery.toString() ? `${crisesFetchBasePath}?${crisisQuery.toString()}` : crisesFetchBasePath;
             return requestServer<VolunteerCrisesResponse>(crisisUrl, { includeJwt: true });
           })()
         : Promise.resolve({ crises: [] } as VolunteerCrisesResponse);
@@ -289,14 +366,45 @@ function PostingSearchView({
     } finally {
       setLoading(false);
     }
-  }, [fetchPostingsRequest, fetchUrl, filterPostings, enableOrganizationSearch]);
+  }, [fetchPostingsRequest, fetchUrl, filterPostings, enableOrganizationSearch, organizationsFetchUrl, crisesFetchBasePath]);
 
   const applyFilters = useCallback(async (formValues: PostingSearchFormValues) => {
     const withEntity = { ...formValues, entity: activeEntity };
     const filters = fromPostingSearchFormValues(withEntity);
+
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(filters));
+    }
+    setPersistedFilters(filters);
+
     setActiveEntity(filters.entity);
     await fetchPostings(filters);
-  }, [fetchPostings, activeEntity]);
+  }, [fetchPostings, activeEntity, storageKey]);
+
+  const setEntityInUrl = useCallback((entity: PostingSearchFilters['entity']) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('entity', entity);
+    setSearchParams(nextParams);
+
+    if (showEntityTabs && typeof window !== 'undefined') {
+      const entityDefaults = getCleanDefaultsForEntity(entity);
+      const nextStoredFilters: Partial<PostingSearchFilters> = {
+        ...(persistedFilters ?? {}),
+        entity,
+      };
+
+      if (entity !== 'postings') {
+        nextStoredFilters.sortBy = 'title';
+        nextStoredFilters.sortDir = 'asc';
+      } else if (!nextStoredFilters.sortBy || nextStoredFilters.sortBy === 'title') {
+        nextStoredFilters.sortBy = entityDefaults.sortBy;
+        nextStoredFilters.sortDir = entityDefaults.sortDir;
+      }
+
+      window.sessionStorage.setItem(storageKey, JSON.stringify(nextStoredFilters));
+      setPersistedFilters(nextStoredFilters);
+    }
+  }, [searchParams, setSearchParams, showEntityTabs, storageKey, persistedFilters]);
 
   return (
     <PageContainer>
@@ -318,7 +426,12 @@ function PostingSearchView({
               className="join-item flex-1"
               color={activeEntity === 'postings' ? 'primary' : undefined}
               style={activeEntity === 'postings' ? undefined : 'outline'}
-              onClick={() => setActiveEntity('postings')}
+              onClick={() => {
+                setActiveEntity('postings');
+                if (showEntityTabs) {
+                  setEntityInUrl('postings');
+                }
+              }}
               Icon={ClipboardList}
             >
               Postings
@@ -329,7 +442,12 @@ function PostingSearchView({
                 className="join-item flex-1"
                 color={activeEntity === 'organizations' ? 'primary' : undefined}
                 style={activeEntity === 'organizations' ? undefined : 'outline'}
-                onClick={() => setActiveEntity('organizations')}
+                onClick={() => {
+                  setActiveEntity('organizations');
+                  if (showEntityTabs) {
+                    setEntityInUrl('organizations');
+                  }
+                }}
                 Icon={Building2}
               >
                 Organizations
@@ -341,7 +459,12 @@ function PostingSearchView({
                 className="join-item flex-1"
                 color={activeEntity === 'crises' ? 'primary' : undefined}
                 style={activeEntity === 'crises' ? undefined : 'outline'}
-                onClick={() => setActiveEntity('crises')}
+                onClick={() => {
+                  setActiveEntity('crises');
+                  if (showEntityTabs) {
+                    setEntityInUrl('crises');
+                  }
+                }}
                 Icon={AlertTriangle}
               >
                 Crises
@@ -352,6 +475,7 @@ function PostingSearchView({
       )}
       <PostingFiltersCard
         defaultValues={defaultFormValues}
+        resetValues={toPostingSearchFormValues(cleanEntityDefaults)}
         onApply={applyFilters}
         searchFieldName="search"
         searchPlaceholder={activeEntity === 'organizations'
@@ -468,20 +592,6 @@ function PostingSearchView({
               label="End Time By"
               type="time"
             />
-            {activeEntity === 'organizations' && (
-              <div className="lg:col-span-2">
-                <FormField
-                  form={form}
-                  name="organizationCertificateFilter"
-                  label="Certificate status"
-                  selectOptions={[
-                    { label: 'All organizations', value: 'all' },
-                    { label: 'Cert enabled', value: 'enabled' },
-                    { label: 'Cert disabled', value: 'disabled' },
-                  ]}
-                />
-              </div>
-            )}
             {enableCrisisFilter && (
               <div className="lg:col-span-2">
                 <FormField
@@ -534,7 +644,7 @@ function PostingSearchView({
                 : (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {crises.map(crisis => (
-                        <CrisisCard key={crisis.id} crisis={crisis} />
+                        <CrisisCard key={crisis.id} crisis={crisis} link={`${crisisBasePath}/${crisis.id}/postings`} />
                       ))}
                     </div>
                   )
@@ -554,6 +664,7 @@ function PostingSearchView({
                         <PostingCollection
                           postings={postings}
                           showCrisis
+                          crisisBasePath={crisisBasePath}
                           cardsContainerClassName="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3"
                           listContainerClassName="space-y-4"
                         />

@@ -50,3 +50,16 @@ export type OrganizationVolunteerProfileResponse = {
 export type OrganizationReportVolunteerResponse = SuccessResponse;
 
 export type OrganizationResetPasswordResponse = ResetPasswordResponse;
+
+export type OrganizationSearchResult = {
+  id: number;
+  name: string;
+  description: string | null;
+  location_name: string | null;
+  logo_path: string | null;
+  posting_count: number;
+};
+
+export type OrganizationOrganizationSearchResponse = {
+  organizations: OrganizationSearchResult[];
+};

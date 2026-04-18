@@ -8,7 +8,7 @@ export const enrollmentApplicationSchema = zod.object({
   id: idSchema,
   volunteer_id: idSchema,
   posting_id: idSchema,
-  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').optional(),
+  message: zod.string().max(350, 'Your message is too long. Please limit it to 350 characters.').nullable(),
   created_at: zod.date(),
 });
 

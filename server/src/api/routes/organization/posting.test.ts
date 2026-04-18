@@ -14,6 +14,10 @@ const formatDateToIso = (date: Date) => `${date.getFullYear()}-${String(date.get
 let transaction: ControlledTransaction<Database, []>;
 let server: TestAgent;
 
+type SkillResponseItem = {
+  name: string;
+};
+
 beforeEach(async () => {
   transaction = await database.startTransaction().execute();
   server = supertest(createApp(transaction));
@@ -227,6 +231,119 @@ describe('Organization posting applications', () => {
   });
 });
 
+describe('Organization posting discover', () => {
+  test('GET /organization/posting/discover returns active postings across organizations', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-discover-viewer@example.com' });
+    const { organization: ownerOne } = await createOrganizationAccount(transaction, { email: 'org-discover-owner-1@example.com' });
+    const { organization: ownerTwo } = await createOrganizationAccount(transaction, { email: 'org-discover-owner-2@example.com' });
+
+    await transaction
+      .insertInto('organization_posting')
+      .values([
+        {
+          organization_id: ownerOne.id,
+          title: 'Discover Open Posting A',
+          description: 'A posting visible to all organizations.',
+          latitude: 33.9,
+          longitude: 35.5,
+          start_date: new Date('2026-09-01T00:00:00.000Z'),
+          start_time: '09:00:00',
+          end_date: new Date('2026-09-01T00:00:00.000Z'),
+          end_time: '12:00:00',
+          automatic_acceptance: true,
+          is_closed: false,
+          allows_partial_attendance: false,
+          location_name: 'Beirut',
+        },
+        {
+          organization_id: ownerTwo.id,
+          title: 'Discover Open Posting B',
+          description: 'Another posting visible to all organizations.',
+          latitude: 33.91,
+          longitude: 35.51,
+          start_date: new Date('2026-09-02T00:00:00.000Z'),
+          start_time: '10:00:00',
+          end_date: new Date('2026-09-02T00:00:00.000Z'),
+          end_time: '13:00:00',
+          automatic_acceptance: false,
+          is_closed: false,
+          allows_partial_attendance: false,
+          location_name: 'Tripoli',
+        },
+        {
+          organization_id: ownerTwo.id,
+          title: 'Closed Posting',
+          description: 'Should be hidden from discover.',
+          latitude: 33.91,
+          longitude: 35.51,
+          start_date: new Date('2026-09-03T00:00:00.000Z'),
+          start_time: '10:00:00',
+          end_date: new Date('2026-09-03T00:00:00.000Z'),
+          end_time: '13:00:00',
+          automatic_acceptance: false,
+          is_closed: true,
+          allows_partial_attendance: false,
+          location_name: 'Tripoli',
+        },
+      ])
+      .execute();
+
+    const response = await server
+      .get('/organization/posting/discover')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.postings.map((posting: { title: string }) => posting.title)).toEqual(
+      expect.arrayContaining(['Discover Open Posting A', 'Discover Open Posting B']),
+    );
+    expect(response.body.postings.map((posting: { title: string }) => posting.title)).not.toContain('Closed Posting');
+    expect(response.body.postings.every((posting: { application_status: string }) => posting.application_status === 'none')).toBe(true);
+  });
+
+  test('GET /organization/posting/discover supports hide_full filter', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-discover-hide-full@example.com' });
+    const { organization } = await createOrganizationAccount(transaction, { email: 'org-discover-capacity-owner@example.com' });
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-discover-capacity@example.com' });
+
+    const fullPosting = await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Full Discover Posting',
+        description: 'Should be hidden when hide_full=true.',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 1,
+        start_date: new Date('2026-09-10T00:00:00.000Z'),
+        start_time: '09:00:00',
+        end_date: new Date('2026-09-10T00:00:00.000Z'),
+        end_time: '12:00:00',
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .insertInto('enrollment')
+      .values({
+        posting_id: fullPosting.id,
+        volunteer_id: volunteer.id,
+        attended: false,
+      })
+      .execute();
+
+    const response = await server
+      .get('/organization/posting/discover?hide_full=true')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.postings.map((posting: { id: number }) => posting.id)).not.toContain(fullPosting.id);
+  });
+});
+
 describe('Organization posting management', () => {
   test('creates a posting with crisis and skills', async () => {
     const { token } = await createOrganizationAccount(transaction, { email: 'org-create-posting@example.com' });
@@ -261,7 +378,7 @@ describe('Organization posting management', () => {
 
     expect(response.body.posting.title).toBe('Created Posting');
     expect(response.body.posting.crisis_id).toBe(crisis.id);
-    const skillNames = response.body.skills.map((skill: any) => skill.name);
+    const skillNames = (response.body.skills as SkillResponseItem[]).map(skill => skill.name);
     expect(skillNames).toHaveLength(3);
     expect(skillNames).toContain('CPR');
     expect(skillNames).toContain(' First Aid ');
@@ -342,7 +459,7 @@ describe('Organization posting management', () => {
 
     expect(response.body.posting.title).toBe('Updated Posting');
     expect(response.body.crisis.id).toBe(crisis.id);
-    expect(response.body.skills.map((skill: any) => skill.name).sort()).toEqual(['CPR', 'Updated']);
+    expect((response.body.skills as SkillResponseItem[]).map(skill => skill.name).sort()).toEqual(['CPR', 'Updated']);
   });
 
   test('deletes a posting and removes associated enrollment rows', async () => {
@@ -667,6 +784,41 @@ describe('Organization posting management', () => {
     expect(response.body.skills).toEqual(expect.arrayContaining([
       expect.objectContaining({ posting_id: posting.id, name: 'Detail Skill' }),
     ]));
+  });
+
+  test('GET /organization/posting/:id allows organizations to view other organizations postings', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-get-foreign-posting-viewer@example.com' });
+    const { organization: ownerOrganization } = await createOrganizationAccount(transaction, { email: 'org-get-foreign-posting-owner@example.com' });
+
+    const posting = await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: ownerOrganization.id,
+        title: 'Foreign Posting',
+        description: 'Visible for other organizations in read-only mode.',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 5,
+        start_date: new Date('2026-09-06T00:00:00.000Z'),
+        start_time: '09:00:00',
+        end_date: new Date('2026-09-06T00:00:00.000Z'),
+        end_time: '17:00:00',
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Foreign Location',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const response = await server
+      .get(`/organization/posting/${posting.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.posting.id).toBe(posting.id);
+    expect(response.body.posting.organization_id).toBe(ownerOrganization.id);
   });
 
   test('GET /organization/posting/:id returns 404 when posting is missing', async () => {

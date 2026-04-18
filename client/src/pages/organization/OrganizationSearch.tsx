@@ -5,17 +5,18 @@ import PostingViewModeToggle from '../../components/postings/PostingViewModeTogg
 import requestServer from '../../utils/requestServer.ts';
 import useAsync from '../../utils/useAsync.ts';
 
-import type { VolunteerPinnedCrisesResponse } from '../../../../server/src/api/types.ts';
+import type { OrganizationPinnedCrisesResponse } from '../../../../server/src/api/types.ts';
 
-function VolunteerSearch() {
+function OrganizationSearch() {
   const [searchParams] = useSearchParams();
   const entityParam = searchParams.get('entity');
-  const initialEntity = entityParam === 'organizations' || entityParam === 'crises' || entityParam === 'postings'
+  const initialEntity = entityParam === 'crises' || entityParam === 'postings' || entityParam === 'organizations'
     ? entityParam
     : undefined;
+
   const { data: pinnedCrises } = useAsync(
     async () => {
-      const response = await requestServer<VolunteerPinnedCrisesResponse>('/volunteer/crises/pinned', {
+      const response = await requestServer<OrganizationPinnedCrisesResponse>('/organization/crises/pinned', {
         includeJwt: true,
       });
       return response.crises;
@@ -27,11 +28,14 @@ function VolunteerSearch() {
     <div className="grow bg-base-200">
       <PostingSearchView
         title="Search Opportunities"
-        subtitle="Browse all postings, organizations, and crises, and filter them down by dates, location, or skills."
+        subtitle="Browse all active postings and crises across organizations."
         icon={undefined}
         showBack={false}
         actions={<PostingViewModeToggle />}
-        fetchUrl="/volunteer/posting?include_applied=true"
+        fetchUrl="/organization/posting/discover"
+        organizationsFetchUrl="/organization/organizations"
+        crisisBasePath="/organization/crises"
+        crisesFetchBasePath="/organization/crises"
         enableCrisisFilter
         enableOrganizationSearch
         initialFilters={initialEntity ? { entity: initialEntity } : undefined}
@@ -44,4 +48,4 @@ function VolunteerSearch() {
   );
 }
 
-export default VolunteerSearch;
+export default OrganizationSearch;

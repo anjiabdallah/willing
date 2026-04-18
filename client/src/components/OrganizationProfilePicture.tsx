@@ -41,7 +41,7 @@ export default function OrganizationProfilePicture({
   if (logoPath) {
     return (
       <div
-        className={`rounded-full overflow-hidden ring-1 ring-base-300 flex items-center justify-center ${className}`}
+        className={`shrink-0 aspect-square rounded-full overflow-hidden ring-1 ring-base-300 flex items-center justify-center ${className}`}
         style={{ width: size, height: size, backgroundColor: isPng ? 'white' : undefined }}
       >
         <img
@@ -57,7 +57,7 @@ export default function OrganizationProfilePicture({
 
   return (
     <div
-      className={`rounded-full overflow-hidden ring-1 ring-base-300 flex items-center justify-center bg-primary text-primary-content ${className}`}
+      className={`shrink-0 aspect-square rounded-full overflow-hidden ring-1 ring-base-300 flex items-center justify-center bg-primary text-primary-content ${className}`}
       style={{ width: size, height: size }}
     >
       {initials

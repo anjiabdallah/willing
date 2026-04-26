@@ -30,6 +30,7 @@ import Button from '../components/Button.tsx';
 import CalendarInfo from '../components/CalendarInfo.tsx';
 import Card from '../components/Card.tsx';
 import CustomMessageModal from '../components/CustomMessageModal.tsx';
+import EmptyState from '../components/EmptyState.tsx';
 import ColumnLayout from '../components/layout/ColumnLayout.tsx';
 import PageContainer from '../components/layout/PageContainer.tsx';
 import PageHeader from '../components/layout/PageHeader.tsx';
@@ -64,20 +65,30 @@ import type {
 import type { Crisis } from '../../../server/src/db/tables/index.ts';
 import type { PostingApplication, PostingEnrollment, PostingWithContext, PostingWithSkills } from '../../../server/src/types.ts';
 
-const parseDateOnlyParts = (value: string) => {
-  const datePart = value.split('T')[0] ?? '';
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
-  if (!match) return null;
+const parseLocalDateParts = (value: string | Date) => {
+  if (typeof value === 'string') {
+    const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (isoDateMatch) {
+      return {
+        year: Number(isoDateMatch[1]),
+        month: Number(isoDateMatch[2]),
+        day: Number(isoDateMatch[3]),
+      };
+    }
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
 
   return {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
+    year: parsed.getFullYear(),
+    month: parsed.getMonth() + 1,
+    day: parsed.getDate(),
   };
 };
 
-const normalizeDateOnlyValue = (value: string) => {
-  const dateParts = parseDateOnlyParts(value);
+const normalizeDateOnlyValue = (value: string | Date) => {
+  const dateParts = parseLocalDateParts(value);
   if (!dateParts) return '';
 
   return `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
@@ -87,20 +98,37 @@ const normalizeDateOnlyList = (values: string[]) => values
   .map(normalizeDateOnlyValue)
   .filter((value): value is string => Boolean(value));
 
-const getDateInputValue = (value: Date | string) => {
-  if (typeof value === 'string') {
-    const dateParts = parseDateOnlyParts(value);
-    if (dateParts) {
-      return `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
-    }
+const buildDateRangeInclusive = (startValue: string | Date, endValue: string | Date) => {
+  const startParts = parseLocalDateParts(startValue);
+  const endParts = parseLocalDateParts(endValue);
+
+  if (!startParts || !endParts) {
+    return [] as string[];
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  const year = parsed.getUTCFullYear();
-  const month = `${parsed.getUTCMonth() + 1}`.padStart(2, '0');
-  const day = `${parsed.getUTCDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const start = new Date(startParts.year, startParts.month - 1, startParts.day);
+  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start.getTime() > end.getTime()) {
+    return [] as string[];
+  }
+
+  const dates: string[] = [];
+  const cursor = new Date(start);
+
+  while (cursor.getTime() <= end.getTime()) {
+    dates.push(normalizeDateOnlyValue(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+};
+
+const getDateInputValue = (value: Date | string) => {
+  const dateParts = parseLocalDateParts(value);
+  if (!dateParts) return '';
+
+  return `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
 };
 
 const getTimeInputValue = (timeValue: string | undefined) => (timeValue ?? '').slice(0, 5);
@@ -111,10 +139,16 @@ const getPostingStartDateTime = (posting: PostingWithSkills) => {
   return new Date(`${datePart}T${timePart}`);
 };
 
+const getPostingEndDateTime = (posting: PostingWithSkills | PostingWithContext) => {
+  const datePart = getDateInputValue(posting.end_date ?? posting.start_date);
+  const timePart = (posting.end_time ?? '').slice(0, 5) || '23:59';
+  return new Date(`${datePart}T${timePart}`);
+};
+
 const formatDisplayDate = (value?: string) => {
   if (!value) return '-';
 
-  const dateParts = parseDateOnlyParts(value);
+  const dateParts = parseLocalDateParts(value);
   if (dateParts) {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -123,13 +157,7 @@ const formatDisplayDate = (value?: string) => {
     }).format(new Date(dateParts.year, dateParts.month - 1, dateParts.day));
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(parsed);
+  return value;
 };
 
 const formatDisplayTime = (value?: string) => {
@@ -301,7 +329,22 @@ function PostingPage() {
       setHasPendingApplication(postingResponse.posting.application_status === 'pending');
       setIsEnrolled(postingResponse.posting.application_status === 'registered');
       setPostingEnrollmentCount(postingResponse.posting.enrollment_count);
-      setPostingDates(normalizeDateOnlyList(postingResponse.posting_dates ?? []));
+      const normalizedPostingDates = normalizeDateOnlyList(postingResponse.posting_dates ?? []);
+      const computedPostingDates = buildDateRangeInclusive(
+        postingResponse.posting.start_date,
+        postingResponse.posting.end_date ?? postingResponse.posting.start_date,
+      );
+      const normalizedStartDate = normalizeDateOnlyValue(postingResponse.posting.start_date);
+      const normalizedEndDate = normalizeDateOnlyValue(
+        postingResponse.posting.end_date ?? postingResponse.posting.start_date,
+      );
+      const mergedPostingDates = Array.from(new Set([
+        ...normalizedPostingDates,
+        ...computedPostingDates,
+        normalizedStartDate,
+        normalizedEndDate,
+      ].filter(Boolean))).sort();
+      setPostingDates(mergedPostingDates);
       setSelectedVolunteerDates(normalizeDateOnlyList(postingResponse.selected_dates ?? []));
       setSkills(postingResponse.posting.skills.map(s => s.name));
       setSelectedCrisisId(postingResponse.posting.crisis_id ?? undefined);
@@ -631,7 +674,7 @@ function PostingPage() {
   const submitApplication = useCallback(async (message?: string) => {
     if (!id || hasPendingApplication || isEnrolled || !posting) return;
 
-    if (posting.allows_partial_attendance) {
+    if (posting.allows_partial_attendance && !isSingleDayPosting) {
       if (selectedApplicationDates.length === 0) {
         notifications.push({ type: 'error', message: 'Please select at least one date to apply.' });
         return;
@@ -656,8 +699,22 @@ function PostingPage() {
     }
   }, [applyToPosting, id, hasPendingApplication, isEnrolled, notifications, loadPosting, posting, postingDates, selectedApplicationDates]);
 
+  const canWithdrawFromPosting = useMemo(() => {
+    if (!posting) return false;
+
+    const endDateTime = getPostingEndDateTime(posting);
+    return !Number.isNaN(endDateTime.getTime()) && new Date() < endDateTime;
+  }, [posting]);
+
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
+    if (!canWithdrawFromPosting) {
+      notifications.push({
+        type: 'error',
+        message: 'This posting has already ended and can no longer be withdrawn.',
+      });
+      return;
+    }
 
     const choice = await modal.promptModal({
       title: isEnrolled ? 'Leave Position' : 'Withdraw Application',
@@ -688,7 +745,7 @@ function PostingPage() {
     } finally {
       setWithdrawing(false);
     }
-  }, [id, hasPendingApplication, isEnrolled, loadPosting, modal, notifications, withdrawFromPosting]);
+  }, [canWithdrawFromPosting, hasPendingApplication, id, isEnrolled, loadPosting, modal, notifications, withdrawFromPosting]);
 
   const acceptApplication = useCallback(async (applicationId: number) => {
     if (!id) return;
@@ -781,10 +838,13 @@ function PostingPage() {
 
   const applicationDaysLabel = useMemo(() => {
     if (!posting || (!isEnrolled && !hasPendingApplication)) return null;
-    if (!posting.allows_partial_attendance) return 'All days';
+    if (!posting.allows_partial_attendance) {
+      if (startDate === endDate && startDate) return formatDisplayDate(startDate);
+      return 'All days';
+    }
     if (formattedSelectedDates.length === 0) return null;
     return formattedSelectedDates.join(', ');
-  }, [formattedSelectedDates, hasPendingApplication, isEnrolled, posting]);
+  }, [endDate, formattedSelectedDates, hasPendingApplication, isEnrolled, posting, startDate]);
 
   const shouldShowCommitmentCard = useMemo(() => {
     if (!posting) return false;
@@ -910,7 +970,7 @@ function PostingPage() {
         title="Apply to posting"
         placeholder="You can add an optional message to tell the organization why you're interested in this opportunity"
       >
-        {posting?.allows_partial_attendance && (
+        {posting?.allows_partial_attendance && !isSingleDayPosting && (
           <div className="mt-3">
             <p className="text-sm font-medium mb-2">Select your available days (partial attendance)</p>
             <CalendarInfo
@@ -938,23 +998,24 @@ function PostingPage() {
         defaultBackTo={isVolunteerView ? '/volunteer' : '/organization'}
         actions={canManagePosting && (isEditMode
           ? (
-              <>
-                <Button style="outline" onClick={onCancelEdit} disabled={saving} Icon={X}>
+              <span className="flex gap-2 flex-wrap justify-end">
+                <Button style="outline" onClick={onCancelEdit} disabled={saving} Icon={X} size="sm">
                   Cancel
                 </Button>
-                <Button color="primary" onClick={onSave} loading={saving} Icon={Save}>
+                <Button color="primary" onClick={onSave} loading={saving} Icon={Save} size="sm">
                   Save Changes
                 </Button>
-              </>
+              </span>
             )
           : (
-              <>
+              <span className="flex gap-2 flex-wrap justify-end">
                 <LinkButton
                   to={`/organization/posting/${posting.id}/attendance`}
                   color="info"
                   style="outline"
                   disabled={!canOpenAttendancePage}
                   Icon={ListChecks}
+                  size="sm"
                 >
                   Attendance
                 </LinkButton>
@@ -963,6 +1024,7 @@ function PostingPage() {
                   onClick={() => setIsEditMode(true)}
                   style="outline"
                   Icon={Edit3}
+                  size="sm"
                 >
                   Edit
                 </Button>
@@ -972,6 +1034,7 @@ function PostingPage() {
                   disabled={!posting}
                   loading={togglingClosed}
                   Icon={posting?.is_closed ? LockOpen : Lock}
+                  size="sm"
                 >
                   {posting?.is_closed ? 'Reopen' : 'Close'}
                 </Button>
@@ -980,10 +1043,11 @@ function PostingPage() {
                   onClick={onDelete}
                   loading={deleting}
                   Icon={Trash2}
+                  size="sm"
                 >
                   Delete
                 </Button>
-              </>
+              </span>
             )
         )}
       />
@@ -994,14 +1058,14 @@ function PostingPage() {
             <Card>
               <div className="flex items-start gap-3 mb-4">
                 {postingOrganization && (
-                  <Link to={`/organization/${postingOrganization.id}`} className="shrink-0">
-                    <OrganizationProfilePicture
-                      organizationName={postingOrganization.name}
-                      organizationId={postingOrganization.id}
-                      logoPath={postingOrganization.logoPath}
-                      size={48}
-                    />
-                  </Link>
+                  <OrganizationProfilePicture
+                    organizationName={postingOrganization.name}
+                    organizationId={postingOrganization.id}
+                    logoPath={postingOrganization.logoPath}
+                    size={48}
+                    linkToOrganizationPage
+                    linkClassName="shrink-0"
+                  />
                 )}
 
                 <div className="min-w-0">
@@ -1358,27 +1422,41 @@ function PostingPage() {
             <div className="mt-3 flex justify-end">
               {isEnrolled
                 ? (
-                    <Button
-                      color="error"
-                      style="outline"
-                      onClick={withdrawApplication}
-                      loading={withdrawing}
-                      Icon={SquareArrowRight}
+                    <span
+                      className={canWithdrawFromPosting ? 'inline-block' : 'tooltip tooltip-top inline-block'}
+                      data-tip={canWithdrawFromPosting ? undefined : 'This posting has ended.'}
                     >
-                      Leave Position
-                    </Button>
-                  )
-                : hasPendingApplication
-                  ? (
                       <Button
                         color="error"
                         style="outline"
                         onClick={withdrawApplication}
                         loading={withdrawing}
+                        disabled={!canWithdrawFromPosting}
+                        className={!canWithdrawFromPosting ? 'pointer-events-none' : undefined}
                         Icon={SquareArrowRight}
                       >
-                        Withdraw Application
+                        Leave Position
                       </Button>
+                    </span>
+                  )
+                : hasPendingApplication
+                  ? (
+                      <span
+                        className={canWithdrawFromPosting ? 'inline-block' : 'tooltip tooltip-top inline-block'}
+                        data-tip={canWithdrawFromPosting ? undefined : 'This posting has ended.'}
+                      >
+                        <Button
+                          color="error"
+                          style="outline"
+                          onClick={withdrawApplication}
+                          loading={withdrawing}
+                          disabled={!canWithdrawFromPosting}
+                          className={!canWithdrawFromPosting ? 'pointer-events-none' : undefined}
+                          Icon={SquareArrowRight}
+                        >
+                          Withdraw Application
+                        </Button>
+                      </span>
                     )
                   : (
                       <Button
@@ -1425,16 +1503,17 @@ function PostingPage() {
         {canManagePosting && !isOpen && (
           <Card
             title="Enrollment Applications"
-            description="Enrollment applications description."
             right={
               <span className="badge badge-primary">{applications.length}</span>
             }
           >
             {applications.length === 0
               ? (
-                  <Alert>
-                    No pending applications.
-                  </Alert>
+                  <EmptyState
+                    title="No pending applications"
+                    description="Wait for volunteers to apply to show here."
+                    Icon={Users}
+                  />
                 )
               : (
                   <div className="space-y-2">
@@ -1444,7 +1523,7 @@ function PostingPage() {
                         volunteer={app}
                         profileLink={`/organization/volunteer/${app.volunteer_id}`}
                         actions={(
-                          <>
+                          <span className="flex gap-2">
                             <Button
                               color="success"
                               style="soft"
@@ -1463,7 +1542,7 @@ function PostingPage() {
                             >
                               Reject
                             </Button>
-                          </>
+                          </span>
                         )}
                       />
                     ))}
@@ -1475,7 +1554,6 @@ function PostingPage() {
         {canManagePosting && (
           <Card
             title="Enrolled Volunteers"
-            // description="Enrolled volunteers description"
             right={
               <span className="badge badge-primary">{enrollments.length}</span>
             }
@@ -1483,9 +1561,11 @@ function PostingPage() {
 
             {enrollments.length === 0
               ? (
-                  <Alert>
-                    No volunteers have enrolled yet.
-                  </Alert>
+                  <EmptyState
+                    title="No volunteers have enrolled yet"
+                    description="Wait for volunteers to enroll to show here."
+                    Icon={Users}
+                  />
                 )
               : (
                   <div className="space-y-2">

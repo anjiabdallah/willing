@@ -72,7 +72,7 @@ function StatsCarousel({ totalVolunteers, totalOpportunities, totalOrganizations
         type="button"
         onClick={prev}
         aria-label="Show previous stat"
-        className="btn btn-circle btn-ghost border border-base-content/10 hover:border-primary/40 hover:text-primary transition-all"
+        className="btn btn-circle border border-base-content/10 hover:border-primary/40 hover:text-primary transition-all max-lg:absolute left-2 z-999"
       >
         ‹
       </button>
@@ -151,7 +151,7 @@ function StatsCarousel({ totalVolunteers, totalOpportunities, totalOrganizations
         type="button"
         onClick={next}
         aria-label="Show next stat"
-        className="btn btn-circle btn-ghost border border-base-content/10 hover:border-primary/40 hover:text-primary transition-all"
+        className="btn btn-circle border border-base-content/10 hover:border-primary/40 hover:text-primary transition-all max-lg:absolute right-2 z-999"
       >
         ›
       </button>

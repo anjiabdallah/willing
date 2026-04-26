@@ -26,6 +26,7 @@ import AuthContext from '../../auth/AuthContext';
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import EmptyState from '../../components/EmptyState';
 import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
@@ -63,6 +64,10 @@ const profileFormSchema = volunteerAccountSchema.omit({
   id: true,
   password: true,
   email: true,
+  first_name: true,
+  last_name: true,
+  date_of_birth: true,
+  cv_path: true,
   volunteer_profile_vector: true,
   volunteer_history_vector: true,
   volunteer_context_vector: true,
@@ -146,9 +151,6 @@ function VolunteerProfile() {
     resolver: zodResolver(profileFormSchema),
     mode: 'onTouched',
     defaultValues: {
-      first_name: '',
-      last_name: '',
-      date_of_birth: '',
       gender: 'male',
       description: '',
     },
@@ -163,9 +165,6 @@ function VolunteerProfile() {
     setShowAllExperiences(false);
     setSkills(response.skills);
     form.reset({
-      first_name: response.volunteer.first_name,
-      last_name: response.volunteer.last_name,
-      date_of_birth: getDateInputValue(response.volunteer.date_of_birth),
       gender: response.volunteer.gender,
       description: response.volunteer.description ?? '',
     });
@@ -242,8 +241,11 @@ function VolunteerProfile() {
   const formValues = form.watch();
 
   const volunteerName = useMemo(
-    () => `${formValues.first_name || ''} ${formValues.last_name || ''}`.trim(),
-    [formValues.first_name, formValues.last_name],
+    () => {
+      if (!profile) return '';
+      return `${profile.volunteer.first_name || ''} ${profile.volunteer.last_name || ''}`.trim();
+    },
+    [profile],
   );
 
   const initials = useMemo(() => {
@@ -255,20 +257,20 @@ function VolunteerProfile() {
   }, [volunteerName]);
 
   const formattedDateOfBirth = useMemo(() => {
-    if (!formValues.date_of_birth) return '-';
+    if (!profile) return '-';
 
-    const dateParts = getDateParts(formValues.date_of_birth);
-    if (!dateParts) return formValues.date_of_birth;
+    const dateParts = getDateParts(profile.volunteer.date_of_birth);
+    if (!dateParts) return profile.volunteer.date_of_birth;
 
     const parsed = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
-    if (Number.isNaN(parsed.getTime())) return formValues.date_of_birth;
+    if (Number.isNaN(parsed.getTime())) return profile.volunteer.date_of_birth;
 
     return parsed.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
-  }, [formValues.date_of_birth]);
+  }, [profile]);
 
   const formattedGender = useMemo(() => {
     if (formValues.gender === 'male') return 'Male';
@@ -358,9 +360,6 @@ function VolunteerProfile() {
       setProfile(response);
       setSkills(response.skills);
       form.reset({
-        first_name: response.volunteer.first_name,
-        last_name: response.volunteer.last_name,
-        date_of_birth: getDateInputValue(response.volunteer.date_of_birth),
         gender: response.volunteer.gender,
         description: response.volunteer.description ?? '',
       });
@@ -377,9 +376,6 @@ function VolunteerProfile() {
   const onCancelEdit = useCallback(() => {
     if (!profile) return;
     form.reset({
-      first_name: profile.volunteer.first_name,
-      last_name: profile.volunteer.last_name,
-      date_of_birth: getDateInputValue(profile.volunteer.date_of_birth),
       gender: profile.volunteer.gender,
       description: profile.volunteer.description ?? '',
     });
@@ -519,23 +515,23 @@ function VolunteerProfile() {
         icon={FileText}
         actions={(
           <>
-            <LinkButton to="/volunteer/certificate" color="secondary" className="btn btn-outline">
+            <LinkButton to="/volunteer/certificate" color="secondary" className="btn btn-outline" size="sm">
               <FileText size={16} />
               Generate Certificate
             </LinkButton>
             {isEditMode
               ? (
-                  <Button color="primary" style="outline" onClick={onCancelEdit} loading={saving} Icon={X}>
+                  <Button color="primary" style="outline" onClick={onCancelEdit} loading={saving} Icon={X} size="sm">
                     Cancel
                   </Button>
                 )
               : (
-                  <Button color="primary" style="outline" onClick={() => setIsEditMode(true)} Icon={Edit3}>
+                  <Button color="primary" style="outline" onClick={() => setIsEditMode(true)} Icon={Edit3} size="sm">
                     Edit Profile
                   </Button>
                 )}
             {isEditMode && (
-              <Button color="primary" onClick={onSave} loading={saving} Icon={Save}>
+              <Button color="primary" onClick={onSave} loading={saving} Icon={Save} size="sm">
                 Save Changes
               </Button>
             )}
@@ -766,9 +762,12 @@ function VolunteerProfile() {
         >
           {profile.completed_experiences.length === 0
             ? (
-                <div className="alert alert-soft mt-4">
-                  <span className="text-sm">No completed experiences to show yet.</span>
-                </div>
+                <EmptyState
+                  title="No completed experiences to show yet."
+                  description="Register for a posting and complete it to show it here."
+                  Icon={Building2}
+                  compact
+                />
               )
             : (
                 <div className="mt-4 space-y-3">
@@ -830,9 +829,12 @@ function VolunteerProfile() {
                   </div>
                 )
               : (
-                  <Alert style="soft">
-                    No CV uploaded yet.
-                  </Alert>
+                  <EmptyState
+                    title="No CV uploaded yet"
+                    description="Upload your CV to show it here."
+                    Icon={Upload}
+                    compact
+                  />
                 )}
 
             <input

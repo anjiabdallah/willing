@@ -33,6 +33,7 @@ import {
   recomputeVolunteerExperienceVector,
 } from '../../../services/embeddings/updates.ts';
 import {
+  sendPostingDeletedEmail,
   sendVolunteerApplicationAcceptedEmail,
   sendVolunteerApplicationRejectedEmail,
 } from '../../../services/smtp/emails.ts';
@@ -211,6 +212,9 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       defaultSortBy: 'start_date',
       defaultSortDir: 'asc',
     });
+
+    const hideFull = parseOptionalBooleanQueryParam(req.query.hide_full) ?? false;
+    const postingFilter = typeof req.query.posting_filter === 'string' ? req.query.posting_filter : 'all';
     const isClosedFilter = parseOptionalBooleanQueryParam(req.query.is_closed);
     const automaticAcceptanceFilter = parseOptionalBooleanQueryParam(req.query.automatic_acceptance);
     const crisisIdFilter = parseOptionalNumberQueryParam(req.query.crisis_id);
@@ -237,6 +241,20 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
 
     if (isClosedFilter !== undefined) {
       postingsQuery = postingsQuery.where('organization_posting.is_closed', '=', isClosedFilter);
+    }
+
+    if (postingFilter === 'open') {
+      postingsQuery = postingsQuery.where('organization_posting.automatic_acceptance', '=', true);
+    } else if (postingFilter === 'review') {
+      postingsQuery = postingsQuery.where('organization_posting.automatic_acceptance', '=', false);
+    } else if (postingFilter === 'partial') {
+      postingsQuery = postingsQuery.where('organization_posting.allows_partial_attendance', '=', true);
+    } else if (postingFilter === 'full') {
+      postingsQuery = postingsQuery.where('organization_posting.allows_partial_attendance', '=', false);
+    } else if (postingFilter === 'tagged') {
+      postingsQuery = postingsQuery.where('organization_posting.crisis_id', 'is not', null);
+    } else if (postingFilter === 'untagged') {
+      postingsQuery = postingsQuery.where('organization_posting.crisis_id', 'is', null);
     }
 
     if (automaticAcceptanceFilter !== undefined) {
@@ -298,7 +316,11 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       };
     });
 
-    res.json({ postings: postingsWithSkills });
+    const visiblePostings = hideFull
+      ? postingsWithSkills.filter(posting => !posting.is_full)
+      : postingsWithSkills;
+
+    res.json({ postings: visiblePostings });
   });
 
   postingRouter.get('/discover', async (req, res: Response<OrganizationPostingDiscoverResponse>) => {
@@ -628,6 +650,25 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
       .where('attended', '=', true)
       .execute();
 
+    const enrolledVolunteerEmailContexts = await db
+      .selectFrom('enrollment')
+      .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
+      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .select([
+        'volunteer_account.id as volunteer_id',
+        'volunteer_account.email as volunteer_email',
+        'volunteer_account.first_name',
+        'volunteer_account.last_name',
+        'organization_posting.title as posting_title',
+        'organization_account.name as organization_name',
+      ])
+      .where('enrollment.posting_id', '=', postingId)
+      .where('volunteer_account.is_deleted', '=', false)
+      .where('volunteer_account.is_disabled', '=', false)
+      .where('organization_account.is_deleted', '=', false)
+      .execute();
+
     await executeTransaction(db, async (trx) => {
       await trx.deleteFrom('posting_skill').where('posting_id', '=', postingId).execute();
       await trx.deleteFrom('enrollment_application_date').where('application_id', 'in', trx
@@ -645,6 +686,19 @@ function createOrganizationPostingRouter(db: Kysely<Database>) {
     await recomputeOrganizationHistoryVectorOnly(orgId, db);
     await recomputeOrganizationCompositeVectorOnly(orgId, db);
     await recomputePostingContextVectorsForOrganization(orgId, db);
+
+    await Promise.allSettled(
+      enrolledVolunteerEmailContexts.map(emailContext =>
+        sendPostingDeletedEmail({
+          volunteerEmail: emailContext.volunteer_email,
+          volunteerName: `${emailContext.first_name} ${emailContext.last_name}`,
+          postingTitle: emailContext.posting_title,
+          organizationName: emailContext.organization_name,
+        }).catch((err) => {
+          console.error(`Failed to send deletion notification email for posting ${postingId} to volunteer ${emailContext.volunteer_id}:`, err);
+        }),
+      ),
+    );
 
     res.json({});
   });

@@ -1,6 +1,6 @@
 import { AlertCircle, ChevronDown, ClipboardCheck, Flag, Home, LogOut, Settings, ShieldUser } from 'lucide-react';
 import { useCallback, useContext } from 'react';
-import { NavLink } from 'react-router';
+import { NavLink } from 'react-router-dom';
 
 import Navbar from './Navbar';
 import AuthContext from '../../../auth/AuthContext';
@@ -52,10 +52,15 @@ function AdminNavbar() {
         <div className="dropdown dropdown-bottom dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost m-1">
             <ShieldUser size={20} />
-            {`${admin.first_name} ${admin.last_name}`}
+            <span className="hidden sm:inline">
+              {`${admin.first_name} ${admin.last_name}`}
+            </span>
             <ChevronDown size={14} className="opacity-50" />
           </div>
           <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <span className="sm:hidden inline mx-2 my-4 opacity-50">
+              {`${admin.first_name} ${admin.last_name}`}
+            </span>
             <li>
               <button onClick={handleLogout}>
                 <LogOut size={16} />

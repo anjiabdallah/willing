@@ -2,13 +2,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, Building2, Calendar, Clock3, Download, FileText, Flag, Mail, Mars, Users, Venus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 import zod from 'zod';
 
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
+import Card from '../../components/Card';
+import EmptyState from '../../components/EmptyState';
 import IconButton from '../../components/IconButton';
 import ColumnLayout from '../../components/layout/ColumnLayout';
+import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import PostingCollection from '../../components/postings/PostingCollection';
@@ -275,193 +278,187 @@ function OrganizationVolunteerProfile() {
   if (!profile) return null;
 
   return (
-    <div className="grow bg-base-200">
-      <div className="p-6 md:container mx-auto">
-        <PageHeader
-          title={volunteerName || 'Volunteer'}
-          icon={FileText}
-          showBack
-          defaultBackTo="/organization"
-          actions={(
-            <Button
-              color="error"
-              style="outline"
-              type="button"
-              Icon={Flag}
-              onClick={openReportModal}
-            >
-              Report volunteer
-            </Button>
-          )}
-        />
-
-        <div className="mt-4">
-          <ColumnLayout
-            sidebar={(
-              <div className="card bg-base-100 shadow-md mt-4">
-                <div className="card-body">
-                  <div className="flex items-center gap-4">
-                    <div className="avatar">
-                      <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
-                        <span className="text-2xl">{initials || 'V'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold">{volunteerName}</h4>
-                      <div className="mt-1">
-                        <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
-                          {profile.volunteer.gender === 'male' && <Mars size={12} />}
-                          {profile.volunteer.gender === 'female' && <Venus size={12} />}
-                          {profile.volunteer.gender === 'other' && <span className="font-bold">*</span>}
-                          {formattedGender}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="divider my-4" />
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="opacity-70 flex items-center gap-2">
-                        <Mail size={14} />
-                        Email
-                      </span>
-                      <span className="font-medium text-right break-all">{profile.volunteer.email}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="opacity-70 flex items-center gap-2">
-                        <Calendar size={14} />
-                        Date of Birth
-                      </span>
-                      <span className="font-medium text-right">{formattedDateOfBirth}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="text-sm font-semibold text-base-content mb-2 block">Description</label>
-                    <p className="text-sm opacity-80 whitespace-pre-wrap wrap-break-word">
-                      {profile.volunteer.description || 'No description added yet.'}
-                    </p>
-                  </div>
-
-                  <div className="mt-4">
-                    {profile.volunteer.cv_path
-                      ? (
-                          <div className="flex items-center gap-2">
-                            <Button type="button" color="primary" style="soft" onClick={() => { void viewCv(); }} Icon={FileText}>
-                              View User CV
-                            </Button>
-                            <IconButton
-                              type="button"
-                              color="primary"
-                              style="outline"
-                              Icon={Download}
-                              onClick={() => { void downloadCv(); }}
-                              aria-label="Download CV"
-                              title="Download CV"
-                            />
-                          </div>
-                        )
-                      : (
-                          <p className="text-sm opacity-70">No CV uploaded by this volunteer.</p>
-                        )}
-                  </div>
-                </div>
-              </div>
-            )}
+    <PageContainer>
+      <PageHeader
+        title={volunteerName || 'Volunteer'}
+        icon={FileText}
+        showBack
+        defaultBackTo="/organization"
+        actions={(
+          <Button
+            color="error"
+            style="outline"
+            type="button"
+            Icon={Flag}
+            onClick={openReportModal}
+            size="sm"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
-              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
-                <div className="stat-title text-base">Completed Postings</div>
-                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                  <Users className="h-6 w-6 shrink-0 stroke-current" />
-                  <span>{profile.experience_stats.total_completed_experiences}</span>
-                </div>
-              </div>
-              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
-                <div className="stat-title text-base">Hours Completed</div>
-                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                  <Clock3 className="h-6 w-6 shrink-0 stroke-current" />
-                  <span>{profile.experience_stats.total_hours_completed.toFixed(1)}</span>
-                </div>
-              </div>
-              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
-                <div className="stat-title text-base">Organizations</div>
-                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                  <Building2 className="h-6 w-6 shrink-0 stroke-current" />
-                  <span>{profile.experience_stats.organizations_supported}</span>
-                </div>
-              </div>
-            </div>
+            Report volunteer
+          </Button>
+        )}
+      />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
-              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
-                <div className="stat-title text-base">Crisis-Related</div>
-                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                  <AlertTriangle className="h-6 w-6 shrink-0 stroke-current" />
-                  <span>{profile.experience_stats.crisis_related_experiences}</span>
+      <ColumnLayout
+        sidebar={(
+          <Card>
+            <div className="flex items-center gap-4">
+              <div className="avatar">
+                <div className="bg-primary text-primary-content rounded-full w-20 flex items-center justify-center">
+                  <span className="text-2xl">{initials || 'V'}</span>
                 </div>
               </div>
-              <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
-                <div className="stat-title text-base">Total Skills Used</div>
-                <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                  <FileText className="h-6 w-6 shrink-0 stroke-current" />
-                  <span>{profile.experience_stats.total_skills_used}</span>
-                </div>
-              </div>
-              <div className="stat min-w-0 place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
-                <div className="stat-title w-full text-center text-base">Most Volunteered Crisis</div>
-                <div className="stat-value text-lg text-primary/80 flex w-full min-w-0 items-center justify-center gap-2 px-2">
-                  <span className="max-w-full text-center whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
-                    {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
+              <div>
+                <h4 className="text-xl font-bold">{volunteerName}</h4>
+                <div className="mt-1">
+                  <span className={`badge badge-sm gap-1 ${genderBadgeStyles}`}>
+                    {profile.volunteer.gender === 'male' && <Mars size={12} />}
+                    {profile.volunteer.gender === 'female' && <Venus size={12} />}
+                    {profile.volunteer.gender === 'other' && <span className="font-bold">*</span>}
+                    {formattedGender}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md mt-4">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Skills</h5>
-                <p className="text-sm opacity-70 mt-1">Volunteer skill set.</p>
-                <SkillsList skills={profile.skills} enableLimit={false} />
+            <div className="divider my-4" />
+
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-70 flex items-center gap-2">
+                  <Mail size={14} />
+                  Email
+                </span>
+                <span className="font-medium text-right break-all">{profile.volunteer.email}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-70 flex items-center gap-2">
+                  <Calendar size={14} />
+                  Date of Birth
+                </span>
+                <span className="font-medium text-right">{formattedDateOfBirth}</span>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h5 className="font-bold text-lg">Previous Experiences</h5>
-                <p className="text-sm opacity-70 mt-1">
-                  Past volunteering experiences completed through the platform.
-                </p>
-
-                {profile.completed_experiences.length === 0
-                  ? (
-                      <div className="alert alert-soft mt-4">
-                        <span className="text-sm">No completed experiences to show yet.</span>
-                      </div>
-                    )
-                  : (
-                      <div className="mt-4 space-y-3">
-                        <div className="flex justify-end">
-                          <PostingViewModeToggle />
-                        </div>
-
-                        <PostingCollection
-                          postings={experiencePostings}
-                          showCrisis={false}
-                          variant="organization"
-                          showOrganizationName={true}
-                          cardsContainerClassName="grid grid-cols-1 gap-6"
-                          listContainerClassName="space-y-3"
-                        />
-                      </div>
-                    )}
-              </div>
+            <div className="mt-4">
+              <label className="text-sm font-semibold text-base-content mb-2 block">Description</label>
+              <p className="text-sm opacity-80 whitespace-pre-wrap wrap-break-word">
+                {profile.volunteer.description || 'No description added yet.'}
+              </p>
             </div>
-          </ColumnLayout>
+
+            <div className="mt-4">
+              {profile.volunteer.cv_path
+                ? (
+                    <div className="flex items-center gap-2">
+                      <Button type="button" color="primary" style="soft" onClick={() => { void viewCv(); }} Icon={FileText}>
+                        View User CV
+                      </Button>
+                      <IconButton
+                        type="button"
+                        color="primary"
+                        style="outline"
+                        Icon={Download}
+                        onClick={() => { void downloadCv(); }}
+                        aria-label="Download CV"
+                        title="Download CV"
+                      />
+                    </div>
+                  )
+                : (
+                    <p className="text-sm opacity-70">No CV uploaded by this volunteer.</p>
+                  )}
+            </div>
+          </Card>
+        )}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
+          <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
+            <div className="stat-title text-base">Completed Postings</div>
+            <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <Users className="h-6 w-6 shrink-0 stroke-current" />
+              <span>{profile.experience_stats.total_completed_experiences}</span>
+            </div>
+          </div>
+          <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
+            <div className="stat-title text-base">Hours Completed</div>
+            <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <Clock3 className="h-6 w-6 shrink-0 stroke-current" />
+              <span>{profile.experience_stats.total_hours_completed.toFixed(1)}</span>
+            </div>
+          </div>
+          <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
+            <div className="stat-title text-base">Organizations</div>
+            <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <Building2 className="h-6 w-6 shrink-0 stroke-current" />
+              <span>{profile.experience_stats.organizations_supported}</span>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
+          <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-l-2xl sm:rounded-r-none">
+            <div className="stat-title text-base">Crisis-Related</div>
+            <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <AlertTriangle className="h-6 w-6 shrink-0 stroke-current" />
+              <span>{profile.experience_stats.crisis_related_experiences}</span>
+            </div>
+          </div>
+          <div className="stat place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-none">
+            <div className="stat-title text-base">Total Skills Used</div>
+            <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
+              <FileText className="h-6 w-6 shrink-0 stroke-current" />
+              <span>{profile.experience_stats.total_skills_used}</span>
+            </div>
+          </div>
+          <div className="stat min-w-0 place-items-center bg-base-100 shadow-md rounded-2xl sm:rounded-r-2xl sm:rounded-l-none">
+            <div className="stat-title w-full text-center text-base">Most Volunteered Crisis</div>
+            <div className="stat-value text-lg text-primary/80 flex w-full min-w-0 items-center justify-center gap-2 px-2">
+              <span className="max-w-full text-center whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
+                {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <Card
+          title="Skills"
+          description="Volunteer skill set."
+        >
+          <SkillsList skills={profile.skills} enableLimit={false} />
+        </Card>
+
+        <Card
+          title="Previous Experiences"
+          description="Past volunteering experiences completed through the platform."
+        >
+          {profile.completed_experiences.length === 0
+            ? (
+                <EmptyState
+                  title="No completed experiences to show"
+                  description="This volunteer hasn't completed any opportunities yet."
+                  Icon={Building2}
+                  compact
+                  className="mt-4"
+                />
+              )
+            : (
+                <div className="mt-4 space-y-3">
+                  <div className="flex justify-end">
+                    <PostingViewModeToggle />
+                  </div>
+
+                  <PostingCollection
+                    postings={experiencePostings}
+                    showCrisis={false}
+                    variant="organization"
+                    showOrganizationName={true}
+                    cardsContainerClassName="grid grid-cols-1 gap-6"
+                    listContainerClassName="space-y-3"
+                  />
+                </div>
+              )}
+        </Card>
+      </ColumnLayout>
 
       <ReportForm
         open={reportModalOpen}
@@ -475,7 +472,7 @@ function OrganizationVolunteerProfile() {
         submitDisabled={!canSubmitReport}
         maxMessageLength={1000}
       />
-    </div>
+    </PageContainer>
   );
 }
 

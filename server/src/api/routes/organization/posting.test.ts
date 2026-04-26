@@ -1,8 +1,9 @@
 import supertest from 'supertest';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import createApp from '../../../app.ts';
 import database from '../../../db/index.ts';
+import * as smtpEmails from '../../../services/smtp/emails.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../../tests/fixtures/accounts.ts';
 
 import type { Database } from '../../../db/tables/index.ts';
@@ -510,6 +511,81 @@ describe('Organization posting management', () => {
     expect(deletedPosting).toBeUndefined();
   });
 
+  test('deleting a posting sends notification emails to enrolled volunteers', async () => {
+    const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-delete-email-posting@example.com' });
+    const { volunteer: volunteerOne } = await createVolunteerAccount(transaction, {
+      email: 'vol-delete-email-one@example.com',
+      first_name: 'Alice',
+      last_name: 'Walker',
+    });
+    const { volunteer: volunteerTwo } = await createVolunteerAccount(transaction, {
+      email: 'vol-delete-email-two@example.com',
+      first_name: 'Bob',
+      last_name: 'Stone',
+    });
+
+    const posting = await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Delete With Email Notifications',
+        description: 'To be deleted with volunteer notifications',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: new Date('2026-11-10T00:00:00.000Z'),
+        start_time: '09:00:00',
+        end_date: new Date('2026-11-10T00:00:00.000Z'),
+        end_time: '17:00:00',
+        minimum_age: 18,
+        automatic_acceptance: false,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Delete Email Location',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .insertInto('enrollment')
+      .values([
+        {
+          volunteer_id: volunteerOne.id,
+          posting_id: posting.id,
+          attended: false,
+        },
+        {
+          volunteer_id: volunteerTwo.id,
+          posting_id: posting.id,
+          attended: true,
+        },
+      ])
+      .execute();
+
+    const postingDeletedEmailSpy = vi.spyOn(smtpEmails, 'sendPostingDeletedEmail').mockResolvedValue(undefined);
+
+    await server
+      .delete(`/organization/posting/${posting.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(postingDeletedEmailSpy).toHaveBeenCalledTimes(2);
+    expect(postingDeletedEmailSpy).toHaveBeenCalledWith({
+      volunteerEmail: volunteerOne.email,
+      volunteerName: `${volunteerOne.first_name} ${volunteerOne.last_name}`,
+      postingTitle: posting.title,
+      organizationName: organization.name,
+    });
+    expect(postingDeletedEmailSpy).toHaveBeenCalledWith({
+      volunteerEmail: volunteerTwo.email,
+      volunteerName: `${volunteerTwo.first_name} ${volunteerTwo.last_name}`,
+      postingTitle: posting.title,
+      organizationName: organization.name,
+    });
+
+    postingDeletedEmailSpy.mockRestore();
+  });
+
   test('returns 400 when accepting an application for an open posting', async () => {
     const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-accept-open@example.com' });
     const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-accept-open@example.com' });
@@ -736,6 +812,109 @@ describe('Organization posting management', () => {
     expect(response.body.postings).toHaveLength(1);
     expect(response.body.postings[0].id).toBe(expectedPosting.id);
     expect(response.body.postings[0].title).toBe('Searchable Posting');
+  });
+
+  test('GET /organization/posting supports posting_filter and hide_full', async () => {
+    const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-list-posting-filter@example.com' });
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-listing-vol@example.com' });
+    const crisis = await transaction
+      .insertInto('crisis')
+      .values({ name: 'Filter Crisis', description: 'Filter crisis', pinned: false })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Open Posting',
+        description: 'Open posting example',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: new Date('2026-09-04T00:00:00.000Z'),
+        start_time: '09:00:00',
+        end_date: new Date('2026-09-04T00:00:00.000Z'),
+        end_time: '17:00:00',
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Open Location',
+      })
+      .execute();
+
+    const fullPosting = await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Full Posting',
+        description: 'Full posting example',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 1,
+        start_date: new Date('2026-09-05T00:00:00.000Z'),
+        start_time: '10:00:00',
+        end_date: new Date('2026-09-05T00:00:00.000Z'),
+        end_time: '18:00:00',
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Full Location',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteer.id,
+        posting_id: fullPosting.id,
+        attended: false,
+      })
+      .execute();
+
+    await transaction
+      .insertInto('organization_posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Tagged Partial Posting',
+        description: 'Tagged partial posting',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: new Date('2026-09-06T00:00:00.000Z'),
+        start_time: '11:00:00',
+        end_date: new Date('2026-09-06T00:00:00.000Z'),
+        end_time: '19:00:00',
+        minimum_age: 18,
+        automatic_acceptance: false,
+        is_closed: false,
+        allows_partial_attendance: true,
+        location_name: 'Tagged Location',
+        crisis_id: crisis.id,
+      })
+      .execute();
+
+    const openResponse = await server
+      .get('/organization/posting')
+      .query({ posting_filter: 'open' })
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(openResponse.body.postings.map((posting: { title: string }) => posting.title)).toEqual(
+      expect.arrayContaining(['Open Posting', 'Full Posting']),
+    );
+    expect(openResponse.body.postings.some((posting: { title: string }) => posting.title === 'Tagged Partial Posting')).toBe(false);
+
+    const hideFullResponse = await server
+      .get('/organization/posting')
+      .query({ posting_filter: 'open', hide_full: 'true' })
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(hideFullResponse.body.postings.map((posting: { title: string }) => posting.title)).toEqual(['Open Posting']);
   });
 
   test('GET /organization/posting/:id returns posting with crisis and skills', async () => {

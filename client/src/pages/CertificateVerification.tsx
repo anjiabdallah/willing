@@ -1,11 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, FileSearch, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import Button from '../components/Button';
 import Card from '../components/Card';
+import CertificatePreview from '../components/certificates/CertificatePreview';
+import {
+  CERTIFICATE_PREVIEW_HEIGHT,
+  CERTIFICATE_PREVIEW_WIDTH,
+  getCertificatePreviewStyles,
+} from '../components/certificates/certificatePreview.constants';
 import Footer from '../components/layout/Footer';
 import UserNavbar from '../components/layout/navbars/UserNavbar';
 import PageContainer from '../components/layout/PageContainer';
@@ -20,9 +26,13 @@ const verificationSchema = z.object({
 });
 
 type VerificationFormData = z.infer<typeof verificationSchema>;
+const CERTIFICATE_PREVIEW_ID = 'certificate-preview-verify';
 
 function CertificateVerification() {
   const [result, setResult] = useState<PublicCertificateVerificationResponse | null>(null);
+  const [verifiedToken, setVerifiedToken] = useState<string>('');
+  const previewViewportRef = useRef<HTMLDivElement | null>(null);
+  const [certificateScale, setCertificateScale] = useState(1);
 
   const form = useForm<VerificationFormData>({
     resolver: zodResolver(verificationSchema),
@@ -45,13 +55,41 @@ function CertificateVerification() {
         },
       );
       setResult(response);
+      setVerifiedToken(data.token.trim());
     });
   });
+
+  useEffect(() => {
+    const viewportElement = previewViewportRef.current;
+    if (!viewportElement || !result?.valid) return undefined;
+
+    const updateScale = () => {
+      const availableWidth = viewportElement.clientWidth;
+      if (!availableWidth) return;
+      const nextScale = Math.min(1, availableWidth / CERTIFICATE_PREVIEW_WIDTH);
+      setCertificateScale(currentScale => (Math.abs(currentScale - nextScale) < 0.001 ? currentScale : nextScale));
+    };
+
+    updateScale();
+
+    const observer = new ResizeObserver(() => {
+      updateScale();
+    });
+    observer.observe(viewportElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [result?.valid]);
 
   return (
     <div className="min-h-screen flex flex-col bg-base-100">
       <UserNavbar />
       <PageContainer>
+        <style>
+          {getCertificatePreviewStyles(CERTIFICATE_PREVIEW_ID, false)}
+        </style>
+
         <PageHeader
           title="Verify Certificate"
           subtitle="Enter a certificate verification token to validate authenticity."
@@ -118,6 +156,40 @@ function CertificateVerification() {
                 </ul>
               </div>
             )}
+          </Card>
+        )}
+
+        {result?.valid && (
+          <Card title="Regenerated Certificate">
+            <div ref={previewViewportRef} className="w-full certificate-preview-viewport overflow-hidden">
+              <div
+                className="mx-auto certificate-preview-stage"
+                style={{
+                  width: `${CERTIFICATE_PREVIEW_WIDTH * certificateScale}px`,
+                  height: `${CERTIFICATE_PREVIEW_HEIGHT * certificateScale}px`,
+                }}
+              >
+                <div
+                  className="certificate-preview-scaler"
+                  style={{
+                    width: `${CERTIFICATE_PREVIEW_WIDTH}px`,
+                    height: `${CERTIFICATE_PREVIEW_HEIGHT}px`,
+                    transform: `scale(${certificateScale})`,
+                    transformOrigin: 'top left',
+                  }}
+                >
+                  <CertificatePreview
+                    previewId={CERTIFICATE_PREVIEW_ID}
+                    volunteerName={result.volunteer_name ?? 'Volunteer'}
+                    totalHours={result.total_hours ?? 0}
+                    organizations={result.organizations ?? []}
+                    platformCertificate={result.platform_certificate ?? null}
+                    generatedAtLabel={result.issued_at ? new Date(result.issued_at).toLocaleDateString() : '-'}
+                    verificationToken={verifiedToken}
+                  />
+                </div>
+              </div>
+            </div>
           </Card>
         )}
       </PageContainer>

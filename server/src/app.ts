@@ -29,6 +29,7 @@ function createApp(db: Kysely<Database>) {
     credentials: true,
   }));
 
+  app.set('trust proxy', 1);
   app.use(createAPIRouter(db));
 
   app.use((req, res, next) => {

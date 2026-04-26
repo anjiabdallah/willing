@@ -1,4 +1,4 @@
-import { Pin } from 'lucide-react';
+import { AlertCircle, Pin } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 import Card from '../Card.tsx';
@@ -24,8 +24,9 @@ function CrisisCard({
     <Card
       title={crisis.name}
       description={crisis.description || descriptionFallback}
+      Icon={AlertCircle}
       link={link ?? `/volunteer/crises/${crisis.id}/postings`}
-      right={right ?? (crisis.pinned ? <Pin size={16} className="text-primary" /> : undefined)}
+      right={right ?? (crisis.pinned ? <Pin size={16} className="text-primary shrink-0" /> : undefined)}
     >
       {children}
     </Card>

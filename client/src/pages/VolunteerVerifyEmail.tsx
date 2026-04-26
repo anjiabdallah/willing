@@ -8,6 +8,7 @@ import Card from '../components/Card';
 import Hero from '../components/layout/Hero';
 import LinkButton from '../components/LinkButton';
 import useNotifications from '../notifications/useNotifications';
+import { forgotPasswordRequestSchema } from '../schemas/auth';
 import useAsync from '../utils/useAsync';
 
 export default function VolunteerVerifyEmail() {
@@ -46,12 +47,7 @@ export default function VolunteerVerifyEmail() {
       .then(() => {
         navigate('/volunteer', { replace: true });
       })
-      .catch((err) => {
-        notifications.push({
-          type: 'error',
-          message: err.message,
-        });
-      });
+      .catch(() => {});
   }, [verificationKey, trigger, notifications, navigate]);
 
   if (!verificationKey) {
@@ -91,15 +87,15 @@ export default function VolunteerVerifyEmail() {
       <Hero>
         <Card>
           <h2 className="font-bold text-2xl text-center">Email verification failed</h2>
-          <p className="opacity-80 text-center">{error.message}</p>
-          <div className="form-control w-full max-w-md mx-auto">
-            <label className="label" htmlFor="resend-verification-email">
+          <p className="opacity-80 text-center text-error">{error.message}</p>
+          <div className="form-control w-full max-w-md mx-auto mt-4">
+            <label className="label mb-2" htmlFor="resend-verification-email">
               <span className="label-text">Need a new link? Enter your email</span>
             </label>
             <input
               id="resend-verification-email"
               type="email"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full mt-2"
               placeholder="name@example.com"
               value={resendEmail}
               onChange={event => setResendEmail(event.target.value)}
@@ -121,17 +117,26 @@ export default function VolunteerVerifyEmail() {
                   return;
                 }
 
+                const validation = forgotPasswordRequestSchema.safeParse({ email });
+                if (!validation.success) {
+                  notifications.push({
+                    type: 'warning',
+                    message: validation.error.issues[0]?.message ?? 'Please enter a valid email address.',
+                  });
+                  return;
+                }
+
                 triggerResend(email)
                   .then(() => {
                     notifications.push({
                       type: 'success',
-                      message: 'If an unverified account exists for this email, a new verification link has been sent.',
+                      message: 'A new verification link has been sent.',
                     });
                   })
                   .catch((err) => {
                     notifications.push({
                       type: 'error',
-                      message: err.message,
+                      message: err instanceof Error ? err.message : 'Failed to resend verification email.',
                     });
                   });
               }}

@@ -51,19 +51,29 @@ export default function PageHeader({
 
   return (
     <Card>
-      <div className="flex items-center justify-between gap-4 md:flex-nowrap flex-wrap">
+      <div className="flex items-center gap-4 md:flex-nowrap flex-wrap justify-between">
         <div className="flex items-center gap-3">
           {showBack && (
             <IconButton
               onClick={onBack}
               Icon={ArrowLeft}
+              className="max-sm:hidden"
             />
           )}
           <div className="flex gap-4">
-            {Icon && <Icon className="text-primary mt-0.5 shrink-0" size={32} />}
+            {Icon && <Icon className="text-primary mt-0.5 shrink-0 max-md:hidden" size={32} />}
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-3xl font-extrabold tracking-tight">{title}</h3>
+                {showBack && (
+                  <IconButton
+                    onClick={onBack}
+                    Icon={ArrowLeft}
+                    className="sm:hidden"
+                    size="xs"
+                  />
+                )}
+                {Icon && <Icon className="text-primary shrink-0 md:hidden" size={22} />}
+                <h3 className="md:text-3xl text-xl font-extrabold tracking-tight">{title}</h3>
                 {badge && badge}
               </div>
               {subtitle && (

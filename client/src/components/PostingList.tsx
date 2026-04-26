@@ -1,5 +1,5 @@
 import { AlertCircle, Ban, Cake, Calendar, Clock, ExternalLink, LockOpen, MapPin, Users } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 
 import OrganizationProfilePicture from './OrganizationProfilePicture';
 import SkillsList from './skills/SkillsList';
@@ -247,14 +247,15 @@ function PostingList({
 
         <div className="collapse-title z-10 pointer-events-none flex items-center gap-3 pr-12">
           <div className="relative shrink-0 pointer-events-auto">
-            <Link to={`/organization/${posting.organization_id}`} onClick={event => event.stopPropagation()} className="avatar avatar-placeholder">
-              <OrganizationProfilePicture
-                organizationName={posting.organization_name ?? 'Organization'}
-                organizationId={posting.organization_id}
-                logoPath={posting.organization_logo_path}
-                size={44}
-              />
-            </Link>
+            <OrganizationProfilePicture
+              organizationName={posting.organization_name ?? 'Organization'}
+              organizationId={posting.organization_id}
+              logoPath={posting.organization_logo_path}
+              size={44}
+              linkToOrganizationPage
+              linkClassName="avatar avatar-placeholder"
+              onLinkClick={event => event.stopPropagation()}
+            />
           </div>
 
           <div className="min-w-0 flex-1 relative">

@@ -261,7 +261,7 @@ function createAdminRouter(db: Kysely<Database>) {
       .selectAll();
 
     if (search) {
-      const searchPattern = `%${search};%`;
+      const searchPattern = `%${search}%`;
       organizationRequestsQuery = organizationRequestsQuery.where(eb => eb.or([
         eb('organization_request.name', 'ilike', searchPattern),
         eb('organization_request.email', 'ilike', searchPattern),

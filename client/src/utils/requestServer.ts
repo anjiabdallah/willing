@@ -44,7 +44,17 @@ export default async function requestServer<ReturnType>(path: string, { body, me
   const json = await response.json();
 
   if (response.status >= 400) {
-    throw new Error(json.message, { cause: response });
+    let message = json?.message;
+
+    if (!message && Array.isArray(json) && json.length > 0) {
+      message = json[0]?.message;
+    }
+
+    if (!message) {
+      message = response.statusText || 'Request failed';
+    }
+
+    throw new Error(message, { cause: response });
   }
 
   return json as ReturnType;

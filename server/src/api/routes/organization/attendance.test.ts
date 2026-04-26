@@ -104,6 +104,80 @@ describe('Organization attendance endpoints', () => {
     expect(fetch2.body.enrollments[0].dates?.[0].attended).toBe(true);
   });
 
+  test('PATCH /organization/posting/:id/enrollment-dates/:enrollmentDateId/attendance marks an enrollment attended when at least one date is attended', async () => {
+    const org = await createOrganizationAccount(transaction, { email: 'org-full@example.com' });
+    const volunteer = await createVolunteerAccount(transaction, { email: 'vol-full@example.com' });
+
+    const posting = await createOrganizationPosting(transaction, {
+      organizationId: org.organization.id,
+      overrides: {
+        allows_partial_attendance: false,
+        start_date: new Date('2026-01-01'),
+        end_date: new Date('2026-01-02'),
+      },
+    });
+
+    const enrollment = await transaction
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteer.volunteer.id,
+        posting_id: posting.id,
+        attended: false,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const firstDay = await transaction
+      .insertInto('enrollment_date')
+      .values({
+        enrollment_id: enrollment.id,
+        posting_id: posting.id,
+        date: new Date('2026-01-01'),
+        attended: false,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const secondDay = await transaction
+      .insertInto('enrollment_date')
+      .values({
+        enrollment_id: enrollment.id,
+        posting_id: posting.id,
+        date: new Date('2026-01-02'),
+        attended: false,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await server
+      .patch(`/organization/posting/${posting.id}/enrollment-dates/${firstDay.id}/attendance`)
+      .set('Authorization', `Bearer ${org.token}`)
+      .send({ attended: true })
+      .expect(200);
+
+    const firstDayEnrollment = await transaction
+      .selectFrom('enrollment')
+      .select(['attended'])
+      .where('id', '=', enrollment.id)
+      .executeTakeFirstOrThrow();
+
+    expect(firstDayEnrollment.attended).toBe(true);
+
+    await server
+      .patch(`/organization/posting/${posting.id}/enrollment-dates/${secondDay.id}/attendance`)
+      .set('Authorization', `Bearer ${org.token}`)
+      .send({ attended: true })
+      .expect(200);
+
+    const updatedEnrollment = await transaction
+      .selectFrom('enrollment')
+      .select(['attended'])
+      .where('id', '=', enrollment.id)
+      .executeTakeFirstOrThrow();
+
+    expect(updatedEnrollment.attended).toBe(true);
+  });
+
   test('PATCH /organization/posting/:id/attendance updates all enrollment attendance and recomputes volunteer vectors', async () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-b@example.com' });
     const volunteerOne = await createVolunteerAccount(transaction, { email: 'vol-b1@example.com' });

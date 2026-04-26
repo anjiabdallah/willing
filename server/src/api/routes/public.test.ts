@@ -271,7 +271,7 @@ describe('POST /public/certificate/verify', () => {
     const enrollmentCreatedAt = new Date(issuedAtDate);
     enrollmentCreatedAt.setMinutes(enrollmentCreatedAt.getMinutes() - 2);
 
-    await transaction
+    const enrollments = await transaction
       .insertInto('enrollment')
       .values([
         {
@@ -285,6 +285,25 @@ describe('POST /public/certificate/verify', () => {
           posting_id: postingTwo.id,
           attended: true,
           created_at: enrollmentCreatedAt,
+        },
+      ])
+      .returningAll()
+      .execute();
+
+    await transaction
+      .insertInto('enrollment_date')
+      .values([
+        {
+          enrollment_id: enrollments[0]!.id,
+          posting_id: postingOne.id,
+          date: new Date('2026-02-01T00:00:00.000Z'),
+          attended: true,
+        },
+        {
+          enrollment_id: enrollments[1]!.id,
+          posting_id: postingTwo.id,
+          date: new Date('2026-02-03T00:00:00.000Z'),
+          attended: true,
         },
       ])
       .execute();
@@ -461,6 +480,7 @@ describe('POST /public/certificate/verify', () => {
       volunteer_name: `${volunteer.first_name} ${volunteer.last_name}`,
       total_hours: payload.total_hours,
       organizations: [],
+      platform_certificate: null,
     });
   });
 
@@ -496,13 +516,67 @@ describe('POST /public/certificate/verify', () => {
           id: organizationOne.id,
           name: organizationOne.name,
           hours: payload.hours_per_org[String(organizationOne.id)],
+          logo_path: null,
+          signatory_name: null,
+          signatory_position: null,
+          signature_path: null,
         },
         {
           id: organizationTwo.id,
           name: organizationTwo.name,
           hours: payload.hours_per_org[String(organizationTwo.id)],
+          logo_path: null,
+          signatory_name: null,
+          signatory_position: null,
+          signature_path: null,
         },
       ],
+      platform_certificate: null,
+    });
+  });
+
+  test('keeps a previously issued certificate valid when one referenced organization is later disabled', async () => {
+    const { token, payload, volunteer, organizationOne, organizationTwo } = await createValidCertificateVerificationContext();
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ is_disabled: true })
+      .where('id', '=', organizationOne.id)
+      .execute();
+
+    const response = await server
+      .post('/public/certificate/verify')
+      .send({ token })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      valid: true,
+      message: 'Certificate is valid.',
+      issued_at: payload.issued_at,
+      certificate_type: CERTIFICATE_TYPE,
+      volunteer_name: `${volunteer.first_name} ${volunteer.last_name}`,
+      total_hours: payload.total_hours,
+      organizations: [
+        {
+          id: organizationOne.id,
+          name: organizationOne.name,
+          hours: payload.hours_per_org[String(organizationOne.id)],
+          logo_path: null,
+          signatory_name: null,
+          signatory_position: null,
+          signature_path: null,
+        },
+        {
+          id: organizationTwo.id,
+          name: organizationTwo.name,
+          hours: payload.hours_per_org[String(organizationTwo.id)],
+          logo_path: null,
+          signatory_name: null,
+          signatory_position: null,
+          signature_path: null,
+        },
+      ],
+      platform_certificate: null,
     });
   });
 

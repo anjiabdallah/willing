@@ -190,7 +190,7 @@ function HomePage() {
           </div>
         </section>
 
-        <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 md:px-6 xl:px-8 mt-16">
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-20 mt-16">
 
           {auth.user?.role === 'admin' && (
             <div className="mx-auto flex max-w-7xl flex-wrap justify-center gap-4">
@@ -266,7 +266,7 @@ function HomePage() {
             </div>
           </div>
 
-          <section className="space-y-8">
+          <section className="space-y-8 px-4">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-4xl font-black leading-tight tracking-[-0.04em] md:text-6xl">
                 <span className="text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">

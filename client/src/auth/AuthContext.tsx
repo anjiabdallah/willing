@@ -1,6 +1,6 @@
 import * as jose from 'jose';
 import { createContext, useState, useCallback, type ReactNode, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 
 import requestServer from '../utils/requestServer';
 

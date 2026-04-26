@@ -59,8 +59,8 @@ function PostingDateTime({
 
           <div className="flex flex-col items-center shrink-0 mt-1">
             <Clock size={16} className="text-primary" />
-            {hasEndDate && <div className="w-0.5 h-6 bg-primary my-1" />}
-            {hasEndDate && <Clock size={16} className="text-primary" />}
+            <div className="w-0.5 h-6 bg-primary my-1" />
+            <Clock size={16} className="text-primary" />
           </div>
         </div>
       </div>

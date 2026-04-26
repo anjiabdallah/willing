@@ -1,5 +1,5 @@
 import { useContext, type ReactNode } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
 
 import AuthContext from './AuthContext';
 import Loading from '../components/Loading';

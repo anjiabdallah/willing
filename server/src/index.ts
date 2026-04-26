@@ -5,7 +5,7 @@ import { migrateToLatest } from './db/migrate.ts';
 
 async function startServer() {
   try {
-    if (config.NODE_ENV === 'development') {
+    if (config.NODE_ENV === 'development' || config.NODE_ENV === 'production') {
       await migrateToLatest(database);
       console.log('Database migrations completed');
     }

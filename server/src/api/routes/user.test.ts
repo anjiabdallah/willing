@@ -80,6 +80,23 @@ describe('POST /user/login', () => {
     expect(response.body.volunteer.volunteer_history_vector).toBeUndefined();
   });
 
+  test('logs in successfully when email input uses uppercase letters', async () => {
+    const { volunteer, plainPassword } = await createVolunteerAccount(transaction, {
+      email: 'case-insensitive-login@example.com',
+    });
+
+    const response = await server
+      .post('/user/login')
+      .send({ email: 'Case-Insensitive-Login@Example.com', password: plainPassword })
+      .expect(200);
+
+    expect(response.body.role).toBe('volunteer');
+    expect(response.body.volunteer).toMatchObject({
+      id: volunteer.id,
+      email: volunteer.email,
+    });
+  });
+
   test('rejects login for inexistent account', async () => {
     const response = await server
       .post('/user/login')

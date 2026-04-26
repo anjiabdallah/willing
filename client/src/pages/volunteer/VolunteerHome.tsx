@@ -1,7 +1,7 @@
-import { House } from 'lucide-react';
+import { House, Clipboard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import Alert from '../../components/Alert';
+import EmptyState from '../../components/EmptyState.tsx';
 import PageContainer from '../../components/layout/PageContainer.tsx';
 import PageHeader from '../../components/layout/PageHeader.tsx';
 import Loading from '../../components/Loading.tsx';
@@ -311,9 +311,11 @@ function VolunteerHome() {
                         </div>
                       )
                     : (
-                        <Alert>
-                          No recommended postings are available yet.
-                        </Alert>
+                        <EmptyState
+                          title="No postings are available"
+                          description="Wait for postings to be created to show here."
+                          Icon={Clipboard}
+                        />
                       )}
               >
                 <PostingCollection
@@ -338,9 +340,11 @@ function VolunteerHome() {
                         </div>
                       )
                     : (
-                        <Alert>
-                          No recommended postings are available yet.
-                        </Alert>
+                        <EmptyState
+                          title="No postings are available"
+                          description="Wait for postings to be created to show here."
+                          Icon={Clipboard}
+                        />
                       )}
               >
                 <PostingCollection

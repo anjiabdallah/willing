@@ -16,6 +16,7 @@ function renderGuidePage(role?: 'volunteer' | 'organization' | 'admin') {
 
 beforeEach(() => {
   Element.prototype.scrollTo = vi.fn();
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
@@ -32,10 +33,10 @@ test('all navigable section ids are present in the DOM', () => {
   }
 });
 
-test('clicking a nav button calls scrollTo on the container', () => {
+test('clicking a nav button calls scrollIntoView on the section', () => {
   renderGuidePage();
   screen.getAllByRole('button', { name: 'For Volunteers' })[0].click();
-  expect(Element.prototype.scrollTo).toHaveBeenCalled();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 });
 
 // CTA Section — Guest

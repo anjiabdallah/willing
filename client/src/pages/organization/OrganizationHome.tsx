@@ -35,8 +35,7 @@ import type { PostingWithContext } from '../../../../server/src/types';
 type OrganizationPostingFilters = SharedPostingFilterFields & {
   sortBy: OrganizationPostingSortBy;
   sortDir: PostingSortDir;
-  isClosed: 'all' | 'open' | 'closed';
-  postingType: 'all' | 'open' | 'review';
+  hideFull: boolean;
   crisisId: 'all' | `${number}`;
 };
 
@@ -48,8 +47,7 @@ const defaultFilters: OrganizationPostingFilters = {
   search: '',
   sortBy: 'created_at',
   sortDir: 'desc',
-  isClosed: 'all',
-  postingType: 'all',
+  hideFull: false,
   crisisId: 'all',
   startDateFrom: '',
   endDateTo: '',
@@ -62,8 +60,7 @@ const defaultFilters: OrganizationPostingFilters = {
 const defaultFormValues: OrganizationPostingFilterFormValues = {
   search: defaultFilters.search,
   sortOption: toOrganizationPostingSortOptionValue(defaultFilters.sortBy, defaultFilters.sortDir),
-  isClosed: defaultFilters.isClosed,
-  postingType: defaultFilters.postingType,
+  hideFull: defaultFilters.hideFull,
   crisisId: defaultFilters.crisisId,
   startDateFrom: defaultFilters.startDateFrom,
   endDateTo: defaultFilters.endDateTo,
@@ -79,8 +76,7 @@ const toOrganizationPostingFilterFormValues = (
 ): OrganizationPostingFilterFormValues => ({
   search: filters.search,
   sortOption: toOrganizationPostingSortOptionValue(filters.sortBy, filters.sortDir),
-  isClosed: filters.isClosed,
-  postingType: filters.postingType,
+  hideFull: filters.hideFull,
   crisisId: filters.crisisId,
   startDateFrom: filters.startDateFrom,
   endDateTo: filters.endDateTo,
@@ -99,8 +95,7 @@ const fromOrganizationPostingFilterFormValues = (
     search: values.search,
     sortBy: selectedSortOption.sortBy,
     sortDir: selectedSortOption.sortDir,
-    isClosed: values.isClosed,
-    postingType: values.postingType,
+    hideFull: values.hideFull,
     crisisId: values.crisisId,
     startDateFrom: values.startDateFrom,
     endDateTo: values.endDateTo,
@@ -133,13 +128,8 @@ function OrganizationHome() {
   const fetchOrganizationPostings = useCallback(
     async (nextFilters: OrganizationPostingFilters) => {
       const query = buildSharedPostingQuery(nextFilters);
-
-      if (nextFilters.isClosed !== 'all') {
-        query.is_closed = nextFilters.isClosed === 'closed' ? 'true' : 'false';
-      }
-
-      if (nextFilters.postingType !== 'all') {
-        query.automatic_acceptance = nextFilters.postingType === 'open' ? 'true' : 'false';
+      if (nextFilters.hideFull) {
+        query.hide_full = 'true';
       }
 
       if (nextFilters.crisisId !== 'all') {
@@ -221,12 +211,13 @@ function OrganizationHome() {
           )
         }
         actions={(
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center flex-wrap justify-end">
             <PostingViewModeToggle />
             <LinkButton
               color="primary"
               to="/organization/posting"
               Icon={Plus}
+              size="sm"
             >
               Create New Posting
             </LinkButton>
@@ -239,42 +230,35 @@ function OrganizationHome() {
         resetValues={defaultFormValues}
         onApply={applyFilters}
         searchFieldName="search"
-        searchPlaceholder="Search title, description, or location"
+        searchPlaceholder="Search by title, description, or location"
         sortFieldName="sortOption"
         sortOptions={organizationPostingSortOptions.map(option => ({
           label: option.label,
           value: option.value,
         }))}
+        extraFields={form => (
+          <FormField
+            form={form}
+            name="postingFilter"
+            label="Posting Filter"
+            selectOptions={[
+              { label: 'All postings', value: 'all' },
+              { label: 'Open postings', value: 'open' },
+              { label: 'Review-based postings', value: 'review' },
+              { label: 'Full commitment', value: 'full' },
+              { label: 'Partial commitment', value: 'partial' },
+              { label: 'Tagged postings', value: 'tagged' },
+              { label: 'Untagged postings', value: 'untagged' },
+            ]}
+          />
+        )}
         getHasAdvancedFiltersApplied={values => (
           hasSharedAdvancedPostingFilters(values)
-          || values.isClosed !== 'all'
-          || values.postingType !== 'all'
+          || values.hideFull
           || values.crisisId !== 'all'
         )}
         renderAdvancedFields={form => (
           <>
-            <FormField
-              form={form}
-              name="isClosed"
-              label="Status"
-              selectOptions={[
-                { label: 'All statuses', value: 'all' },
-                { label: 'Open', value: 'open' },
-                { label: 'Closed', value: 'closed' },
-              ]}
-            />
-
-            <FormField
-              form={form}
-              name="postingType"
-              label="Posting Type"
-              selectOptions={[
-                { label: 'All posting types', value: 'all' },
-                { label: 'Open Posting', value: 'open' },
-                { label: 'Review-Based', value: 'review' },
-              ]}
-            />
-
             <div className="lg:col-span-2">
               <FormField
                 form={form}
@@ -327,6 +311,16 @@ function OrganizationHome() {
               label="End Time By"
               type="time"
             />
+            <div className="lg:col-span-2 flex items-end">
+              <label className="label cursor-pointer justify-start gap-3 py-0">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  {...form.register('hideFull')}
+                />
+                <span className="label-text">Hide full postings</span>
+              </label>
+            </div>
           </>
         )}
       />

@@ -4,6 +4,7 @@ import { newOrganizationPostingSchema } from '../../../server/src/db/tables';
 
 export const organizationPostingFormSchema = newOrganizationPostingSchema
   .omit({
+    crisis_id: true,
     latitude: true,
     longitude: true,
     start_date: true,
@@ -30,6 +31,7 @@ export type OrganizationPostingFormData = z.infer<typeof organizationPostingForm
 
 export const organizationPostingEditFormSchema = newOrganizationPostingSchema
   .omit({
+    crisis_id: true,
     latitude: true,
     longitude: true,
     start_date: true,

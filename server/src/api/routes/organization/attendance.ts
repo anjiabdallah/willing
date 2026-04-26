@@ -182,16 +182,40 @@ function createAttendanceRouter(db: Kysely<Database>) {
       .where('id', '=', enrollmentDateId)
       .execute();
 
-    if (body.attended) {
-      const enrollment = await db
-        .selectFrom('enrollment')
-        .select(['id', 'volunteer_id'])
-        .where('id', '=', dateRecord.enrollment_id)
-        .executeTakeFirst();
+    const enrollment = await db
+      .selectFrom('enrollment')
+      .select(['id', 'volunteer_id'])
+      .where('id', '=', dateRecord.enrollment_id)
+      .executeTakeFirst();
 
-      if (enrollment) {
-        await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
-      }
+    if (!enrollment) {
+      res.status(500);
+      throw new Error('Enrollment record is missing');
+    }
+
+    const enrollmentDates = await db
+      .selectFrom('enrollment_date')
+      .select(['attended'])
+      .where('enrollment_id', '=', enrollment.id)
+      .execute();
+
+    const updatedEnrollmentAttended = enrollmentDates.length > 0 && enrollmentDates.some(row => row.attended);
+
+    const currentEnrollment = await db
+      .selectFrom('enrollment')
+      .select(['attended'])
+      .where('id', '=', enrollment.id)
+      .executeTakeFirst();
+
+    if (currentEnrollment && currentEnrollment.attended !== updatedEnrollmentAttended) {
+      await db
+        .updateTable('enrollment')
+        .set({ attended: updatedEnrollmentAttended })
+        .where('id', '=', enrollment.id)
+        .execute();
+
+      await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
+      await recomputePostingVectorsForVolunteerEnrollments(enrollment.volunteer_id, db);
     }
 
     res.json({});

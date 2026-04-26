@@ -21,11 +21,7 @@ export default function SkillsList({ skills, action: Action, enableLimit = true,
   }, [skills, enableLimit, limit, expanded]);
 
   if (skills.length === 0) {
-    return (
-      <p className="text-xs italic text-base-content/60 mt-3">
-        Add skills to help volunteers find your posting.
-      </p>
-    );
+    return;
   }
 
   return (

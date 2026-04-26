@@ -3,7 +3,7 @@ import { useWatch, type FieldValues, type Path, type UseFormReturn } from 'react
 
 import { FormField, FormRootError } from '../../utils/formUtils';
 import Button from '../Button';
-import IconButton from '../IconButton';
+import Modal from '../Modal';
 import { REPORT_TYPE_OPTIONS } from './reportType.constants';
 
 type ReportFormProps<TForm extends FieldValues & { title: string; message: string }> = {
@@ -38,71 +38,57 @@ function ReportForm<TForm extends FieldValues & { title: string; message: string
   const messageLength = typeof reportMessage === 'string' ? reportMessage.length : 0;
 
   return (
-    <div className={`modal ${open ? 'modal-open' : ''}`}>
-      <div className="modal-box border border-base-300">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-lg">{heading}</h3>
-          <IconButton
+    <Modal
+      open={open}
+      title={heading}
+      onClose={onClose}
+      disableBackdropClose={submitting}
+      showCloseButton={!submitting}
+    >
+      <form onSubmit={onSubmit} className="space-y-2">
+        <FormField
+          form={form}
+          name={'title' as Path<TForm>}
+          label="Report Type"
+          selectOptions={REPORT_TYPE_OPTIONS}
+        />
+
+        <FormField
+          form={form}
+          name={'message' as Path<TForm>}
+          label="Message"
+          type="textarea"
+          placeholder={messagePlaceholder}
+        />
+
+        <p className="text-xs opacity-70 text-right px-1">
+          {`${messageLength}/${maxMessageLength}`}
+        </p>
+
+        <FormRootError form={form} />
+
+        <div className="modal-action">
+          <Button
             type="button"
+            color="ghost"
             Icon={X}
             onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            color="error"
+            Icon={Flag}
             loading={submitting}
-            aria-label="Close report modal"
-            title="Close"
-          />
+            disabled={submitDisabled}
+          >
+            {submitLabel}
+          </Button>
         </div>
-
-        <form onSubmit={onSubmit} className="space-y-2">
-          <FormField
-            form={form}
-            name={'title' as Path<TForm>}
-            label="Report Type"
-            selectOptions={REPORT_TYPE_OPTIONS}
-          />
-
-          <FormField
-            form={form}
-            name={'message' as Path<TForm>}
-            label="Message"
-            type="textarea"
-            placeholder={messagePlaceholder}
-          />
-
-          <p className="text-xs opacity-70 text-right px-1">
-            {`${messageLength}/${maxMessageLength}`}
-          </p>
-
-          <FormRootError form={form} />
-
-          <div className="modal-action">
-            <Button
-              type="button"
-              color="ghost"
-              Icon={X}
-              onClick={onClose}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              color="error"
-              Icon={Flag}
-              loading={submitting}
-              disabled={submitDisabled}
-            >
-              {submitLabel}
-            </Button>
-          </div>
-        </form>
-      </div>
-      <button
-        type="button"
-        className="modal-backdrop"
-        aria-label="Close modal"
-        onClick={onClose}
-      />
-    </div>
+      </form>
+    </Modal>
   );
 }
 

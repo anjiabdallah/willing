@@ -163,14 +163,29 @@ function createPublicRouter(db: Kysely<Database>) {
       ? []
       : await db
           .selectFrom('organization_account')
-          .select(['id', 'name'])
-          .where('id', 'in', organizationIds)
+          .leftJoin(
+            'organization_certificate_info',
+            'organization_certificate_info.id',
+            'organization_account.certificate_info_id',
+          )
+          .select([
+            'organization_account.id',
+            'organization_account.name',
+            'organization_account.logo_path',
+            'organization_certificate_info.signatory_name',
+            'organization_certificate_info.signatory_position',
+            'organization_certificate_info.signature_path',
+          ])
+          .where('organization_account.id', 'in', organizationIds)
           .execute();
 
-    const organizationNameById = new Map<number, string>();
-    organizations.forEach((organization) => {
-      organizationNameById.set(organization.id, organization.name);
-    });
+    const organizationById = new Map(organizations.map(organization => [organization.id, organization]));
+
+    const platformCertificate = await db
+      .selectFrom('platform_certificate_settings')
+      .select(['signatory_name', 'signatory_position', 'signature_path'])
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
 
     res.json({
       valid: true,
@@ -181,9 +196,20 @@ function createPublicRouter(db: Kysely<Database>) {
       total_hours: tokenResult.payload.total_hours,
       organizations: organizationIds.map(orgId => ({
         id: orgId,
-        name: organizationNameById.get(orgId) ?? `Organization ${orgId}`,
+        name: organizationById.get(orgId)?.name ?? `Organization ${orgId}`,
         hours: tokenResult.payload.hours_per_org[String(orgId)] ?? 0,
+        logo_path: organizationById.get(orgId)?.logo_path ?? null,
+        signatory_name: organizationById.get(orgId)?.signatory_name ?? null,
+        signatory_position: organizationById.get(orgId)?.signatory_position ?? null,
+        signature_path: organizationById.get(orgId)?.signature_path ?? null,
       })),
+      platform_certificate: platformCertificate
+        ? {
+            signatory_name: platformCertificate.signatory_name ?? null,
+            signatory_position: platformCertificate.signatory_position ?? null,
+            signature_path: platformCertificate.signature_path ?? null,
+          }
+        : null,
     });
   });
 

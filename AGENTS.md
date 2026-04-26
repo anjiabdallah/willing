@@ -353,6 +353,10 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 - **`StatsCarousel`**: In `client/src/components/home/StatsCarousel.tsx`; used in `HomePage` for the active stats carousel with navigation and keyboard controls.
 
+### Certificate Components (`client/src/components/certificates/`)
+
+- **`CertificatePreview`**: Shared certificate renderer used by both generation and verification screens so they stay visually and structurally identical. Use `certificatePreview.constants.ts` for shared sizing (`CERTIFICATE_PREVIEW_WIDTH`, `CERTIFICATE_PREVIEW_HEIGHT`, `MAX_CERTIFICATE_ORGANIZATIONS`) and `getCertificatePreviewStyles(...)` for typography/print style injection.
+
 ### Posting Components (`client/src/components/postings/` + shared posting cards)
 
 - **`PostingCard`**: Standard volunteer opportunity card (title, description, location, dates, constraints, skills). Required prop: `posting`. Optional prop: `organization`.
@@ -379,6 +383,7 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 - **`Loading`**: DaisyUI loading spinner. Optional prop: `size` (`xs`, `sm`, `md`, `lg`, `xl`; default `md`).
 - **`EmptyState`**: Generic empty-state panel with centered icon and text for no-data/result cases. Required props: `title`, `description`, `Icon`.
+- **`OrganizationProfilePicture`**: Shared organization avatar/logo renderer with initials fallback. Required props: `organizationName`, `organizationId`. Optional props: `logoPath`, `size` (default `96`), `className`, `linkToOrganizationPage` (default `false`), `linkClassName`, `onLinkClick`.
 - **`LocationPicker`**: Leaflet map picker with draggable marker, click-to-place, Lebanon geocoding search, and read-only mode. Required props: `position`, `setPosition`. Optional props: `readOnly` (default `false`), `className`.
 - **`OrganizationRequestReviewCard`**: Admin review card for organization onboarding requests. Required props: `request`, `refreshOrganizationRequests`.
 - **`VolunteerInfoCollapse`**: Expandable volunteer info block for applications/enrollments. Required prop: `volunteer`. Optional prop: `actions`.

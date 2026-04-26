@@ -8,7 +8,7 @@ export async function generateJWT(payload: UserJWT) {
   const token = await new jose.SignJWT({ ...payload })
     .setIssuedAt()
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('7d')
+    .setExpirationTime('1d')
     .sign(new TextEncoder().encode(config.JWT_SECRET));
 
   return token;

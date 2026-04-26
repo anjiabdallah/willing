@@ -14,7 +14,7 @@ import authorizeOnly from '../../auth/authorizeOnly.ts';
 import removePassword from '../../auth/removePassword.ts';
 import executeTransaction from '../../db/executeTransaction.ts';
 import { type Database } from '../../db/tables/index.ts';
-import { passwordSchema } from '../../schemas/index.ts';
+import { emailSchema, passwordSchema } from '../../schemas/index.ts';
 import { compare, hash } from '../../services/bcrypt/index.ts';
 import { generateJWT } from '../../services/jwt/index.ts';
 import { sendPasswordResetEmail, sendPostingDeletedEmail } from '../../services/smtp/emails.ts';
@@ -49,7 +49,7 @@ const volunteerLoginColumns = [
 ] as const;
 
 const forgotPasswordRequestSchema = zod.object({
-  email: zod.string().email(),
+  email: emailSchema,
 });
 
 const forgotPasswordResetSchema = zod.object({

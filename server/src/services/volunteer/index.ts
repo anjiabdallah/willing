@@ -38,27 +38,6 @@ export type VolunteerProfileData = {
   completed_experiences: VolunteerCompletedExperience[];
 };
 
-const combineDateTimeToDate = (date: Date, time: string) => {
-  const [hoursRaw, minutesRaw = '0', secondsRaw = '0'] = time.split(':');
-  const hours = Number(hoursRaw);
-  const minutes = Number(minutesRaw);
-  const seconds = Number(secondsRaw);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
-    return new Date(Number.NaN);
-  }
-
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    hours,
-    minutes,
-    seconds,
-    0,
-  );
-};
-
 export const getVolunteerProfile = async (volunteerId: number): Promise<VolunteerProfileData> => {
   const [volunteer, volunteerSkills, completedExperiences, usedPostingSkills] = await Promise.all([
     database
@@ -117,20 +96,22 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
       .execute(),
   ]);
 
-  const totalHoursCompletedRaw = completedExperiences.reduce((totalHours, experience) => {
-    if (!experience.end_date || !experience.end_time) return totalHours;
+  const totalHoursRow = await database
+    .selectFrom('enrollment_date')
+    .innerJoin('enrollment', 'enrollment.id', 'enrollment_date.enrollment_id')
+    .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+    .select(sql<number>`COALESCE(SUM(GREATEST(
+  0,
+  EXTRACT(EPOCH FROM (
+    (enrollment_date.date + organization_posting.end_time)
+    - (enrollment_date.date + organization_posting.start_time)
+  )) / 3600.0
+)), 0)`.as('total_hours'))
+    .where('enrollment.volunteer_id', '=', volunteerId)
+    .where('enrollment_date.attended', '=', true)
+    .executeTakeFirstOrThrow();
 
-    const startMillis = combineDateTimeToDate(experience.start_date, experience.start_time).getTime();
-    const endMillis = combineDateTimeToDate(experience.end_date, experience.end_time).getTime();
-
-    if (Number.isNaN(startMillis) || Number.isNaN(endMillis) || endMillis <= startMillis) {
-      return totalHours;
-    }
-
-    return totalHours + ((endMillis - startMillis) / (1000 * 60 * 60));
-  }, 0);
-
-  const totalHoursCompleted = Math.round(totalHoursCompletedRaw * 10) / 10;
+  const totalHoursCompleted = Math.round((Number(totalHoursRow.total_hours ?? 0)) * 10) / 10;
 
   const crisisCountByName = new Map<string, number>();
   completedExperiences.forEach((experience) => {

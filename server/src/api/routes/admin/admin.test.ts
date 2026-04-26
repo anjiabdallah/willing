@@ -134,6 +134,56 @@ describe('Admin route coverage', () => {
     expect(response.body.organizationRequests[1].name).toBe('Second Org');
   });
 
+  test('GET /admin/getOrganizationRequests filters by name, email, and location search text', async () => {
+    await transaction
+      .insertInto('organization_request')
+      .values([
+        {
+          name: 'Alpha Relief',
+          email: 'alpha@example.com',
+          phone_number: '+96170000011',
+          url: 'https://alpha.example',
+          latitude: 33.91,
+          longitude: 35.51,
+          location_name: 'Beirut Center',
+        },
+        {
+          name: 'Beta Support',
+          email: 'contact@beta.org',
+          phone_number: '+96170000012',
+          url: 'https://beta.example',
+          latitude: 33.92,
+          longitude: 35.52,
+          location_name: 'Tripoli North',
+        },
+      ])
+      .execute();
+
+    const byName = await server
+      .get('/admin/getOrganizationRequests?search=alpha')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(byName.body.organizationRequests).toHaveLength(1);
+    expect(byName.body.organizationRequests[0].name).toBe('Alpha Relief');
+
+    const byEmail = await server
+      .get('/admin/getOrganizationRequests?search=beta.org')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(byEmail.body.organizationRequests).toHaveLength(1);
+    expect(byEmail.body.organizationRequests[0].email).toBe('contact@beta.org');
+
+    const byLocation = await server
+      .get('/admin/getOrganizationRequests?search=tripoli')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(byLocation.body.organizationRequests).toHaveLength(1);
+    expect(byLocation.body.organizationRequests[0].location_name).toBe('Tripoli North');
+  });
+
   test('POST /admin/reviewOrganizationRequest rejects a request and sends rejection email', async () => {
     const createdRequest = await transaction
       .insertInto('organization_request')

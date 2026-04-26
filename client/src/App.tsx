@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
 import AdminPage from './auth/pages/AdminPage';

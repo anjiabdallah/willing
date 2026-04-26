@@ -9,6 +9,16 @@ export type PublicHomeStatsResponse = {
 
 export type PublicCertificateSignatureResponse = never;
 
+export type PublicCertificateVerificationOrganization = {
+  id: number;
+  name: string;
+  hours: number;
+  logo_path: string | null;
+  signatory_name: string | null;
+  signatory_position: string | null;
+  signature_path: string | null;
+};
+
 export type PublicCertificateVerificationResponse = {
   valid: boolean;
   message: string;
@@ -16,9 +26,10 @@ export type PublicCertificateVerificationResponse = {
   certificate_type?: 'volunteer_hours_certificate';
   volunteer_name?: string;
   total_hours?: number;
-  organizations?: Array<{
-    id: number;
-    name: string;
-    hours: number;
-  }>;
+  organizations?: PublicCertificateVerificationOrganization[];
+  platform_certificate?: {
+    signatory_name: string | null;
+    signatory_position: string | null;
+    signature_path: string | null;
+  } | null;
 };

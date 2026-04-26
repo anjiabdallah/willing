@@ -349,13 +349,54 @@ function createOrganizationRouter(db: Kysely<Database>) {
     res.json({ crises });
   });
 
-  organizationRouter.get('/crises', async (_req, res: Response<OrganizationCrisesResponse>) => {
-    const crises = await db
+  organizationRouter.get('/crises', async (req, res: Response<OrganizationCrisesResponse>) => {
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const sortBy = typeof req.query.sort_by === 'string' ? req.query.sort_by : 'pinned_first';
+    const pinnedFilter = typeof req.query.pinned === 'string'
+      ? req.query.pinned === 'true'
+        ? true
+        : req.query.pinned === 'false'
+          ? false
+          : undefined
+      : undefined;
+
+    let query = db
       .selectFrom('crisis')
-      .selectAll()
-      .orderBy('pinned', 'desc')
-      .orderBy('created_at', 'desc')
-      .execute();
+      .selectAll();
+
+    if (search) {
+      const terms = normalizeSearchTerms(search);
+      query = query.where(({ and, or }) => and(
+        terms.map((term) => {
+          const likePattern = `%${term}%`;
+          return or([
+            sql<boolean>`lower(crisis.name) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(crisis.name), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+            sql<boolean>`lower(coalesce(crisis.description, '')) LIKE ${likePattern}`,
+            sql<boolean>`regexp_replace(lower(coalesce(crisis.description, '')), '[^a-z0-9]+', '', 'g') LIKE ${likePattern}`,
+          ]);
+        }),
+      ));
+    }
+
+    if (typeof pinnedFilter === 'boolean') {
+      query = query.where('pinned', '=', pinnedFilter);
+    }
+
+    switch (sortBy) {
+      case 'pinned_first':
+        query = query.orderBy('pinned', 'desc').orderBy('created_at', 'desc');
+        break;
+      case 'title_desc':
+        query = query.orderBy('name', 'desc');
+        break;
+      case 'title_asc':
+      default:
+        query = query.orderBy('name', 'asc');
+        break;
+    }
+
+    const crises = await query.execute();
 
     res.json({ crises });
   });

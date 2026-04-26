@@ -63,8 +63,9 @@ const defaultFilters: CrisisFilters = {
 const crisisFiltersStorageKey = 'admin-crises-filters';
 
 function AdminCrises() {
-  const initialFilters = useMemo<CrisisFilters>(() => {
+  const [initialFilters] = useState<CrisisFilters>(() => {
     if (typeof window === 'undefined') return defaultFilters;
+
     const raw = window.sessionStorage.getItem(crisisFiltersStorageKey);
     if (!raw) return defaultFilters;
 
@@ -74,7 +75,7 @@ function AdminCrises() {
     } catch {
       return defaultFilters;
     }
-  }, []);
+  });
 
   const [filters, setFilters] = useState<CrisisFilters>(initialFilters);
   const [activeFilters, setActiveFilters] = useState<CrisisFilters>(initialFilters);

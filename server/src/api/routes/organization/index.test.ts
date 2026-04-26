@@ -367,6 +367,46 @@ describe('Organization index routes', () => {
     expect(response.body.crises[0].name).toBe('Pinned Crisis');
   });
 
+  test('GET /organization/crises filters pinned crises when pinned=true', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-crises-filter-true@example.com' });
+    await transaction
+      .insertInto('crisis')
+      .values([
+        { name: 'Pinned Alpha', description: 'Urgent', pinned: true },
+        { name: 'Unpinned Beta', description: 'Regular', pinned: false },
+      ])
+      .execute();
+
+    const response = await server
+      .get('/organization/crises?pinned=true')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.crises).toHaveLength(1);
+    expect(response.body.crises[0].name).toBe('Pinned Alpha');
+    expect(response.body.crises[0].pinned).toBe(true);
+  });
+
+  test('GET /organization/crises filters unpinned crises when pinned=false', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-crises-filter-false@example.com' });
+    await transaction
+      .insertInto('crisis')
+      .values([
+        { name: 'Pinned Gamma', description: 'Urgent', pinned: true },
+        { name: 'Unpinned Delta', description: 'Regular', pinned: false },
+      ])
+      .execute();
+
+    const response = await server
+      .get('/organization/crises?pinned=false')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.crises).toHaveLength(1);
+    expect(response.body.crises[0].name).toBe('Unpinned Delta');
+    expect(response.body.crises[0].pinned).toBe(false);
+  });
+
   test('GET /organization/crises/:id returns a crisis by id and 404 when missing', async () => {
     const { token } = await createOrganizationAccount(transaction, { email: 'org-crises-by-id@example.com' });
     const inserted = await transaction

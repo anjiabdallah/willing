@@ -1,11 +1,11 @@
-import { CheckCheck, Download, RotateCcw, Save, Undo2, Users } from 'lucide-react';
+import { CheckCheck, Download, RotateCcw, Save, Search, Undo2, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 
-import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import CalendarInfo from '../../components/CalendarInfo';
 import Card from '../../components/Card';
+import EmptyState from '../../components/EmptyState';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
@@ -415,13 +415,14 @@ function OrganizationPostingAttendance() {
         showBack
         defaultBackTo={`/posting/${data.posting.id}`}
         actions={(
-          <>
+          <span className="flex gap-2 flex-wrap justify-end">
             <Button
               style="outline"
               onClick={() => void exportAttendanceCsv()}
               disabled={data.enrollments.length === 0}
               loading={exportingCsv}
               Icon={Download}
+              size="sm"
             >
               Export CSV
             </Button>
@@ -432,6 +433,7 @@ function OrganizationPostingAttendance() {
               disabled={data.enrollments.length === 0}
               loading={saving}
               Icon={CheckCheck}
+              size="sm"
             >
               Mark All Present
             </Button>
@@ -442,6 +444,7 @@ function OrganizationPostingAttendance() {
               disabled={data.enrollments.length === 0}
               loading={saving}
               Icon={RotateCcw}
+              size="sm"
             >
               Clear All
             </Button>
@@ -451,6 +454,7 @@ function OrganizationPostingAttendance() {
               disabled={!hasUnsavedChanges}
               loading={saving}
               Icon={Undo2}
+              size="sm"
             >
               Undo Changes
             </Button>
@@ -460,10 +464,11 @@ function OrganizationPostingAttendance() {
               disabled={!hasUnsavedChanges}
               loading={saving}
               Icon={Save}
+              size="sm"
             >
               Save Attendance
             </Button>
-          </>
+          </span>
         )}
       />
 
@@ -537,15 +542,20 @@ function OrganizationPostingAttendance() {
         )}
 
         {data.enrollments.length === 0 && (
-          <Alert>
-            No enrolled volunteers to track yet.
-          </Alert>
+          <EmptyState
+            title="No enrolled volunteers"
+            description="Volunteers will show up here once they register for this posting."
+            Icon={Users}
+          />
         )}
 
         {data.enrollments.length > 0 && filteredAndSortedEnrollments.length === 0 && (
-          <Alert>
-            No volunteers signed up for this day yet
-          </Alert>
+          <EmptyState
+            title="No match"
+            description="No volunteers match your query."
+            Icon={Search}
+            compact
+          />
         )}
 
         {data.enrollments.length > 0 && filteredAndSortedEnrollments.length > 0 && (

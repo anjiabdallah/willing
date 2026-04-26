@@ -40,6 +40,8 @@ const profileFormSchema = organizationAccountSchema.omit({
   email: true,
   name: true,
   url: true,
+  logo_path: true,
+  certificate_info_id: true,
   org_profile_vector: true,
   org_history_vector: true,
   org_context_vector: true,
@@ -488,19 +490,19 @@ function OrganizationProfile() {
           <>
             {isEditMode
               ? (
-                  <Button color="primary" style="outline" onClick={onCancelEdit} loading={saving} Icon={X}>
+                  <Button color="primary" style="outline" onClick={onCancelEdit} loading={saving} Icon={X} size="sm">
                     Cancel
                   </Button>
                 )
               : (
-                  <button className="btn btn-outline" onClick={() => setIsEditMode(true)}>
+                  <Button style="outline" onClick={() => setIsEditMode(true)} size="sm">
                     Edit Profile
-                  </button>
+                  </Button>
                 )}
             {isEditMode && (
-              <button className="btn btn-primary" onClick={onSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              <Button color="primary" onClick={onSave} loading={saving} size="sm">
+                Save Changes
+              </Button>
             )}
           </>
         )}
@@ -565,16 +567,37 @@ function OrganizationProfile() {
             {isEditMode
               ? (
                   <div className={`space-y-3 ${saving ? 'pointer-events-none opacity-70' : ''}`}>
-                    <div className="rounded-box border border-base-300 p-3">
-                      <p className="text-xs opacity-70">Organization Name</p>
-                      <p className="font-semibold mt-1">{profile.organization.name || '-'}</p>
-                    </div>
-                    <div className="rounded-box border border-base-300 p-3">
-                      <p className="text-xs opacity-70">Website</p>
-                      <a href={profile.organization.url} target="_blank" rel="noreferrer" className="font-semibold mt-1 inline-flex items-center gap-2 text-primary break-all">
-                        <Globe size={14} />
-                        {profile.organization.url}
-                      </a>
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Organization Name</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.organization.name || ''}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Email</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.organization.email || ''}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Website</label>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full opacity-80"
+                          value={profile.organization.url || ''}
+                          disabled
+                          readOnly
+                        />
+                      </div>
                     </div>
                     <FormField form={form} name="phone_number" label="Phone Number" Icon={Phone} />
                     <FormField form={form} name="location_name" label="Location Name" Icon={MapPin} />

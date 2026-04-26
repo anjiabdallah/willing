@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet } from 'react-router-dom';
 
 import UserNavbar from '../../components/layout/navbars/UserNavbar';
 import { AdminOnly } from '../guards';

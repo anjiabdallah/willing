@@ -152,6 +152,7 @@ function OrganizationProfile() {
               type="button"
               Icon={Flag}
               onClick={openReportModal}
+              size="sm"
             >
               Report organization
             </Button>

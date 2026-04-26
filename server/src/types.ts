@@ -6,6 +6,7 @@ import {
   type VolunteerSkill,
   type VolunteerAccountWithoutPassword,
 } from './db/tables/index.ts';
+import { emailSchema } from './schemas/index.ts';
 
 export type Role = 'admin' | 'volunteer' | 'organization';
 
@@ -21,7 +22,7 @@ export interface UserJWT {
 }
 
 export const loginInfoSchema = zod.object({
-  email: zod.email(),
+  email: emailSchema,
   password: zod.string(),
 });
 

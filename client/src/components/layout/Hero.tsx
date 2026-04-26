@@ -16,7 +16,7 @@ function Hero({
 }: HeroProps) {
   return (
     <div className="hero w-full h-full p-4">
-      <div className="hero-content flex-col lg:flex-row-reverse gap-8 w-full">
+      <div className="hero-content flex-col lg:flex-row-reverse sm:gap-8 gap-1 w-full">
         {
           title && (
             <div className="text-center lg:text-left shrink-0 lg:max-w-[50%]">

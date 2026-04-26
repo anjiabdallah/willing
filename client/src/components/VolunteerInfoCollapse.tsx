@@ -1,6 +1,6 @@
 import { Cake, FileText, Mail, Mars, MessageSquare, Venus } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 
 import IconButton from './IconButton';
 import SkillsList from './skills/SkillsList';
@@ -117,8 +117,10 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
                       <span className="badge badge-sm gap-1">
                         <Cake size={12} />
                         {age}
-                        {' '}
-                        years old
+                        <span className="max-sm:hidden">
+                          {' '}
+                          years old
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -148,8 +150,10 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
                       <span className="badge badge-sm gap-1">
                         <Cake size={12} />
                         {age}
-                        {' '}
-                        years old
+                        <span className="max-sm:hidden">
+                          {' '}
+                          years old
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -172,13 +176,16 @@ function VolunteerInfoCollapse({ volunteer, actions, profileLink }: VolunteerInf
           </div>
         )}
         {actions && (
-          <div className="flex gap-2 items-center pointer-events-auto" onClick={e => e.stopPropagation()}>
+          <div className="flex gap-2 items-center pointer-events-auto max-sm:hidden" onClick={e => e.stopPropagation()}>
             {actions}
           </div>
         )}
       </div>
       <div className="collapse-content pt-0">
-        <div className="flex items-center gap-2 text-xs opacity-70 mt-1">
+        <div className="mt-4 mb-8 flex flex-col items-end sm:hidden">
+          {actions}
+        </div>
+        <div className="flex items-center gap-2 text-xs opacity-70 sm:mt-1 mt-3">
           <Mail size={12} />
           {volunteer.email}
         </div>

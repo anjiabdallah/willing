@@ -593,7 +593,7 @@ function createPostingRouter(db: Kysely<Database>) {
 
     if (!isPostingStartBeforeEnd(effectiveStartDate, effectiveStartTime ?? '', effectiveEndDate, effectiveEndTime ?? '')) {
       res.status(400);
-      throw new Error('End date and time must be after start date and time');
+      throw new Error('End time must be after start time');
     }
 
     if (body.crisis_id !== undefined && body.crisis_id !== null && body.crisis_id !== posting.crisis_id) {

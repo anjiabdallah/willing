@@ -1455,7 +1455,11 @@ describe('Organization posting management', () => {
   test('allows creating a posting with today as the start date', async () => {
     const { token } = await createOrganizationAccount(transaction, { email: 'org-today-date@example.com' });
 
-    const today = formatDateToIso(new Date());
+    const now = new Date();
+    const startHour = now.getUTCHours() < 23 ? now.getUTCHours() + 1 : 23;
+    const startTime = `${String(startHour).padStart(2, '0')}:00:00`;
+    const endTime = startHour === 23 ? '23:59:00' : `${String(startHour + 1).padStart(2, '0')}:00:00`;
+    const today = formatDateToIso(now);
 
     const response = await server
       .post('/organization/posting')
@@ -1467,9 +1471,9 @@ describe('Organization posting management', () => {
         longitude: 35.5,
         max_volunteers: 10,
         start_date: today,
-        start_time: '23:59:00',
+        start_time: startTime,
         end_date: today,
-        end_time: '23:59:00',
+        end_time: endTime,
         minimum_age: 18,
         automatic_acceptance: false,
         is_closed: false,
@@ -1480,6 +1484,40 @@ describe('Organization posting management', () => {
       .expect(200);
 
     expect(response.body.posting.title).toBe('Today Posting');
+  });
+
+  test('returns 400 when creating a posting with an end time that is not after the start time', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-invalid-end-time@example.com' });
+
+    const now = new Date();
+    const startHour = now.getUTCHours() < 23 ? now.getUTCHours() + 1 : 23;
+    const startTime = `${String(startHour).padStart(2, '0')}:00:00`;
+
+    const today = formatDateToIso(now);
+
+    const response = await server
+      .post('/organization/posting')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Invalid End Time Posting',
+        description: 'Should fail',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: today,
+        start_time: startTime,
+        end_date: today,
+        end_time: startTime,
+        minimum_age: 18,
+        automatic_acceptance: false,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Invalid End Time Location',
+        crisis_id: null,
+      })
+      .expect(400);
+
+    expect(response.body.message).toBe('End time must be after start time');
   });
 
   test('returns 400 when creating a posting with today start date but past start time', async () => {

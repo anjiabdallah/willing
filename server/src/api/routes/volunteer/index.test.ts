@@ -774,6 +774,104 @@ describe('GET /volunteer/certificate', () => {
     });
   });
 
+  test('calculates 6 hours for a two-day overnight posting on the volunteer certificate', async () => {
+    const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'overnight-certificate-volunteer@example.com' });
+    const { organization } = await createOrganizationAccount(transaction, { email: 'overnight-certificate-org@example.com' });
+
+    const certificateInfo = await transaction
+      .insertInto('organization_certificate_info')
+      .values({
+        certificate_feature_enabled: true,
+        hours_threshold: 1,
+        signatory_name: 'Org Signatory',
+        signatory_position: 'Director',
+        signature_path: 'uploads/org-signature.png',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ certificate_info_id: certificateInfo.id })
+      .where('id', '=', organization.id)
+      .execute();
+
+    const posting = await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Night Shift Support',
+        description: 'Late-night relief distribution',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 15,
+        start_date: new Date('2026-02-01T00:00:00.000Z'),
+        start_time: '23:00:00',
+        end_date: new Date('2026-02-03T00:00:00.000Z'),
+        end_time: '02:00:00',
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+        crisis_id: null,
+        created_at: new Date('2026-01-01T00:00:00.000Z'),
+        updated_at: new Date('2026-01-01T00:00:00.000Z'),
+      })
+      .returning(['id'])
+      .executeTakeFirstOrThrow();
+
+    const enrollment = await transaction
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteer.id,
+        posting_id: posting.id,
+        attended: true,
+        created_at: new Date('2026-02-03T00:00:00.000Z'),
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .insertInto('enrollment_date')
+      .values([
+        {
+          enrollment_id: enrollment.id,
+          posting_id: posting.id,
+          date: new Date('2026-02-01T00:00:00.000Z'),
+          attended: true,
+        },
+        {
+          enrollment_id: enrollment.id,
+          posting_id: posting.id,
+          date: new Date('2026-02-02T00:00:00.000Z'),
+          attended: true,
+        },
+      ])
+      .execute();
+
+    await transaction
+      .insertInto('platform_certificate_settings')
+      .values({
+        signatory_name: 'Platform Lead',
+        signatory_position: 'Coordinator',
+        signature_path: 'uploads/platform.png',
+        signature_uploaded_by_admin_id: null,
+        created_at: new Date('2026-01-05T00:00:00.000Z'),
+        updated_at: new Date('2026-01-05T00:00:00.000Z'),
+      })
+      .execute();
+
+    const response = await server
+      .get('/volunteer/certificate')
+      .set('Authorization', 'Bearer ' + token)
+      .expect(200);
+
+    expect(response.body.total_hours).toBe(6);
+    expect(response.body.organizations).toHaveLength(1);
+    expect(response.body.organizations[0].hours).toBe(6);
+  });
+
   test('counts only attended days for partial attendance postings on the volunteer certificate', async () => {
     const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'certificate-partial@example.com' });
     const { organization } = await createOrganizationAccount(transaction, { email: 'certificate-partial-org@example.com' });

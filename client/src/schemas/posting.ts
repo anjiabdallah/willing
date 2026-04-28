@@ -37,7 +37,7 @@ const validatePostingDateTimeOrder = (
   if (startDateTime && endDateTime && endDateTime <= startDateTime) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'End time cannot be after start time',
+      message: 'End time must be after start time',
       path: ['end_time'],
     });
   }

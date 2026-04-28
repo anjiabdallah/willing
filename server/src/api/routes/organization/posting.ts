@@ -32,7 +32,14 @@ import {
   recomputePostingVectors,
   recomputeVolunteerExperienceVector,
 } from '../../../services/embeddings/updates.ts';
-import { hasPostingEnded } from '../../../services/posting/postingTime.ts';
+import {
+  formatDateToIso,
+  getPostingDateTimeFromDateAndTime,
+  getPostingDates,
+  hasPostingEnded,
+  isPostingStartBeforeEnd,
+  normalizeStoredDate,
+} from '../../../services/posting/postingTime.ts';
 import { rejectEndedPendingApplicationsForPostings } from '../../../services/posting/rejectEndedPendingApplications.ts';
 import {
   sendPostingDeletedEmail,
@@ -89,47 +96,6 @@ const areSkillListsEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
 };
-const formatDateToIso = (date: Date) =>
-  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
-const normalizeStoredDate = (value: Date | string | null | undefined) => {
-  if (value instanceof Date) return formatDateToIso(value);
-  if (typeof value === 'string') {
-    const datePart = value.split('T')[0]?.trim();
-    return datePart || undefined;
-  }
-  return undefined;
-};
-const parseIsoDateParts = (value: string) => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return undefined;
-
-  return {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
-  };
-};
-const getPostingDates = (startDate: Date | string, endDate: Date | string): string[] => {
-  const normalizedStartDate = normalizeStoredDate(startDate);
-  const normalizedEndDate = normalizeStoredDate(endDate);
-  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
-  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
-
-  if (!startParts || !endParts) {
-    return [];
-  }
-
-  const result: string[] = [];
-  const current = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day));
-  const end = new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day));
-
-  while (current.getTime() <= end.getTime()) {
-    result.push(formatDateToIso(current));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-
-  return result;
-};
 const areDatesEqual = (left: Date | undefined, right: Date | undefined) => (left?.getTime() ?? null) === (right?.getTime() ?? null);
 const areTimeValuesEqual = (left: string | undefined, right: string | undefined) => (left ?? null) === (right ?? null);
 const isPostingFull = (maxVolunteers: number | null | undefined, enrollmentCount: number) => maxVolunteers !== undefined && maxVolunteers !== null && enrollmentCount >= maxVolunteers;
@@ -178,24 +144,22 @@ function createPostingRouter(db: Kysely<Database>) {
       res.status(400);
       throw new Error('End date cannot be in the past');
     }
-    if (formatDateToIso(body.start_date) === todayIso && body.start_time) {
-      const parts = body.start_time.split(':').map(Number);
-      const startDateTime = new Date(now);
-      startDateTime.setUTCHours(parts[0] ?? 0, parts[1] ?? 0, 0, 0);
-      if (startDateTime < now) {
-        res.status(400);
-        throw new Error('Start time cannot be in the past');
-      }
+
+    const startDateTime = getPostingDateTimeFromDateAndTime(body.start_date, body.start_time);
+    if (startDateTime && startDateTime < now) {
+      res.status(400);
+      throw new Error('Start time cannot be in the past');
     }
 
-    if (formatDateToIso(body.end_date) === todayIso && body.end_time) {
-      const parts = body.end_time.split(':').map(Number);
-      const endDateTime = new Date(now);
-      endDateTime.setUTCHours(parts[0] ?? 0, parts[1] ?? 0, 0, 0);
-      if (endDateTime < now) {
-        res.status(400);
-        throw new Error('End time cannot be in the past');
-      }
+    const endDateTime = getPostingDateTimeFromDateAndTime(body.end_date, body.end_time);
+    if (endDateTime && endDateTime < now) {
+      res.status(400);
+      throw new Error('End time cannot be in the past');
+    }
+
+    if (!isPostingStartBeforeEnd(body.start_date, body.start_time, body.end_date, body.end_time)) {
+      res.status(400);
+      throw new Error('End time must be after start time');
     }
 
     if (body.crisis_id != null) {
@@ -604,26 +568,32 @@ function createPostingRouter(db: Kysely<Database>) {
 
     const effectiveStartDate = body.start_date ?? posting.start_date;
     const effectiveStartTime = body.start_time ?? posting.start_time;
-    if (formatDateToIso(effectiveStartDate) === todayIso && effectiveStartTime) {
-      const parts = effectiveStartTime.split(':').map(Number);
-      const startDateTime = new Date(now);
-      startDateTime.setUTCHours(parts[0] ?? 0, parts[1] ?? 0, 0, 0);
-      if (startDateTime < now) {
+    const effectiveEndDate = body.end_date ?? posting.end_date;
+    const effectiveEndTime = body.end_time ?? posting.end_time;
+
+    const startDateChanged = body.start_date !== undefined && !areDatesEqual(body.start_date, posting.start_date);
+    const startTimeChanged = body.start_time !== undefined && !areTimeValuesEqual(body.start_time, posting.start_time);
+    if (startDateChanged || startTimeChanged) {
+      const effectiveStartDateTime = getPostingDateTimeFromDateAndTime(effectiveStartDate, effectiveStartTime ?? '');
+      if (effectiveStartDateTime && effectiveStartDateTime < now) {
         res.status(400);
         throw new Error('Start time cannot be in the past');
       }
     }
 
-    const effectiveEndDate = body.end_date ?? posting.end_date;
-    const effectiveEndTime = body.end_time ?? posting.end_time;
-    if (formatDateToIso(effectiveEndDate) === todayIso && effectiveEndTime) {
-      const parts = effectiveEndTime.split(':').map(Number);
-      const endDateTime = new Date(now);
-      endDateTime.setUTCHours(parts[0] ?? 0, parts[1] ?? 0, 0, 0);
-      if (endDateTime < now) {
+    const endDateChanged = body.end_date !== undefined && !areDatesEqual(body.end_date, posting.end_date);
+    const endTimeChanged = body.end_time !== undefined && !areTimeValuesEqual(body.end_time, posting.end_time);
+    if (endDateChanged || endTimeChanged) {
+      const effectiveEndDateTime = getPostingDateTimeFromDateAndTime(effectiveEndDate, effectiveEndTime ?? '');
+      if (effectiveEndDateTime && effectiveEndDateTime < now) {
         res.status(400);
         throw new Error('End time cannot be in the past');
       }
+    }
+
+    if (!isPostingStartBeforeEnd(effectiveStartDate, effectiveStartTime ?? '', effectiveEndDate, effectiveEndTime ?? '')) {
+      res.status(400);
+      throw new Error('End date and time must be after start date and time');
     }
 
     if (body.crisis_id !== undefined && body.crisis_id !== null && body.crisis_id !== posting.crisis_id) {

@@ -7,12 +7,38 @@ function getTodayDateString() {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
 }
 
+const getDateTimeFromStrings = (date: string, time: string) => {
+  const parsed = new Date(`${date}T${time}`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
 const notPastDate = (date: string, ctx: z.RefinementCtx, field: string, label: string) => {
   if (date && date < getTodayDateString()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `${label} cannot be in the past`,
       path: [field],
+    });
+  }
+};
+
+const validatePostingDateTimeOrder = (
+  data: {
+    start_date: string;
+    start_time: string;
+    end_date: string;
+    end_time: string;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const startDateTime = getDateTimeFromStrings(data.start_date, data.start_time);
+  const endDateTime = getDateTimeFromStrings(data.end_date, data.end_time);
+
+  if (startDateTime && endDateTime && endDateTime <= startDateTime) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'End time cannot be after start time',
+      path: ['end_time'],
     });
   }
 };
@@ -44,6 +70,8 @@ export const postingFormSchema = newPostingSchema
   .superRefine((data, ctx) => {
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
+
+    validatePostingDateTimeOrder(data, ctx);
   });
 
 export type PostingFormData = z.infer<typeof postingFormSchema>;
@@ -74,6 +102,8 @@ export const postingEditFormSchema = newPostingSchema
   .superRefine((data, ctx) => {
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
+
+    validatePostingDateTimeOrder(data, ctx);
   });
 
 export type PostingEditFormData = z.infer<typeof postingEditFormSchema>;

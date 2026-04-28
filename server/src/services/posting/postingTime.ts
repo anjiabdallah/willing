@@ -1,7 +1,33 @@
+import { sql } from 'kysely';
+
 type DateLike = Date | string | null | undefined;
 
-const formatDateToIso = (date: Date) =>
+type DateParts = {
+  year: number;
+  month: number;
+  day: number;
+};
+
+export const formatDateToIso = (date: Date) =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+
+const parseIsoDateParts = (value: string): DateParts | undefined => {
+  const segments = value.split('-').map(Number);
+  if (segments.length !== 3) return undefined;
+  const [year, month, day] = segments as [number, number, number];
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return undefined;
+  return { year, month, day };
+};
+
+const parseTimeParts = (time: string) => {
+  const parts = time.split(':').map(Number);
+  return {
+    hours: Number.isFinite(parts[0]) ? parts[0] : 0,
+    minutes: Number.isFinite(parts[1]) ? parts[1] : 0,
+    seconds: Number.isFinite(parts[2]) ? parts[2] : 0,
+  };
+};
+
 export const normalizeStoredDate = (value: DateLike) => {
   if (value instanceof Date) return formatDateToIso(value);
   if (typeof value === 'string') {
@@ -29,6 +55,40 @@ export const normalizeStoredTime = (value: string | null | undefined) => {
   return undefined;
 };
 
+export const getPostingDateTimeFromDateAndTime = (
+  date: DateLike,
+  time: string,
+) => {
+  const normalizedDate = normalizeStoredDate(date);
+  const dateParts = normalizedDate ? parseIsoDateParts(normalizedDate) : undefined;
+  if (!dateParts) return undefined;
+
+  const { hours, minutes, seconds } = parseTimeParts(time);
+  return new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day, hours, minutes, seconds));
+};
+
+export const getPostingDates = (startDate: DateLike, endDate: DateLike) => {
+  const normalizedStartDate = normalizeStoredDate(startDate);
+  const normalizedEndDate = normalizeStoredDate(endDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day));
+  const end = new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day));
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return result;
+};
+
 export const getPostingEndDateTime = (
   endDate: DateLike,
   endTime: string | null | undefined,
@@ -48,6 +108,46 @@ export const getPostingEndDateTime = (
 
   return Number.isNaN(endDateTime.getTime()) ? undefined : endDateTime;
 };
+
+export const isPostingStartBeforeEnd = (
+  startDate: DateLike,
+  startTime: string,
+  endDate: DateLike,
+  endTime: string,
+) => {
+  const startDateTime = getPostingDateTimeFromDateAndTime(startDate, startTime);
+  const endDateTime = getPostingDateTimeFromDateAndTime(endDate, endTime);
+  return Boolean(startDateTime && endDateTime && endDateTime > startDateTime);
+};
+
+export const getPostingDailyHours = (startTime: string, endTime: string) => {
+  const startDateTime = getPostingDateTimeFromDateAndTime('1970-01-01', startTime);
+  const endDateTime = getPostingDateTimeFromDateAndTime('1970-01-01', endTime);
+
+  if (!startDateTime || !endDateTime) {
+    return 0;
+  }
+
+  if (endDateTime <= startDateTime) {
+    endDateTime.setUTCDate(endDateTime.getUTCDate() + 1);
+  }
+
+  return (endDateTime.getTime() - startDateTime.getTime()) / 3600000;
+};
+
+export const getPostingDailyHoursExpression = () => sql<number>`GREATEST(
+  0,
+  EXTRACT(EPOCH FROM (
+    (
+      enrollment_date.date + posting.end_time
+      + CASE
+          WHEN posting.end_time <= posting.start_time THEN INTERVAL '1 day'
+          ELSE INTERVAL '0'
+        END
+    )
+    - (enrollment_date.date + posting.start_time)
+  )) / 3600.0
+)`;
 
 export const hasPostingEnded = (
   posting: {

@@ -33,6 +33,7 @@ import {
   recomputeVolunteerProfileVector,
 } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
+import { getPostingDailyHoursExpression } from '../../../services/posting/postingTime.ts';
 import { sendVolunteerVerificationEmail } from '../../../services/resend/emails.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
 import { normalizeSearchTerms } from '../utils/postingList.js';
@@ -433,13 +434,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
       .where('is_disabled', '=', false)
       .executeTakeFirstOrThrow();
 
-    const hoursPerAttendedDateExpr = sql<number>`GREATEST(
-      0,
-      EXTRACT(EPOCH FROM (
-        (enrollment_date.date + posting.end_time)
-        - (enrollment_date.date + posting.start_time)
-      )) / 3600.0
-    )`;
+    const hoursPerAttendedDateExpr = getPostingDailyHoursExpression();
 
     const totalHoursRow = await db
       .selectFrom('enrollment_date')
@@ -549,13 +544,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const issuedAt = new Date();
     const selectedOrgIds = [...body.org_ids].sort((left, right) => left - right);
 
-    const hoursPerAttendedDateExpr = sql<number>`GREATEST(
-      0,
-      EXTRACT(EPOCH FROM (
-        (enrollment_date.date + posting.end_time)
-        - (enrollment_date.date + posting.start_time)
-      )) / 3600.0
-    )`;
+    const hoursPerAttendedDateExpr = getPostingDailyHoursExpression();
 
     const rows = await db
       .selectFrom('enrollment_date')

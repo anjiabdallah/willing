@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 
 import database from '../../db/index.ts';
+import { getPostingDailyHoursExpression } from '../posting/postingTime.ts';
 
 import type { VolunteerAccountWithoutPassword } from '../../db/tables/index.ts';
 
@@ -100,13 +101,7 @@ export const getVolunteerProfile = async (volunteerId: number): Promise<Voluntee
     .selectFrom('enrollment_date')
     .innerJoin('enrollment', 'enrollment.id', 'enrollment_date.enrollment_id')
     .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
-    .select(sql<number>`COALESCE(SUM(GREATEST(
-  0,
-  EXTRACT(EPOCH FROM (
-    (enrollment_date.date + posting.end_time)
-    - (enrollment_date.date + posting.start_time)
-  )) / 3600.0
-)), 0)`.as('total_hours'))
+    .select(sql<number>`COALESCE(SUM(${getPostingDailyHoursExpression()}), 0)`.as('total_hours'))
     .where('enrollment.volunteer_id', '=', volunteerId)
     .where('enrollment_date.attended', '=', true)
     .executeTakeFirstOrThrow();

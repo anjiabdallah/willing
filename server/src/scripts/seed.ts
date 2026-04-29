@@ -45,6 +45,13 @@ async function seed() {
     );
   }
 
+  const SEED_CVS_DIR = path.resolve(__dirname, 'seed-assets/vol-cvs');
+  const DEST_CVS_DIR = path.resolve(config.UPLOAD_DIR, 'cvs');
+  fs.mkdirSync(DEST_CVS_DIR, { recursive: true });
+  for (const file of fs.readdirSync(SEED_CVS_DIR)) {
+    fs.copyFileSync(path.join(SEED_CVS_DIR, file), path.join(DEST_CVS_DIR, file));
+  }
+
   await sql`
   TRUNCATE TABLE
     enrollment_application_date,
@@ -803,86 +810,86 @@ async function seed() {
   // Volunteers
 
   const volunteerValues = [
-    { first_name: 'Karim', last_name: 'Mansour', email: 'vol1@willing.social', gender: 'male', date_of_birth: '1998-03-15', description: 'Experienced in field logistics and heavy lifting. Reliable in high-pressure environments.' },
-    { first_name: 'Aya', last_name: 'Sadek', email: 'vol2@willing.social', gender: 'female', date_of_birth: '2000-07-22', description: 'Former student tutor with strong communication skills and a passion for education.' },
-    { first_name: 'Jad', last_name: 'Nassar', email: 'vol3@willing.social', gender: 'male', date_of_birth: '1996-11-04', description: 'Paramedic student with first aid certification and crisis response training.' },
-    { first_name: 'Hala', last_name: 'Farah', email: 'vol4@willing.social', gender: 'female', date_of_birth: '1994-01-30', description: 'Social worker background. Comfortable with elderly care and emotional support.' },
-    { first_name: 'Tarek', last_name: 'Slim', email: 'vol5@willing.social', gender: 'male', date_of_birth: '2001-09-18', description: 'Environmentally conscious and physically fit. Loves outdoor community work.' },
-    { first_name: 'Nina', last_name: 'Choufany', email: 'vol6@willing.social', gender: 'female', date_of_birth: '2002-05-11', description: 'Art teacher background. Great with children and creative activities.' },
-    { first_name: 'Marc', last_name: 'Hamamji', email: 'vol7@willing.social', gender: 'male', date_of_birth: '1999-12-01', description: 'Software developer who volunteers for tech literacy programs and remote support.' },
-    { first_name: 'Rana', last_name: 'Saad', email: 'vol8@willing.social', gender: 'female', date_of_birth: '1997-08-25', description: 'Catering background. Expert in food prep and community kitchen coordination.' },
-    { first_name: 'Ziad', last_name: 'Bou Habib', email: 'vol9@willing.social', gender: 'male', date_of_birth: '2003-02-14', description: 'Detail-oriented and great at organizing and sorting donated supplies.' },
-    { first_name: 'Maya', last_name: 'Tannous', email: 'vol10@willing.social', gender: 'female', date_of_birth: '2001-06-06', description: 'Flexible volunteer. Prefers to keep profile private.' },
-    { first_name: 'Sami', last_name: 'Khater', email: 'vol11@willing.social', gender: 'male', date_of_birth: '1995-04-09', description: 'Operations-minded volunteer with warehouse and dispatch experience.' },
-    { first_name: 'Lea', last_name: 'Rizk', email: 'vol12@willing.social', gender: 'female', date_of_birth: '1999-10-02', description: 'Community educator who enjoys tutoring, facilitation, and youth engagement.' },
-    { first_name: 'Omar', last_name: 'Haddad', email: 'vol13@willing.social', gender: 'male', date_of_birth: '1997-12-19', description: 'Tech-savvy coordinator comfortable with helplines, spreadsheets, and operations support.' },
-    { first_name: 'Dana', last_name: 'Mokbel', email: 'vol14@willing.social', gender: 'female', date_of_birth: '2000-03-27', description: 'Patient and dependable volunteer with experience in admin support and event coordination.' },
-    { first_name: 'Carly', last_name: 'Estephan', email: 'vol15@willing.social', gender: 'female', date_of_birth: '1998-12-12', description: 'Passionate volunteer with a background in community outreach and event planning.' },
-    { first_name: 'Rami', last_name: 'Khoury', email: 'vol16@willing.social', gender: 'male', date_of_birth: '1996-05-20', description: 'Civil engineering student comfortable with construction and debris clearance.' },
-    { first_name: 'Sara', last_name: 'Najjar', email: 'vol17@willing.social', gender: 'female', date_of_birth: '2002-08-14', description: 'Psychology student with an interest in psychosocial support and trauma care.' },
-    { first_name: 'Elie', last_name: 'Gemayel', email: 'vol18@willing.social', gender: 'male', date_of_birth: '1993-03-07', description: 'Experienced first responder with firefighting and emergency management background.' },
-    { first_name: 'Lara', last_name: 'Hayek', email: 'vol19@willing.social', gender: 'female', date_of_birth: '1999-11-30', description: 'Nurse with ICU experience. Comfortable in medical triage and patient care settings.' },
-    { first_name: 'Charbel', last_name: 'Abi Nader', email: 'vol20@willing.social', gender: 'male', date_of_birth: '2000-04-22', description: 'Fitness coach passionate about inclusive sports and physical rehabilitation.' },
-    { first_name: 'Nour', last_name: 'Khalil', email: 'vol21@willing.social', gender: 'female', date_of_birth: '2001-07-03', description: 'Graphic designer volunteering for awareness campaigns and community art projects.' },
-    { first_name: 'Fares', last_name: 'Aziz', email: 'vol22@willing.social', gender: 'male', date_of_birth: '1997-01-18', description: 'Experienced driver and fleet coordinator. Available for supply transport missions.' },
-    { first_name: 'Zeina', last_name: 'Saade', email: 'vol23@willing.social', gender: 'female', date_of_birth: '2003-09-25', description: 'University student active in campus environmental clubs and beach cleanup campaigns.' },
-    { first_name: 'Ali', last_name: 'Berro', email: 'vol24@willing.social', gender: 'male', date_of_birth: '1995-12-11', description: 'Carpenter and handyman with experience in shelter repair and carpentry.' },
-    { first_name: 'Nadine', last_name: 'Harb', email: 'vol25@willing.social', gender: 'female', date_of_birth: '1998-06-29', description: 'Social media manager helping NGOs tell stories and reach wider audiences.' },
-    { first_name: 'Bassem', last_name: 'Chaaban', email: 'vol26@willing.social', gender: 'male', date_of_birth: '1992-02-04', description: 'Former army officer with crisis management and team leadership experience.' },
-    { first_name: 'Tala', last_name: 'Srour', email: 'vol27@willing.social', gender: 'female', date_of_birth: '2004-03-17', description: 'High school student eager to contribute to local relief and community events.' },
-    { first_name: 'Georges', last_name: 'Daou', email: 'vol28@willing.social', gender: 'male', date_of_birth: '1990-10-08', description: 'Retired schoolteacher willing to tutor children and run literacy workshops.' },
-    { first_name: 'Hiba', last_name: 'Itani', email: 'vol29@willing.social', gender: 'female', date_of_birth: '2002-12-22', description: 'Trained sign language interpreter with experience in inclusive events.' },
-    { first_name: 'Bilal', last_name: 'Moussawi', email: 'vol30@willing.social', gender: 'male', date_of_birth: '1999-05-15', description: 'Mechanic and driver with experience supporting mobile relief convoys.' },
-    { first_name: 'Carla', last_name: 'Aoun', email: 'vol31@willing.social', gender: 'female', date_of_birth: '2001-08-30', description: 'Dietitian student interested in community nutrition and food security programs.' },
-    { first_name: 'Hassan', last_name: 'Jaber', email: 'vol32@willing.social', gender: 'male', date_of_birth: '1994-04-14', description: 'Agricultural specialist supporting farm recovery and soil restoration efforts.' },
-    { first_name: 'Mia', last_name: 'Stephan', email: 'vol33@willing.social', gender: 'female', date_of_birth: '2003-01-09', description: 'Theater student running storytelling and drama workshops for displaced youth.' },
-    { first_name: 'Kamal', last_name: 'Saleh', email: 'vol34@willing.social', gender: 'male', date_of_birth: '1988-07-21', description: 'Experienced plumber and water systems technician supporting flood and WASH recovery.' },
-    { first_name: 'Joelle', last_name: 'Abou Jaoude', email: 'vol35@willing.social', gender: 'female', date_of_birth: '2000-09-05', description: 'Public health graduate working on community health education and hygiene promotion.' },
-    { first_name: 'Wissam', last_name: 'Khalife', email: 'vol36@willing.social', gender: 'male', date_of_birth: '1996-03-28', description: 'IT support volunteer helping NGOs with tech setup, connectivity, and device repair.' },
-    { first_name: 'Rola', last_name: 'Hamdan', email: 'vol37@willing.social', gender: 'female', date_of_birth: '1991-11-13', description: 'Lawyer providing pro-bono legal information and referral services to displaced persons.' },
-    { first_name: 'Khaled', last_name: 'Mikati', email: 'vol38@willing.social', gender: 'male', date_of_birth: '2002-06-07', description: 'Football coach organizing youth leagues and inclusive sport days in North Lebanon.' },
-    { first_name: 'Cynthia', last_name: 'Frem', email: 'vol39@willing.social', gender: 'female', date_of_birth: '1997-02-16', description: 'Event planner supporting community fundraisers, awareness drives, and distribution events.' },
-    { first_name: 'Mazen', last_name: 'Abou Rizk', email: 'vol40@willing.social', gender: 'male', date_of_birth: '1993-08-03', description: 'Structural engineer assessing damaged buildings and guiding repair volunteers safely.' },
-    { first_name: 'Ghada', last_name: 'Rahhal', email: 'vol41@willing.social', gender: 'female', date_of_birth: '2001-04-19', description: 'Arabic calligrapher and art educator bringing creative healing workshops to communities.' },
-    { first_name: 'Tony', last_name: 'Khoury', email: 'vol42@willing.social', gender: 'male', date_of_birth: '1998-10-27', description: 'Supply chain analyst helping NGOs optimize donations and distribution logistics.' },
-    { first_name: 'Dina', last_name: 'Mansour', email: 'vol43@willing.social', gender: 'female', date_of_birth: '2000-01-14', description: 'Medical laboratory student assisting in blood drives and health screening days.' },
-    { first_name: 'Fouad', last_name: 'Geagea', email: 'vol44@willing.social', gender: 'male', date_of_birth: '1989-05-31', description: 'Experienced chef and culinary trainer managing large-scale community kitchens.' },
-    { first_name: 'Leen', last_name: 'Khoury', email: 'vol45@willing.social', gender: 'female', date_of_birth: '2004-07-11', description: 'Teen volunteer passionate about environmental activism and ocean conservation.' },
-    { first_name: 'Adnan', last_name: 'Wehbe', email: 'vol46@willing.social', gender: 'male', date_of_birth: '1986-12-24', description: 'Former UNHCR field officer with refugee registration and case management experience.' },
-    { first_name: 'Reem', last_name: 'Diab', email: 'vol47@willing.social', gender: 'female', date_of_birth: '2002-03-03', description: 'Student journalist documenting community relief efforts for awareness and advocacy.' },
-    { first_name: 'Nidal', last_name: 'Haidar', email: 'vol48@willing.social', gender: 'male', date_of_birth: '1995-09-17', description: 'Solar energy technician supporting off-grid power solutions for relief organizations.' },
-    { first_name: 'Aline', last_name: 'Eid', email: 'vol49@willing.social', gender: 'female', date_of_birth: '1999-06-20', description: 'Early childhood educator running learning circles and play-based activities for young children.' },
-    { first_name: 'Riad', last_name: 'Zein', email: 'vol50@willing.social', gender: 'male', date_of_birth: '1997-08-08', description: 'Warehouse supervisor with extensive experience managing large donation stockrooms.' },
-    { first_name: 'Myriam', last_name: 'Aboud', email: 'vol51@willing.social', gender: 'female', date_of_birth: '2003-11-04', description: 'Music student offering music therapy and choir workshops in shelters and community centers.' },
-    { first_name: 'Saad', last_name: 'Farran', email: 'vol52@willing.social', gender: 'male', date_of_birth: '1990-03-22', description: 'Veterinarian assisting animal rescue and care efforts in disaster-affected regions.' },
-    { first_name: 'Natalia', last_name: 'Frem', email: 'vol53@willing.social', gender: 'female', date_of_birth: '2001-05-29', description: 'Fashion design student upcycling donated clothing for distribution in refugee camps.' },
-    { first_name: 'Bassel', last_name: 'Khodr', email: 'vol54@willing.social', gender: 'male', date_of_birth: '1994-07-16', description: 'Geography teacher assisting with mapping disaster zones and logistics planning for NGOs.' },
-    { first_name: 'Hind', last_name: 'Assaf', email: 'vol55@willing.social', gender: 'female', date_of_birth: '1998-02-11', description: 'Community organizer experienced in mobilizing volunteers for neighborhood recovery projects.' },
-    { first_name: 'Youssef', last_name: 'Nasser', email: 'vol56@willing.social', gender: 'male', date_of_birth: '2002-10-18', description: 'Engineering student building makeshift infrastructure for displaced communities.' },
-    { first_name: 'Abir', last_name: 'Mourad', email: 'vol57@willing.social', gender: 'female', date_of_birth: '1993-04-05', description: 'Accountant volunteering for NGO financial transparency and grant reporting support.' },
-    { first_name: 'Ramzi', last_name: 'Charaf', email: 'vol58@willing.social', gender: 'male', date_of_birth: '1988-01-29', description: 'Veteran field coordinator managing large multi-organization volunteer deployments.' },
-    { first_name: 'Pamela', last_name: 'Harb', email: 'vol59@willing.social', gender: 'female', date_of_birth: '2004-08-22', description: 'Teen environmental volunteer running awareness campaigns in her school district.' },
-    { first_name: 'Fadi', last_name: 'Daher', email: 'vol60@willing.social', gender: 'male', date_of_birth: '1996-06-13', description: 'Pharmacist supporting medicine distribution, cold chain management, and health fairs.' },
-    { first_name: 'Yasmine', last_name: 'Saleh', email: 'vol61@willing.social', gender: 'female', date_of_birth: '2000-12-01', description: 'Child psychologist providing age-appropriate mental health activities in displacement shelters.' },
-    { first_name: 'Marwan', last_name: 'Khoury', email: 'vol62@willing.social', gender: 'male', date_of_birth: '1991-09-09', description: 'Professional chef running food safety training and community cooking events.' },
-    { first_name: 'Rania', last_name: 'Tabbara', email: 'vol63@willing.social', gender: 'female', date_of_birth: '1997-03-14', description: 'Environmental scientist supporting coastal pollution assessment and cleanup coordination.' },
-    { first_name: 'Majd', last_name: 'Makhoul', email: 'vol64@willing.social', gender: 'male', date_of_birth: '2003-07-27', description: 'Youth activist and community garden project leader in Tripoli.' },
-    { first_name: 'Sana', last_name: 'Itani', email: 'vol65@willing.social', gender: 'female', date_of_birth: '1999-01-23', description: 'Human resources professional streamlining volunteer onboarding and coordination systems.' },
-    { first_name: 'Khalil', last_name: 'Nassif', email: 'vol66@willing.social', gender: 'male', date_of_birth: '1992-11-06', description: 'Electrician providing safe wiring and generator support to shelters and relief centers.' },
-    { first_name: 'Lina', last_name: 'Feghali', email: 'vol67@willing.social', gender: 'female', date_of_birth: '2001-02-28', description: 'Social media coordinator amplifying NGO volunteer calls and community stories online.' },
-    { first_name: 'Malek', last_name: 'Haddad', email: 'vol68@willing.social', gender: 'male', date_of_birth: '2004-04-14', description: 'Student athlete coaching youth sports and running inclusive fitness sessions.' },
-    { first_name: 'Riwa', last_name: 'Ghanem', email: 'vol69@willing.social', gender: 'female', date_of_birth: '2002-06-30', description: 'Biology student assisting environmental NGOs with species monitoring and habitat restoration.' },
-    { first_name: 'Majd', last_name: 'Farhat', email: 'vol70@willing.social', gender: 'male', date_of_birth: '1985-08-15', description: 'Logistics manager with 15 years of supply chain experience supporting humanitarian relief operations.' },
-    { first_name: 'Dalia', last_name: 'Sleiman', email: 'vol71@willing.social', gender: 'female', date_of_birth: '1998-10-10', description: 'Occupational therapist supporting recovery and daily living activities for injured residents.' },
-    { first_name: 'Nasser', last_name: 'Khalife', email: 'vol72@willing.social', gender: 'male', date_of_birth: '2000-03-03', description: 'Community radio presenter using media skills to broadcast relief announcements and volunteer calls.' },
-    { first_name: 'Rouba', last_name: 'Karam', email: 'vol73@willing.social', gender: 'female', date_of_birth: '1995-07-19', description: 'Medical doctor volunteering in crisis clinics and mobile health units across Lebanon.' },
-    { first_name: 'Samer', last_name: 'Abdo', email: 'vol74@willing.social', gender: 'male', date_of_birth: '1993-05-26', description: 'Marine biologist monitoring ecosystem recovery along Lebanon\'s coastline after pollution events.' },
-    { first_name: 'Lara', last_name: 'Gemayel', email: 'vol75@willing.social', gender: 'female', date_of_birth: '2002-09-12', description: 'Architecture student helping design accessible and dignified shelter spaces for displaced families.' },
-    { first_name: 'Imad', last_name: 'Chahrour', email: 'vol76@willing.social', gender: 'male', date_of_birth: '1990-01-17', description: 'Safety officer ensuring volunteer protection standards on field sites and distribution points.' },
-    { first_name: 'Celine', last_name: 'Nasr', email: 'vol77@willing.social', gender: 'female', date_of_birth: '2001-11-20', description: 'Fundraising and grant writing volunteer helping small NGOs access emergency funding.' },
-    { first_name: 'Joe', last_name: 'Abi Khalil', email: 'vol78@willing.social', gender: 'male', date_of_birth: '1997-04-06', description: 'Drone operator mapping flood damage and wildfire zones to support relief planning.' },
-    { first_name: 'Mirna', last_name: 'Khoury', email: 'vol79@willing.social', gender: 'female', date_of_birth: '2003-02-08', description: 'Youth mentor running after-school and weekend programs for at-risk teenagers.' },
-    { first_name: 'Firas', last_name: 'Barakat', email: 'vol80@willing.social', gender: 'male', date_of_birth: '1991-06-24', description: 'Trauma surgeon with extensive field hospital experience, supporting emergency medical teams.' },
+    { first_name: 'Karim', last_name: 'Mansour', email: 'vol1@willing.social', gender: 'male', date_of_birth: '1998-03-15', description: 'Experienced in field logistics and heavy lifting. Reliable in high-pressure environments.', cv_path: 'karim-mansour-cv.pdf' },
+    { first_name: 'Aya', last_name: 'Sadek', email: 'vol2@willing.social', gender: 'female', date_of_birth: '2000-07-22', description: 'Former student tutor with strong communication skills and a passion for education.', cv_path: 'aya-sadek-cv.pdf' },
+    { first_name: 'Jad', last_name: 'Nassar', email: 'vol3@willing.social', gender: 'male', date_of_birth: '1996-11-04', description: 'Paramedic student with first aid certification and crisis response training.', cv_path: 'jad-nassar-cv.pdf' },
+    { first_name: 'Hala', last_name: 'Farah', email: 'vol4@willing.social', gender: 'female', date_of_birth: '1994-01-30', description: 'Social worker background. Comfortable with elderly care and emotional support.', cv_path: null },
+    { first_name: 'Tarek', last_name: 'Slim', email: 'vol5@willing.social', gender: 'male', date_of_birth: '2001-09-18', description: 'Environmentally conscious and physically fit. Loves outdoor community work.', cv_path: null },
+    { first_name: 'Nina', last_name: 'Choufany', email: 'vol6@willing.social', gender: 'female', date_of_birth: '2002-05-11', description: 'Art teacher background. Great with children and creative activities.', cv_path: null },
+    { first_name: 'Marc', last_name: 'Hamamji', email: 'vol7@willing.social', gender: 'male', date_of_birth: '1999-12-01', description: 'Software developer who volunteers for tech literacy programs and remote support.', cv_path: null },
+    { first_name: 'Rana', last_name: 'Saad', email: 'vol8@willing.social', gender: 'female', date_of_birth: '1997-08-25', description: 'Catering background. Expert in food prep and community kitchen coordination.', cv_path: null },
+    { first_name: 'Ziad', last_name: 'Bou Habib', email: 'vol9@willing.social', gender: 'male', date_of_birth: '2003-02-14', description: 'Detail-oriented and great at organizing and sorting donated supplies.', cv_path: null },
+    { first_name: 'Maya', last_name: 'Tannous', email: 'vol10@willing.social', gender: 'female', date_of_birth: '2001-06-06', description: 'Flexible volunteer. Prefers to keep profile private.', cv_path: null },
+    { first_name: 'Sami', last_name: 'Khater', email: 'vol11@willing.social', gender: 'male', date_of_birth: '1995-04-09', description: 'Operations-minded volunteer with warehouse and dispatch experience.', cv_path: null },
+    { first_name: 'Lea', last_name: 'Rizk', email: 'vol12@willing.social', gender: 'female', date_of_birth: '1999-10-02', description: 'Community educator who enjoys tutoring, facilitation, and youth engagement.', cv_path: null },
+    { first_name: 'Omar', last_name: 'Haddad', email: 'vol13@willing.social', gender: 'male', date_of_birth: '1997-12-19', description: 'Tech-savvy coordinator comfortable with helplines, spreadsheets, and operations support.', cv_path: 'omar-haddad-cv.pdf' },
+    { first_name: 'Dana', last_name: 'Mokbel', email: 'vol14@willing.social', gender: 'female', date_of_birth: '2000-03-27', description: 'Patient and dependable volunteer with experience in admin support and event coordination.', cv_path: null },
+    { first_name: 'Carly', last_name: 'Estephan', email: 'vol15@willing.social', gender: 'female', date_of_birth: '1998-12-12', description: 'Passionate volunteer with a background in community outreach and event planning.', cv_path: null },
+    { first_name: 'Rami', last_name: 'Khoury', email: 'vol16@willing.social', gender: 'male', date_of_birth: '1996-05-20', description: 'Civil engineering student comfortable with construction and debris clearance.', cv_path: null },
+    { first_name: 'Sara', last_name: 'Najjar', email: 'vol17@willing.social', gender: 'female', date_of_birth: '2002-08-14', description: 'Psychology student with an interest in psychosocial support and trauma care.', cv_path: null },
+    { first_name: 'Elie', last_name: 'Gemayel', email: 'vol18@willing.social', gender: 'male', date_of_birth: '1993-03-07', description: 'Experienced first responder with firefighting and emergency management background.', cv_path: 'elie-gemayel-cv.pdf' },
+    { first_name: 'Lara', last_name: 'Hayek', email: 'vol19@willing.social', gender: 'female', date_of_birth: '1999-11-30', description: 'Nurse with ICU experience. Comfortable in medical triage and patient care settings.', cv_path: null },
+    { first_name: 'Charbel', last_name: 'Abi Nader', email: 'vol20@willing.social', gender: 'male', date_of_birth: '2000-04-22', description: 'Fitness coach passionate about inclusive sports and physical rehabilitation.', cv_path: null },
+    { first_name: 'Nour', last_name: 'Khalil', email: 'vol21@willing.social', gender: 'female', date_of_birth: '2001-07-03', description: 'Graphic designer volunteering for awareness campaigns and community art projects.', cv_path: 'nour-khalil-cv.pdf' },
+    { first_name: 'Fares', last_name: 'Aziz', email: 'vol22@willing.social', gender: 'male', date_of_birth: '1997-01-18', description: 'Experienced driver and fleet coordinator. Available for supply transport missions.', cv_path: null },
+    { first_name: 'Zeina', last_name: 'Saade', email: 'vol23@willing.social', gender: 'female', date_of_birth: '2003-09-25', description: 'University student active in campus environmental clubs and beach cleanup campaigns.', cv_path: null },
+    { first_name: 'Ali', last_name: 'Berro', email: 'vol24@willing.social', gender: 'male', date_of_birth: '1995-12-11', description: 'Carpenter and handyman with experience in shelter repair and carpentry.', cv_path: null },
+    { first_name: 'Nadine', last_name: 'Harb', email: 'vol25@willing.social', gender: 'female', date_of_birth: '1998-06-29', description: 'Social media manager helping NGOs tell stories and reach wider audiences.', cv_path: null },
+    { first_name: 'Bassem', last_name: 'Chaaban', email: 'vol26@willing.social', gender: 'male', date_of_birth: '1992-02-04', description: 'Former army officer with crisis management and team leadership experience.', cv_path: null },
+    { first_name: 'Tala', last_name: 'Srour', email: 'vol27@willing.social', gender: 'female', date_of_birth: '2004-03-17', description: 'High school student eager to contribute to local relief and community events.', cv_path: null },
+    { first_name: 'Georges', last_name: 'Daou', email: 'vol28@willing.social', gender: 'male', date_of_birth: '1990-10-08', description: 'Retired schoolteacher willing to tutor children and run literacy workshops.', cv_path: 'georges-daou-cv.pdf' },
+    { first_name: 'Hiba', last_name: 'Itani', email: 'vol29@willing.social', gender: 'female', date_of_birth: '2002-12-22', description: 'Trained sign language interpreter with experience in inclusive events.', cv_path: null },
+    { first_name: 'Bilal', last_name: 'Moussawi', email: 'vol30@willing.social', gender: 'male', date_of_birth: '1999-05-15', description: 'Mechanic and driver with experience supporting mobile relief convoys.', cv_path: null },
+    { first_name: 'Carla', last_name: 'Aoun', email: 'vol31@willing.social', gender: 'female', date_of_birth: '2001-08-30', description: 'Dietitian student interested in community nutrition and food security programs.', cv_path: null },
+    { first_name: 'Hassan', last_name: 'Jaber', email: 'vol32@willing.social', gender: 'male', date_of_birth: '1994-04-14', description: 'Agricultural specialist supporting farm recovery and soil restoration efforts.', cv_path: null },
+    { first_name: 'Mia', last_name: 'Stephan', email: 'vol33@willing.social', gender: 'female', date_of_birth: '2003-01-09', description: 'Theater student running storytelling and drama workshops for displaced youth.', cv_path: null },
+    { first_name: 'Kamal', last_name: 'Saleh', email: 'vol34@willing.social', gender: 'male', date_of_birth: '1988-07-21', description: 'Experienced plumber and water systems technician supporting flood and WASH recovery.', cv_path: null },
+    { first_name: 'Joelle', last_name: 'Abou Jaoude', email: 'vol35@willing.social', gender: 'female', date_of_birth: '2000-09-05', description: 'Public health graduate working on community health education and hygiene promotion.', cv_path: null },
+    { first_name: 'Wissam', last_name: 'Khalife', email: 'vol36@willing.social', gender: 'male', date_of_birth: '1996-03-28', description: 'IT support volunteer helping NGOs with tech setup, connectivity, and device repair. .', cv_path: null },
+    { first_name: 'Rola', last_name: 'Hamdan', email: 'vol37@willing.social', gender: 'female', date_of_birth: '1991-11-13', description: 'Lawyer providing pro-bono legal information and referral services to displaced persons.', cv_path: null },
+    { first_name: 'Khaled', last_name: 'Mikati', email: 'vol38@willing.social', gender: 'male', date_of_birth: '2002-06-07', description: 'Football coach organizing youth leagues and inclusive sport days in North Lebanon.', cv_path: null },
+    { first_name: 'Cynthia', last_name: 'Frem', email: 'vol39@willing.social', gender: 'female', date_of_birth: '1997-02-16', description: 'Event planner supporting community fundraisers, awareness drives, and distribution events.', cv_path: null },
+    { first_name: 'Mazen', last_name: 'Abou Rizk', email: 'vol40@willing.social', gender: 'male', date_of_birth: '1993-08-03', description: 'Structural engineer assessing damaged buildings and guiding repair volunteers safely.', cv_path: null },
+    { first_name: 'Ghada', last_name: 'Rahhal', email: 'vol41@willing.social', gender: 'female', date_of_birth: '2001-04-19', description: 'Arabic calligrapher and art educator bringing creative healing workshops to communities.', cv_path: null },
+    { first_name: 'Tony', last_name: 'Khoury', email: 'vol42@willing.social', gender: 'male', date_of_birth: '1998-10-27', description: 'Supply chain analyst helping NGOs optimize donations and distribution logistics.', cv_path: 'tony-khoury-cv.pdf' },
+    { first_name: 'Dina', last_name: 'Mansour', email: 'vol43@willing.social', gender: 'female', date_of_birth: '2000-01-14', description: 'Medical laboratory student assisting in blood drives and health screening days.', cv_path: null },
+    { first_name: 'Fouad', last_name: 'Geagea', email: 'vol44@willing.social', gender: 'male', date_of_birth: '1989-05-31', description: 'Experienced chef and culinary trainer managing large-scale community kitchens.', cv_path: null },
+    { first_name: 'Leen', last_name: 'Khoury', email: 'vol45@willing.social', gender: 'female', date_of_birth: '2004-07-11', description: 'Teen volunteer passionate about environmental activism and ocean conservation.', cv_path: null },
+    { first_name: 'Adnan', last_name: 'Wehbe', email: 'vol46@willing.social', gender: 'male', date_of_birth: '1986-12-24', description: 'Former UNHCR field officer with refugee registration and case management experience.', cv_path: null },
+    { first_name: 'Reem', last_name: 'Diab', email: 'vol47@willing.social', gender: 'female', date_of_birth: '2002-03-03', description: 'Student journalist documenting community relief efforts for awareness and advocacy.', cv_path: null },
+    { first_name: 'Nidal', last_name: 'Haidar', email: 'vol48@willing.social', gender: 'male', date_of_birth: '1995-09-17', description: 'Solar energy technician supporting off-grid power solutions for relief organizations.', cv_path: null },
+    { first_name: 'Aline', last_name: 'Eid', email: 'vol49@willing.social', gender: 'female', date_of_birth: '1999-06-20', description: 'Early childhood educator running learning circles and play-based activities for young children.', cv_path: null },
+    { first_name: 'Riad', last_name: 'Zein', email: 'vol50@willing.social', gender: 'male', date_of_birth: '1997-08-08', description: 'Warehouse supervisor with extensive experience managing large donation stockrooms.', cv_path: null },
+    { first_name: 'Myriam', last_name: 'Aboud', email: 'vol51@willing.social', gender: 'female', date_of_birth: '2003-11-04', description: 'Music student offering music therapy and choir workshops in shelters and community centers.', cv_path: null },
+    { first_name: 'Saad', last_name: 'Farran', email: 'vol52@willing.social', gender: 'male', date_of_birth: '1990-03-22', description: 'Veterinarian assisting animal rescue and care efforts in disaster-affected regions.', cv_path: null },
+    { first_name: 'Natalia', last_name: 'Frem', email: 'vol53@willing.social', gender: 'female', date_of_birth: '2001-05-29', description: 'Fashion design student upcycling donated clothing for distribution in refugee camps.', cv_path: null },
+    { first_name: 'Bassel', last_name: 'Khodr', email: 'vol54@willing.social', gender: 'male', date_of_birth: '1994-07-16', description: 'Geography teacher assisting with mapping disaster zones and logistics planning for NGOs.', cv_path: null },
+    { first_name: 'Hind', last_name: 'Assaf', email: 'vol55@willing.social', gender: 'female', date_of_birth: '1998-02-11', description: 'Community organizer experienced in mobilizing volunteers for neighborhood recovery projects.', cv_path: null },
+    { first_name: 'Youssef', last_name: 'Nasser', email: 'vol56@willing.social', gender: 'male', date_of_birth: '2002-10-18', description: 'Engineering student building makeshift infrastructure for displaced communities.', cv_path: null },
+    { first_name: 'Abir', last_name: 'Mourad', email: 'vol57@willing.social', gender: 'female', date_of_birth: '1993-04-05', description: 'Accountant volunteering for NGO financial transparency and grant reporting support.', cv_path: null },
+    { first_name: 'Ramzi', last_name: 'Charaf', email: 'vol58@willing.social', gender: 'male', date_of_birth: '1988-01-29', description: 'Veteran field coordinator managing large multi-organization volunteer deployments.', cv_path: 'ramzi-charaf-cv.pdf' },
+    { first_name: 'Pamela', last_name: 'Harb', email: 'vol59@willing.social', gender: 'female', date_of_birth: '2004-08-22', description: 'Teen environmental volunteer running awareness campaigns in her school district.', cv_path: null },
+    { first_name: 'Fadi', last_name: 'Daher', email: 'vol60@willing.social', gender: 'male', date_of_birth: '1996-06-13', description: 'Pharmacist supporting medicine distribution, cold chain management, and health fairs.', cv_path: null },
+    { first_name: 'Yasmine', last_name: 'Saleh', email: 'vol61@willing.social', gender: 'female', date_of_birth: '2000-12-01', description: 'Child psychologist providing age-appropriate mental health activities in displacement shelters.', cv_path: null },
+    { first_name: 'Marwan', last_name: 'Khoury', email: 'vol62@willing.social', gender: 'male', date_of_birth: '1991-09-09', description: 'Professional chef running food safety training and community cooking events.', cv_path: null },
+    { first_name: 'Rania', last_name: 'Tabbara', email: 'vol63@willing.social', gender: 'female', date_of_birth: '1997-03-14', description: 'Environmental scientist supporting coastal pollution assessment and cleanup coordination.', cv_path: null },
+    { first_name: 'Majd', last_name: 'Makhoul', email: 'vol64@willing.social', gender: 'male', date_of_birth: '2003-07-27', description: 'Youth activist and community garden project leader in Tripoli.', cv_path: null },
+    { first_name: 'Sana', last_name: 'Itani', email: 'vol65@willing.social', gender: 'female', date_of_birth: '1999-01-23', description: 'Human resources professional streamlining volunteer onboarding and coordination systems.', cv_path: null },
+    { first_name: 'Khalil', last_name: 'Nassif', email: 'vol66@willing.social', gender: 'male', date_of_birth: '1992-11-06', description: 'Electrician providing safe wiring and generator support to shelters and relief centers.', cv_path: null },
+    { first_name: 'Lina', last_name: 'Feghali', email: 'vol67@willing.social', gender: 'female', date_of_birth: '2001-02-28', description: 'Social media coordinator amplifying NGO volunteer calls and community stories online.', cv_path: null },
+    { first_name: 'Malek', last_name: 'Haddad', email: 'vol68@willing.social', gender: 'male', date_of_birth: '2004-04-14', description: 'Student athlete coaching youth sports and running inclusive fitness sessions.', cv_path: null },
+    { first_name: 'Riwa', last_name: 'Ghanem', email: 'vol69@willing.social', gender: 'female', date_of_birth: '2002-06-30', description: 'Biology student assisting environmental NGOs with species monitoring and habitat restoration.', cv_path: null },
+    { first_name: 'Majd', last_name: 'Farhat', email: 'vol70@willing.social', gender: 'male', date_of_birth: '1985-08-15', description: 'Logistics manager with 15 years of supply chain experience supporting humanitarian relief operations.', cv_path: null },
+    { first_name: 'Dalia', last_name: 'Sleiman', email: 'vol71@willing.social', gender: 'female', date_of_birth: '1998-10-10', description: 'Occupational therapist supporting recovery and daily living activities for injured residents.', cv_path: null },
+    { first_name: 'Nasser', last_name: 'Khalife', email: 'vol72@willing.social', gender: 'male', date_of_birth: '2000-03-03', description: 'Community radio presenter using media skills to broadcast relief announcements and volunteer calls.', cv_path: 'nasser-khalife-cv.pdf' },
+    { first_name: 'Rouba', last_name: 'Karam', email: 'vol73@willing.social', gender: 'female', date_of_birth: '1995-07-19', description: 'Medical doctor volunteering in crisis clinics and mobile health units across Lebanon.', cv_path: null },
+    { first_name: 'Samer', last_name: 'Abdo', email: 'vol74@willing.social', gender: 'male', date_of_birth: '1993-05-26', description: 'Marine biologist monitoring ecosystem recovery along Lebanon\'s coastline after pollution events.', cv_path: null },
+    { first_name: 'Lara', last_name: 'Gemayel', email: 'vol75@willing.social', gender: 'female', date_of_birth: '2002-09-12', description: 'Architecture student helping design accessible and dignified shelter spaces for displaced families.', cv_path: null },
+    { first_name: 'Imad', last_name: 'Chahrour', email: 'vol76@willing.social', gender: 'male', date_of_birth: '1990-01-17', description: 'Safety officer ensuring volunteer protection standards on field sites and distribution points.', cv_path: null },
+    { first_name: 'Celine', last_name: 'Nasr', email: 'vol77@willing.social', gender: 'female', date_of_birth: '2001-11-20', description: 'Fundraising and grant writing volunteer helping small NGOs access emergency funding.', cv_path: null },
+    { first_name: 'Joe', last_name: 'Abi Khalil', email: 'vol78@willing.social', gender: 'male', date_of_birth: '1997-04-06', description: 'Drone operator mapping flood damage and wildfire zones to support relief planning.', cv_path: null },
+    { first_name: 'Mirna', last_name: 'Khoury', email: 'vol79@willing.social', gender: 'female', date_of_birth: '2003-02-08', description: 'Youth mentor running after-school and weekend programs for at-risk teenagers.', cv_path: null },
+    { first_name: 'Firas', last_name: 'Barakat', email: 'vol80@willing.social', gender: 'male', date_of_birth: '1991-06-24', description: 'Trauma surgeon with extensive field hospital experience, supporting emergency medical teams.', cv_path: null },
   ].map(v => ({ ...v, password: passwordHash, gender: v.gender as 'male' | 'female' | 'other' }));
 
   const volunteers = await database.insertInto('volunteer_account')
@@ -3673,24 +3680,6 @@ async function seed() {
 
     // --- First Aid Support (Nour Relief, review-based) ---
     {
-      volunteer_id: vol('vol3@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'Paramedic student with first aid and triage training.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol19@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'ICU nurse with triage experience, ready to support the medical team.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol80@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'Trauma surgeon with field hospital experience.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol73@willing.social'),
       posting_id: post('First Aid Support'),
       message: 'Medical doctor volunteering in crisis clinics across Lebanon.',
@@ -3704,24 +3693,6 @@ async function seed() {
     },
 
     // --- Displaced Families Registration (Nour Relief, review-based, partial) ---
-    {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Social worker, Arabic fluent. Comfortable with intake interviews.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol2@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Strong communication and data entry skills.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol46@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Former UNHCR field officer with refugee registration experience.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol65@willing.social'),
       posting_id: post('Displaced Families Registration'),
@@ -3775,18 +3746,6 @@ async function seed() {
 
     // --- War Survivor Psychosocial Support (Nour Relief, review-based) ---
     {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('War Survivor Psychosocial Support'),
-      message: 'Social work background, familiar with trauma-informed approaches.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol17@willing.social'),
-      posting_id: post('War Survivor Psychosocial Support'),
-      message: 'Psychology student trained in psychosocial first aid.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol61@willing.social'),
       posting_id: post('War Survivor Psychosocial Support'),
       message: 'Child psychologist with psychosocial support training.',
@@ -3826,18 +3785,6 @@ async function seed() {
     },
 
     // --- Psychological First Aid Sessions (Nour Relief, review-based) ---
-    {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('Psychological First Aid Sessions'),
-      message: 'Social work and mental health background.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol61@willing.social'),
-      posting_id: post('Psychological First Aid Sessions'),
-      message: 'Child psychologist with psychosocial support training.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol17@willing.social'),
       posting_id: post('Psychological First Aid Sessions'),
@@ -3983,18 +3930,6 @@ async function seed() {
 
     // --- Remote Homework Support (Ajialouna, review-based, partial) ---
     {
-      volunteer_id: vol('vol7@willing.social'),
-      posting_id: post('Remote Homework Support'),
-      message: 'Software developer with strong maths and science background.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol2@willing.social'),
-      posting_id: post('Remote Homework Support'),
-      message: 'Experienced tutor covering Arabic, English, and maths.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol28@willing.social'),
       posting_id: post('Remote Homework Support'),
       message: 'Retired schoolteacher, happy to tutor across all subjects.',
@@ -4126,18 +4061,6 @@ async function seed() {
     },
 
     // --- Medical Supplies Inventory & Sorting (Arz Community, review-based) ---
-    {
-      volunteer_id: vol('vol9@willing.social'),
-      posting_id: post('Medical Supplies Inventory & Sorting'),
-      message: 'Detail-oriented and experienced with inventory systems.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol42@willing.social'),
-      posting_id: post('Medical Supplies Inventory & Sorting'),
-      message: 'Supply chain analyst, comfortable managing medical supplies.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol50@willing.social'),
       posting_id: post('Medical Supplies Inventory & Sorting'),
@@ -4283,18 +4206,6 @@ async function seed() {
 
     // --- Volunteer Helpline Shifts (Cedar Response, review-based, partial) ---
     {
-      volunteer_id: vol('vol13@willing.social'),
-      posting_id: post('Volunteer Helpline Shifts'),
-      message: 'Comfortable with helpline systems across multiple shifts.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol14@willing.social'),
-      posting_id: post('Volunteer Helpline Shifts'),
-      message: 'Strong communication and admin coordination skills.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol36@willing.social'),
       posting_id: post('Volunteer Helpline Shifts'),
       message: 'IT support background, comfortable with remote helpline systems.',
@@ -4380,18 +4291,6 @@ async function seed() {
     },
 
     // --- Urban Search & Rescue Logistics (Cedar Response, review-based) ---
-    {
-      volunteer_id: vol('vol26@willing.social'),
-      posting_id: post('Urban Search & Rescue Logistics'),
-      message: 'Former army officer with crisis management experience.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol58@willing.social'),
-      posting_id: post('Urban Search & Rescue Logistics'),
-      message: 'Veteran field coordinator with large deployment experience.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol76@willing.social'),
       posting_id: post('Urban Search & Rescue Logistics'),
@@ -4490,18 +4389,6 @@ async function seed() {
     },
 
     // --- School Supply Restocking (Bekaa Uplift, review-based, partial) ---
-    {
-      volunteer_id: vol('vol12@willing.social'),
-      posting_id: post('School Supply Restocking'),
-      message: 'Community educator, happy to support schools recovering from flooding.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol11@willing.social'),
-      posting_id: post('School Supply Restocking'),
-      message: 'Warehouse and operations experience, comfortable with inventory.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol9@willing.social'),
       posting_id: post('School Supply Restocking'),

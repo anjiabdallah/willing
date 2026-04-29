@@ -1,4 +1,4 @@
-import { ArrowLeft, Flag, RotateCcw } from 'lucide-react';
+import { Flag, RotateCcw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -127,22 +127,12 @@ function AdminReportDetail() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <Button
-          type="button"
-          color="ghost"
-          style="outline"
-          Icon={ArrowLeft}
-          onClick={() => navigate('/admin/reports')}
-        >
-          Back to Reports
-        </Button>
-      </div>
-
       <PageHeader
         title={reportType === 'organization' ? 'Organization Report' : 'Volunteer Report'}
         subtitle={`Reported on ${new Date(report.created_at).toLocaleString()}`}
         icon={Flag}
+        showBack
+        defaultBackTo="/admin/reports"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

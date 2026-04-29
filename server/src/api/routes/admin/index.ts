@@ -25,6 +25,7 @@ import createResetPassword from '../../../auth/resetPassword.ts';
 import executeTransaction from '../../../db/executeTransaction.ts';
 import { type Database } from '../../../db/tables/index.ts';
 import { compare, hash } from '../../../services/bcrypt/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
 import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/resend/emails.ts';
@@ -881,7 +882,9 @@ function createAdminRouter(db: Kysely<Database>) {
       throw new Error('Failed to create organization account');
     }
 
-    await recomputeOrganizationVector(insertedOrganization.id, db);
+    runEmbeddingInBackground(`organization:${insertedOrganization.id}:context-vector-admin-approval`, async () => {
+      await recomputeOrganizationVector(insertedOrganization.id, db);
+    });
 
     await sendOrganizationAcceptanceEmail(organizationRequest, password);
 

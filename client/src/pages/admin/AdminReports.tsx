@@ -284,9 +284,9 @@ function AdminReports() {
                     : `/admin/reports/volunteer/${report.id}`;
 
                   return (
-                    <div
+                    <Card
                       key={`${type}-${report.id}`}
-                      className="rounded-xl border border-base-300 bg-base-100 p-4 flex flex-col items-start"
+                      className="flex flex-col items-start"
                     >
                       <ReportHeader
                         compact
@@ -303,7 +303,7 @@ function AdminReports() {
                       >
                         View Details
                       </Button>
-                    </div>
+                    </Card>
                   );
                 })}
               </div>

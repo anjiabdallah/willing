@@ -185,14 +185,16 @@ function OrganizationHome() {
     const orgName = organizationMe?.organization.name ?? organization?.name ?? '';
     const orgLogoPath = organizationMe?.organization.logo_path ?? organization?.logo_path ?? null;
 
-    return postings.map(posting => ({
+    const mapped = postings.map(posting => ({
       ...posting,
       organization_name: orgName,
       organization_logo_path: orgLogoPath,
       crisis_name: posting.crisis_id ? (crisisNameById.get(posting.crisis_id) ?? null) : null,
       enrollment_count: posting.enrollment_count,
-      application_status: 'none',
+      application_status: 'none' as const,
     }));
+
+    return mapped;
   }, [crisisNameById, organization?.logo_path, organization?.name, organizationMe?.organization.logo_path, organizationMe?.organization.name, postings]);
 
   return (

@@ -6,7 +6,6 @@ import {
   CalendarX2,
   Cake,
   CheckCircle2,
-  ClipboardList,
   Clock3,
   Edit3,
   House,
@@ -33,6 +32,7 @@ import Alert from '../components/Alert.tsx';
 import Button from '../components/Button.tsx';
 import CalendarInfo from '../components/CalendarInfo.tsx';
 import Card from '../components/Card.tsx';
+import Collapse from '../components/Collapse.tsx';
 import CustomMessageModal from '../components/CustomMessageModal.tsx';
 import EmptyState from '../components/EmptyState.tsx';
 import ColumnLayout from '../components/layout/ColumnLayout.tsx';
@@ -1540,14 +1540,15 @@ function PostingPage() {
         )}
 
         {canManagePosting && !isOpen && (
-          <Card
-            title="Enrollment Applications"
-            description="Pending volunteer applications that need organization review."
-            color="warning"
-            Icon={ClipboardList}
-            right={
-              <span className={`badge badge-${DOMAIN_COLORS.pending} inline-flex items-center gap-1`}>{applications.length}</span>
-            }
+          <Collapse
+            defaultOpen
+            titleClassName="pr-14"
+            title={(
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-base font-semibold">Enrollment Applications</span>
+                <span className="badge badge-primary">{applications.length}</span>
+              </div>
+            )}
           >
             {applications.length === 0
               ? (
@@ -1590,18 +1591,19 @@ function PostingPage() {
                     ))}
                   </div>
                 )}
-          </Card>
+          </Collapse>
         )}
 
         {canManagePosting && (
-          <Card
-            title="Enrolled Volunteers"
-            description="Volunteers currently enrolled in this posting."
-            color="success"
-            Icon={CheckCircle2}
-            right={
-              <span className={`badge badge-${DOMAIN_COLORS.enrollment} inline-flex items-center gap-1`}>{enrollments.length}</span>
-            }
+          <Collapse
+            defaultOpen
+            titleClassName="pr-14"
+            title={(
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-base font-semibold">Enrolled Volunteers</span>
+                <span className="badge badge-primary">{enrollments.length}</span>
+              </div>
+            )}
           >
 
             {enrollments.length === 0
@@ -1623,7 +1625,7 @@ function PostingPage() {
                     ))}
                   </div>
                 )}
-          </Card>
+          </Collapse>
         )}
       </ColumnLayout>
     </PageContainer>

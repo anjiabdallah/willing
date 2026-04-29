@@ -145,7 +145,7 @@ function PostingList({
   const crisisTagContent = (
     <>
       <AlertTriangle size={14} />
-      <span className="truncate max-w-40 font-semibold">{posting.crisis_name}</span>
+      <span className="truncate max-w-40 font-semibold" title={posting.crisis_name ?? undefined}>{posting.crisis_name}</span>
     </>
   );
 
@@ -197,7 +197,9 @@ function PostingList({
                     onClick={event => event.stopPropagation()}
                     className="link link-primary link-hover no-underline hover:underline inline-flex min-w-0 items-center gap-2 pointer-events-auto"
                   >
-                    <span className="truncate text-lg font-semibold leading-tight text-primary">{posting.title}</span>
+                    <span className="truncate text-lg font-semibold leading-tight text-primary" title={posting.title}>
+                      {posting.title}
+                    </span>
                     <ExternalLink size={14} />
                   </Link>
 
@@ -256,11 +258,26 @@ function PostingList({
                 Location
               </span>
 
-              <span className={`-ml-8 hidden min-w-0 truncate justify-self-start pr-1 text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}>{hasEndDate ? `${startDateStr} - ${endDateStr}` : startDateStr}</span>
+              <span
+                className={`-ml-8 hidden min-w-0 truncate justify-self-start pr-1 text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}
+                title={hasEndDate ? `${startDateStr} - ${endDateStr}` : startDateStr}
+              >
+                {hasEndDate ? `${startDateStr} - ${endDateStr}` : startDateStr}
+              </span>
 
-              <span className={`-ml-8 hidden min-w-0 truncate justify-self-start pr-1 text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}>{hasEndDate ? `${startTimeStr} - ${endTimeStr}` : startTimeStr}</span>
+              <span
+                className={`-ml-8 hidden min-w-0 truncate justify-self-start pr-1 text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}
+                title={hasEndDate ? `${startTimeStr} - ${endTimeStr}` : startTimeStr}
+              >
+                {hasEndDate ? `${startTimeStr} - ${endTimeStr}` : startTimeStr}
+              </span>
 
-              <span className={`-ml-8 hidden min-w-0 truncate justify-self-start text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}>{locationText}</span>
+              <span
+                className={`-ml-8 hidden min-w-0 truncate justify-self-start text-xs font-medium text-base-content ${outsideMetaValueVisibleClass}`}
+                title={locationText}
+              >
+                {locationText}
+              </span>
             </div>
           </div>
         </div>

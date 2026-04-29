@@ -33,6 +33,7 @@ import {
   type PostingSkill,
   type Database,
 } from '../../../db/tables/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { sendAdminOrganizationRequestEmail } from '../../../services/resend/emails.ts';
 import { orgLogoMulter } from '../../../services/uploads/orgLogo.ts';
@@ -307,6 +308,16 @@ function createOrganizationRouter(db: Kysely<Database>) {
       .selectFrom('posting')
       .select(postingResponseColumns)
       .where('organization_id', '=', orgId)
+      .orderBy(sql<number>`CASE
+        WHEN posting.end_date IS NOT NULL
+         AND posting.end_time IS NOT NULL
+         AND to_timestamp(
+           to_char(posting.end_date, 'YYYY-MM-DD') || ' ' || posting.end_time,
+           'YYYY-MM-DD HH24:MI'
+         ) < now()
+        THEN 1
+        ELSE 0
+      END`, 'asc')
       .orderBy('posting.start_date', 'asc')
       .orderBy('posting.start_time', 'asc')
       .execute();
@@ -649,7 +660,9 @@ function createOrganizationRouter(db: Kysely<Database>) {
     }
 
     if (shouldRecomputeOrganizationVector && canRecomputeProfileVector(req)) {
-      await recomputeOrganizationVector(organizationId, db);
+      runEmbeddingInBackground(`organization:${organizationId}:context-vector-profile-update`, async () => {
+        await recomputeOrganizationVector(organizationId, db);
+      });
     }
 
     const organization = await db

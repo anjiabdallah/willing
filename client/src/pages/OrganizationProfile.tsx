@@ -114,14 +114,16 @@ function OrganizationProfile() {
   const postingsWithContext = useMemo<PostingWithContext[]>(() => {
     if (!data) return [];
 
-    return data.postings.map(posting => ({
+    const mappedPostings = data.postings.map(posting => ({
       ...posting,
       organization_name: data.organization.name,
       organization_logo_path: data.organization.logo_path,
       crisis_name: null,
       enrollment_count: posting.enrollment_count,
-      application_status: 'none',
+      application_status: 'none' as const,
     }));
+
+    return mappedPostings;
   }, [data]);
 
   if (!id) {

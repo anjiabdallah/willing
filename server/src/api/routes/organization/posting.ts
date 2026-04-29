@@ -24,6 +24,7 @@ import {
   type VolunteerSkill,
   newPostingSchema,
 } from '../../../db/tables/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import {
   recomputeOrganizationCompositeVectorOnly,
   recomputeOrganizationHistoryVectorOnly,
@@ -96,6 +97,70 @@ const areSkillListsEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
 };
+const formatDateToIso = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+const normalizeStoredDate = (value: Date | string | null | undefined) => {
+  if (value instanceof Date) return formatDateToIso(value);
+  if (typeof value === 'string') {
+    const datePart = value.split('T')[0]?.trim();
+    return datePart || undefined;
+  }
+  return undefined;
+};
+const parseIsoDateParts = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return undefined;
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+};
+const getLocalStartOfDayTimestamp = (value: Date | string) => {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  }
+
+  const parsedParts = parseIsoDateParts(value);
+  if (parsedParts) {
+    return new Date(parsedParts.year, parsedParts.month - 1, parsedParts.day).getTime();
+  }
+
+  const parsedDate = new Date(value);
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate()).getTime();
+};
+const assertStartDateNotInPast = (startDate: Date | string, res: Response) => {
+  const startDateTimestamp = getLocalStartOfDayTimestamp(startDate);
+  const today = new Date();
+  const todayTimestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  if (startDateTimestamp < todayTimestamp) {
+    res.status(400);
+    throw new Error('Start date cannot be in the past');
+  }
+};
+const getPostingDates = (startDate: Date | string, endDate: Date | string): string[] => {
+  const normalizedStartDate = normalizeStoredDate(startDate);
+  const normalizedEndDate = normalizeStoredDate(endDate);
+  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
+  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
+
+  if (!startParts || !endParts) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const current = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day));
+  const end = new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day));
+
+  while (current.getTime() <= end.getTime()) {
+    result.push(formatDateToIso(current));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return result;
+};
 const areDatesEqual = (left: Date | undefined, right: Date | undefined) => (left?.getTime() ?? null) === (right?.getTime() ?? null);
 const areTimeValuesEqual = (left: string | undefined, right: string | undefined) => (left ?? null) === (right ?? null);
 const isPostingFull = (maxVolunteers: number | null | undefined, enrollmentCount: number) => maxVolunteers !== undefined && maxVolunteers !== null && enrollmentCount >= maxVolunteers;
@@ -133,6 +198,7 @@ function createPostingRouter(db: Kysely<Database>) {
     const body = newPostingSchema.parse(req.body);
     const orgId = req.userJWT!.id;
     const { skills, ...postingBody } = body;
+    assertStartDateNotInPast(body.start_date, res);
 
     const now = new Date();
     const todayIso = formatDateToIso(now);
@@ -190,7 +256,9 @@ function createPostingRouter(db: Kysely<Database>) {
       return { postingId: newPosting.id };
     });
 
-    await recomputePostingVectors(result.postingId, db);
+    runEmbeddingInBackground(`posting:${result.postingId}:vectors-create`, async () => {
+      await recomputePostingVectors(result.postingId, db);
+    });
 
     const posting = withPostingEndedFlag(await db
       .selectFrom('posting')
@@ -599,7 +667,6 @@ function createPostingRouter(db: Kysely<Database>) {
     if (body.crisis_id !== undefined && body.crisis_id !== null && body.crisis_id !== posting.crisis_id) {
       await assertCrisisExists(body.crisis_id, db, res);
     }
-
     const existingSkills = await db
       .selectFrom('posting_skill')
       .select('name')
@@ -669,12 +736,16 @@ function createPostingRouter(db: Kysely<Database>) {
     });
 
     if (shouldRecomputePostingVectors) {
-      await recomputePostingVectors(postingId, db);
+      runEmbeddingInBackground(`posting:${postingId}:vectors-update`, async () => {
+        await recomputePostingVectors(postingId, db);
+      });
     }
     if (didClosedStateChange) {
-      await recomputeOrganizationHistoryVectorOnly(orgId, db);
-      await recomputeOrganizationCompositeVectorOnly(orgId, db);
-      await recomputePostingContextVectorsForOrganization(orgId, db);
+      runEmbeddingInBackground(`organization:${orgId}:vectors-after-posting-close-state-change`, async () => {
+        await recomputeOrganizationHistoryVectorOnly(orgId, db);
+        await recomputeOrganizationCompositeVectorOnly(orgId, db);
+        await recomputePostingContextVectorsForOrganization(orgId, db);
+      });
     }
 
     const updatedPosting = withPostingEndedFlag(await db
@@ -751,10 +822,12 @@ function createPostingRouter(db: Kysely<Database>) {
     });
 
     const impactedVolunteerIds = Array.from(new Set(impactedVolunteerRows.map(row => row.volunteer_id)));
-    await Promise.all(impactedVolunteerIds.map(volunteerId => recomputeVolunteerExperienceVector(volunteerId, db)));
-    await recomputeOrganizationHistoryVectorOnly(orgId, db);
-    await recomputeOrganizationCompositeVectorOnly(orgId, db);
-    await recomputePostingContextVectorsForOrganization(orgId, db);
+    runEmbeddingInBackground(`posting:${postingId}:vectors-delete`, async () => {
+      await Promise.all(impactedVolunteerIds.map(volunteerId => recomputeVolunteerExperienceVector(volunteerId, db)));
+      await recomputeOrganizationHistoryVectorOnly(orgId, db);
+      await recomputeOrganizationCompositeVectorOnly(orgId, db);
+      await recomputePostingContextVectorsForOrganization(orgId, db);
+    });
 
     await Promise.allSettled(
       enrolledVolunteerEmailContexts.map(emailContext =>
@@ -1022,7 +1095,9 @@ function createPostingRouter(db: Kysely<Database>) {
         .execute();
     });
 
-    await recomputePostingContextVectorOnly(postingId, db);
+    runEmbeddingInBackground(`posting:${postingId}:context-after-application-accept`, async () => {
+      await recomputePostingContextVectorOnly(postingId, db);
+    });
     const acceptedDates = enrollmentDateStrings;
     if (emailContext) {
       try {

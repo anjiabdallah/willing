@@ -27,6 +27,7 @@ import EmptyState from '../EmptyState.tsx';
 import CrisisCard from './CrisisCard.tsx';
 import OrganizationCard from './OrganizationCard.tsx';
 import PostingCollection from './PostingCollection.tsx';
+import Loading from '../Loading.tsx';
 import PostingFiltersCard from './PostingFiltersCard.tsx';
 import PageContainer from '../layout/PageContainer.tsx';
 import PageHeader from '../layout/PageHeader.tsx';
@@ -401,10 +402,38 @@ function PostingSearchView({
     await fetchPostings(filters);
   }, [fetchPostings, activeEntity, storageKey]);
 
+  // When switching the active entity (tabs), auto-fetch results so the
+  // loading state appears immediately instead of showing an empty screen.
+  useEffect(() => {
+    let cancelled = false;
+    const doFetch = async () => {
+      // If we already have results for the selected entity, skip fetching.
+      if (postings.length > 0 || organizations.length > 0 || crises.length > 0) return;
+
+      try {
+        await fetchPostings(activeFilters);
+      } catch {
+        if (cancelled) return;
+      }
+    };
+
+    void doFetch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeEntity, storageKey, fetchPostings, activeFilters, postings.length, organizations.length, crises.length]);
+
   const setEntityInUrl = useCallback((entity: PostingSearchFilters['entity']) => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set('entity', entity);
     setSearchParams(nextParams);
+
+    // Immediately show loading skeleton when user switches entity.
+    setLoading(true);
+    setPostings([]);
+    setOrganizations([]);
+    setCrises([]);
 
     if (showEntityTabs && typeof window !== 'undefined') {
       const entityDefaults = getCleanDefaultsForEntity(entity);
@@ -668,14 +697,11 @@ function PostingSearchView({
 
       {loading
         ? (
-            <PostingCollection
-              postings={[]}
-              loading={true}
-              showCrisis
-              crisisBasePath={crisisBasePath}
-              cardsContainerClassName="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3"
-              listContainerClassName="space-y-4"
-            />
+            <div className="p-6">
+              <div className="flex justify-center mt-8">
+                <Loading size="xl" />
+              </div>
+            </div>
           )
         : activeEntity === 'crises'
           ? (

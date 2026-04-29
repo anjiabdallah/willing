@@ -66,7 +66,7 @@ function PostingCard({
   const crisisTagContent = (
     <>
       <AlertTriangle size={14} />
-      <span className="truncate max-w-40 text-sm font-semibold">
+      <span className="truncate max-w-40 text-sm font-semibold" title={posting.crisis_name ?? undefined}>
         {posting.crisis_name}
       </span>
     </>
@@ -106,7 +106,7 @@ function PostingCard({
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold leading-tight truncate">
                     <Link to={postingDetailsPath} className="link link-primary link-hover no-underline hover:underline inline-flex items-center gap-2">
-                      <span className="truncate">{posting.title}</span>
+                      <span className="truncate" title={posting.title}>{posting.title}</span>
                       <ExternalLink size={14} />
                     </Link>
                   </h3>
@@ -121,7 +121,7 @@ function PostingCard({
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold leading-tight truncate">
                     <Link to={postingDetailsPath} className="link link-primary link-hover no-underline hover:underline inline-flex items-center gap-2">
-                      <span className="truncate">{posting.title}</span>
+                      <span className="truncate" title={posting.title}>{posting.title}</span>
                       <ExternalLink size={14} />
                     </Link>
                   </h3>

@@ -1,4 +1,7 @@
+import { sql } from 'kysely';
+
 import { getSingleQueryValue } from './queryValue.ts';
+import { hasPostingEnded } from '../../../services/posting/postingTime.ts';
 
 export type PostingSortDir = 'asc' | 'desc';
 export type SharedPostingSortBy = 'start_date' | 'created_at' | 'title';
@@ -14,11 +17,12 @@ type PostingDateValue = Date | string | null | undefined;
 
 type PostingSortLike = {
   id?: number;
+  has_ended?: boolean;
   title?: string | null | undefined;
   start_date?: PostingDateValue;
   start_time?: string | null | undefined;
-  end_date?: PostingDateValue;
-  end_time?: string | null | undefined;
+  end_date: PostingDateValue;
+  end_time?: string | null;
   created_at?: PostingDateValue | undefined;
 };
 
@@ -34,6 +38,17 @@ type PostingQueryLike = {
   where: (...args: unknown[]) => PostingQueryLike;
   orderBy: (...args: unknown[]) => PostingQueryLike;
 };
+
+const endedLastOrderExpression = sql<number>`CASE
+  WHEN posting.end_date IS NOT NULL
+   AND posting.end_time IS NOT NULL
+   AND to_timestamp(
+     to_char(posting.end_date, 'YYYY-MM-DD') || ' ' || posting.end_time,
+     'YYYY-MM-DD HH24:MI'
+   ) < now()
+  THEN 1
+  ELSE 0
+END`;
 
 const normalizeDateKey = (value: PostingDateValue): string | null => {
   if (!value) return null;
@@ -88,6 +103,17 @@ const compareNullableKeys = (
 
   const result = left.localeCompare(right);
   return sortDir === 'asc' ? result : -result;
+};
+
+const comparePostingEndStatus = (left: PostingSortLike, right: PostingSortLike): number => {
+  const leftEnded = left.has_ended ?? hasPostingEnded(left);
+  const rightEnded = right.has_ended ?? hasPostingEnded(right);
+
+  if (leftEnded === rightEnded) {
+    return 0;
+  }
+
+  return leftEnded ? 1 : -1;
 };
 
 const parseDateBoundary = (value: string | undefined): Date | undefined => {
@@ -208,6 +234,11 @@ export const sortPostingsBySharedSort = <T extends PostingSortLike>(
   sortBy: SharedPostingSortBy,
   sortDir: PostingSortDir,
 ): T[] => [...postings].sort((left, right) => {
+  const endedCompare = comparePostingEndStatus(left, right);
+  if (endedCompare !== 0) {
+    return endedCompare;
+  }
+
   switch (sortBy) {
     case 'created_at':
     {
@@ -225,7 +256,6 @@ export const sortPostingsBySharedSort = <T extends PostingSortLike>(
       const rightId = right.id ?? 0;
       return sortDir === 'asc' ? leftId - rightId : rightId - leftId;
     }
-    case 'start_date':
     case 'title': {
       return compareNullableKeys(
         left.title ?? '',
@@ -233,6 +263,7 @@ export const sortPostingsBySharedSort = <T extends PostingSortLike>(
         sortDir,
       );
     }
+    case 'start_date':
     default: {
       const dateCompare = compareNullableKeys(
         normalizeDateKey(left.start_date),
@@ -253,23 +284,29 @@ export const sortPostingsBySharedSort = <T extends PostingSortLike>(
   }
 });
 
+export const applyPostingEndedLastSort = <Q extends PostingQueryLike>(query: Q): Q => (
+  query.orderBy(endedLastOrderExpression, 'asc') as Q
+);
+
 export const applySharedPostingSort = <Q extends PostingQueryLike>(
   query: Q,
   sortBy: SharedPostingSortBy,
   sortDir: PostingSortDir,
 ): Q => {
+  const endedSortedQuery = applyPostingEndedLastSort(query);
+
   switch (sortBy) {
     case 'created_at':
-      return query
+      return endedSortedQuery
         .orderBy('posting.created_at', sortDir)
         .orderBy('posting.id', sortDir) as Q;
     case 'title':
-      return query
+      return endedSortedQuery
         .orderBy('posting.title', sortDir)
         .orderBy('posting.id', sortDir) as Q;
     case 'start_date':
     default:
-      return query
+      return endedSortedQuery
         .orderBy('posting.start_date', sortDir)
         .orderBy('posting.start_time', sortDir) as Q;
   }

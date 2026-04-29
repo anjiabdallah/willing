@@ -28,6 +28,7 @@ import executeTransaction from '../../../db/executeTransaction.ts';
 import { type Database, type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, newOrganizationReportSchema, volunteerAccountSchema } from '../../../db/tables/index.ts';
 import { emailSchema } from '../../../schemas/index.ts';
 import { CERTIFICATE_PAYLOAD_VERSION, CERTIFICATE_TYPE, signCertificateVerificationPayload } from '../../../services/certificates/token.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
@@ -264,8 +265,12 @@ function createVolunteerRouter(db: Kysely<Database>) {
       return createdVolunteer;
     });
 
-    await recomputeVolunteerProfileVector(volunteer.id, db);
-    await recomputeVolunteerExperienceVector(volunteer.id, db);
+    runEmbeddingInBackground(`volunteer:${volunteer.id}:profile-vector-initial`, async () => {
+      await recomputeVolunteerProfileVector(volunteer.id, db);
+    });
+    runEmbeddingInBackground(`volunteer:${volunteer.id}:experience-vector-initial`, async () => {
+      await recomputeVolunteerExperienceVector(volunteer.id, db);
+    });
 
     const token = await generateJWT({ id: volunteer.id, role: 'volunteer', token_version: 0 });
 
@@ -776,7 +781,9 @@ function createVolunteerRouter(db: Kysely<Database>) {
     });
 
     if (shouldRecomputeProfileVector && canRecomputeProfileVector(req)) {
-      await recomputeVolunteerProfileVector(volunteerId, db);
+      runEmbeddingInBackground(`volunteer:${volunteerId}:profile-vector-update`, async () => {
+        await recomputeVolunteerProfileVector(volunteerId, db);
+      });
     }
 
     const profile = await getVolunteerProfile(volunteerId);

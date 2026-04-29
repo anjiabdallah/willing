@@ -81,6 +81,8 @@ function VolunteerHome() {
     { immediate: true },
   );
 
+  const sortedEnrolledPostings = enrolledPostings?.postings ?? [];
+
   const {
     data: allPostings,
     loading: allLoading,
@@ -194,7 +196,7 @@ function VolunteerHome() {
                     : null}
                 >
                   <PostingCollection
-                    postings={enrolledPostings?.postings ?? []}
+                    postings={sortedEnrolledPostings}
                     loading={enrolledLoading}
                     showCrisis
                     listItemClassName="w-full"
@@ -221,7 +223,7 @@ function VolunteerHome() {
                     : null}
                 >
                   <PostingCollection
-                    postings={enrolledPostings?.postings ?? []}
+                    postings={sortedEnrolledPostings}
                     loading={enrolledLoading}
                     showCrisis
                     cardItemClassName="h-full shrink-0 snap-start md:w-md w-sm"

@@ -191,6 +191,7 @@ export default function CalendarInfo<T extends FieldValues>({
       {...controlledModeProps}
       disabledDates={props.disabledDates}
       allowedDates={props.allowedDates}
+      disablePastDates={props.disablePastDates}
       dateDetails={props.dateDetails}
     />
   );
@@ -363,8 +364,8 @@ function ControlledCalendarInfo({
   showTopLabels = true,
   selectionMode,
   disabledDates,
-  disablePastDates,
   allowedDates,
+  disablePastDates = false,
   dateDetails,
   rangeValue,
   onRangeChange,
@@ -381,8 +382,8 @@ function ControlledCalendarInfo({
 }: {
   selectionMode?: CalendarSelectionMode;
   disabledDates?: string[];
-  disablePastDates?: boolean;
   allowedDates?: string[];
+  disablePastDates?: boolean;
   dateDetails?: Record<string, string>;
   rangeValue?: CalendarDateRangeValue;
   onRangeChange?: (value: CalendarDateRangeValue) => void;
@@ -432,7 +433,6 @@ function ControlledCalendarInfo({
   const allowedDateSet = useMemo(() => {
     return new Set((allowedDates ?? []).map(getDatePart).filter(Boolean));
   }, [allowedDates]);
-
   const disabledMatchers: Matcher[] | undefined = (() => {
     const matchers: Matcher[] = [];
 

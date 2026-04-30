@@ -101,39 +101,6 @@ const toDateFromParts = (dateValue: Date | string, timeValue?: string) => {
   return new Date(`${datePart}T${timePart}`);
 };
 
-const DEFAULT_SINGLE_DAY_HOURS = 5;
-
-const getExperienceDurationInHours = (
-  startDateValue: Date | string,
-  startTimeValue: string,
-  endDateValue?: Date | string,
-  endTimeValue?: string,
-) => {
-  const startDate = toDateFromParts(startDateValue, startTimeValue);
-  if (Number.isNaN(startDate.getTime())) return 0;
-
-  const endDate = endDateValue ? toDateFromParts(endDateValue, endTimeValue) : null;
-  if (!endDate || Number.isNaN(endDate.getTime())) return DEFAULT_SINGLE_DAY_HOURS;
-
-  const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-  const diffInMs = endDay.getTime() - startDay.getTime();
-  const dayCount = diffInMs < 0 ? 1 : Math.floor(diffInMs / (24 * 60 * 60 * 1000)) + 1;
-
-  const startHourOfDay = startDate.getHours()
-    + (startDate.getMinutes() / 60)
-    + (startDate.getSeconds() / 3600);
-  const endHourOfDay = endDate.getHours()
-    + (endDate.getMinutes() / 60)
-    + (endDate.getSeconds() / 3600);
-
-  const dailyHours = endHourOfDay - startHourOfDay;
-  const safeDailyHours = dailyHours > 0 ? dailyHours : DEFAULT_SINGLE_DAY_HOURS;
-
-  return safeDailyHours * dayCount;
-};
-
 function VolunteerProfile() {
   const [profile, setProfile] = useState<VolunteerProfileResponse | null>(null);
   const [skills, setSkills] = useState<string[]>([]);
@@ -327,19 +294,6 @@ function VolunteerProfile() {
   const hasHiddenCompletedExperiences = useMemo(() => {
     if (!profile) return false;
     return profile.completed_experiences.length >= 3;
-  }, [profile]);
-
-  const totalCompletedHours = useMemo(() => {
-    if (!profile) return 0;
-
-    return profile.completed_experiences.reduce((total, experience) => (
-      total + getExperienceDurationInHours(
-        experience.start_date,
-        experience.start_time,
-        experience.end_date,
-        experience.end_time,
-      )
-    ), 0);
   }, [profile]);
 
   const onSave = form.handleSubmit(async (data) => {
@@ -678,7 +632,7 @@ function VolunteerProfile() {
           />
           <StatCard
             text="Hours Completed"
-            content={totalCompletedHours.toFixed(1)}
+            content={profile.experience_stats.total_hours_completed.toFixed(1)}
             icon={Clock3}
             color="secondary"
           />

@@ -11,6 +11,8 @@ type DateParts = {
 export const formatDateToIso = (date: Date) =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 
+const POSTING_LOCAL_TIMEZONE = 'Asia/Beirut';
+
 const parseIsoDateParts = (value: string): DateParts | undefined => {
   const segments = value.split('-').map(Number);
   if (segments.length !== 3) return undefined;
@@ -147,6 +149,68 @@ export const getPostingDailyHoursExpression = () => sql<number>`GREATEST(
     )
     - (enrollment_date.date + posting.start_time)
   )) / 3600.0
+)`;
+
+export const getPostingHoursPerAttendedDateExpression = () => sql<number>`GREATEST(
+  0,
+  CASE
+    WHEN (
+      posting.end_time > posting.start_time
+      AND
+      (
+        ((DATE '1970-01-01' + posting.end_time) AT TIME ZONE 'UTC')
+        AT TIME ZONE ${POSTING_LOCAL_TIMEZONE}
+      )::time
+      >
+      (
+        ((DATE '1970-01-01' + posting.start_time) AT TIME ZONE 'UTC')
+        AT TIME ZONE ${POSTING_LOCAL_TIMEZONE}
+      )::time
+    ) THEN EXTRACT(EPOCH FROM (
+      (enrollment_date.date + posting.end_time) - (enrollment_date.date + posting.start_time)
+    )) / 3600.0
+    ELSE CASE
+      WHEN enrollment_date.id = (
+        SELECT MIN(ed_anchor.id)
+        FROM enrollment_date AS ed_anchor
+        WHERE ed_anchor.enrollment_id = enrollment_date.enrollment_id
+          AND ed_anchor.posting_id = enrollment_date.posting_id
+          AND ed_anchor.attended = true
+      ) THEN (
+        EXTRACT(EPOCH FROM (
+          (
+            (
+              DATE '1970-01-01'
+              + posting.end_time
+              + CASE
+                  WHEN posting.end_time <= posting.start_time THEN INTERVAL '1 day'
+                  ELSE INTERVAL '0'
+                END
+            )
+            - (DATE '1970-01-01' + posting.start_time)
+          )
+        )) / 3600.0
+      ) * (
+        SELECT COUNT(*)
+        FROM (
+          SELECT DISTINCT ed_pair.date
+          FROM enrollment_date AS ed_pair
+          WHERE ed_pair.enrollment_id = enrollment_date.enrollment_id
+            AND ed_pair.posting_id = enrollment_date.posting_id
+            AND ed_pair.attended = true
+        ) AS attended_dates
+        WHERE EXISTS (
+          SELECT 1
+          FROM enrollment_date AS ed_next
+          WHERE ed_next.enrollment_id = enrollment_date.enrollment_id
+            AND ed_next.posting_id = enrollment_date.posting_id
+            AND ed_next.attended = true
+            AND ed_next.date = attended_dates.date + INTERVAL '1 day'
+        )
+      )
+      ELSE 0
+    END
+  END
 )`;
 
 export const hasPostingEnded = (

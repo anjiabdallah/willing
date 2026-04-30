@@ -3,7 +3,7 @@ import { sql, type Kysely } from 'kysely';
 import { type CertificateVerificationPayload } from './token.ts';
 import database from '../../db/index.ts';
 import { type Database } from '../../db/tables/index.ts';
-import { getPostingDailyHoursExpression } from '../posting/postingTime.ts';
+import { getPostingHoursPerAttendedDateExpression } from '../posting/postingTime.ts';
 
 const HOURS_EPSILON = 0.01;
 const HOURS_DECIMAL_PLACES = 2;
@@ -21,7 +21,7 @@ const roundHours = (value: number) => Number(value.toFixed(HOURS_DECIMAL_PLACES)
 const isSameHours = (left: number, right: number) => Math.abs(left - right) <= HOURS_EPSILON;
 
 const getVolunteerHoursSnapshot = async (db: Kysely<Database>, volunteerId: number, issuedAt: Date): Promise<VolunteerHoursSnapshot> => {
-  const hoursPerAttendedDateExpression = getPostingDailyHoursExpression();
+  const hoursPerAttendedDateExpression = getPostingHoursPerAttendedDateExpression();
 
   const rows = await db
     .selectFrom('enrollment_date')

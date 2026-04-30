@@ -2,8 +2,8 @@ import { cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import '@testing-library/jest-dom/vitest';
-import VolunteerProfile from '../pages/volunteer/VolunteerProfile';
 import { renderPageWithAuth } from './test-utils';
+import VolunteerProfile from '../pages/volunteer/VolunteerProfile';
 
 import type { VolunteerProfileResponse } from '../../../server/src/api/types';
 

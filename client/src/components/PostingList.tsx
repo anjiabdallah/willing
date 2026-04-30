@@ -105,7 +105,7 @@ function PostingList({
                   </span>
                 )
               : (
-                  <span className="badge badge-sm badge-secondary inline-flex items-center gap-1">
+                  <span className="badge badge-sm badge-secondary inline-flex items-center gap-1 whitespace-nowrap">
                     <ClipboardList size={12} />
                     Review Based
                   </span>

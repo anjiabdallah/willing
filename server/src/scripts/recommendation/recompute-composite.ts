@@ -46,10 +46,6 @@ const getMissingCounts = async () => {
 };
 
 async function recomputeCompositeVectors() {
-  if (config.NODE_ENV === 'production') {
-    throw new Error('Refusing to recompute composite vectors in production.');
-  }
-
   const { organizationIds, postingIds, volunteerIds } = await getIds();
 
   console.log('Starting composite-only vector recomputation (no OpenAI embedding calls)...');

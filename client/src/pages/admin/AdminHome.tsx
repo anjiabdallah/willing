@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight, ClipboardCheck, Flag, LayoutDashboard } from 'lucide-react';
+import { AlertTriangle, ArrowRight, ClipboardCheck, Flag, Home } from 'lucide-react';
 import { useCallback } from 'react';
 
 import Card from '../../components/Card';
@@ -41,9 +41,9 @@ function AdminHome() {
   return (
     <PageContainer>
       <PageHeader
-        title="Admin Dashboard"
+        title="Home"
         subtitle="Quick overview of requests and active crises."
-        icon={LayoutDashboard}
+        icon={Home}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

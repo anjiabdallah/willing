@@ -50,9 +50,6 @@ const getMissingCounts = async () => {
 };
 
 async function recomputeAllEmbeddings() {
-  if (config.NODE_ENV === 'production') {
-    throw new Error('Refusing to recompute all embeddings in production.');
-  }
   await warnBeforeOpenAiCalls({
     countdownSeconds: 5,
     force: process.argv.includes('--yes') || process.env.SKIP_OPENAI_WARNING === 'true',

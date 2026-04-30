@@ -993,7 +993,7 @@ function PostingPage() {
               disabledDates={fullPostingDates}
               dateDetails={postingDateDetails}
             />
-            <p className="text-xs text-muted mt-2">You must select at least one available day. Full days are unavailable.</p>
+            <p className="text-xs text-muted mt-2">You must select at least one available day.</p>
           </div>
         )}
       </CustomMessageModal>

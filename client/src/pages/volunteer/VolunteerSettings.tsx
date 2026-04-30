@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 import DeleteAccountCard from '../../components/DeleteAccountCard';
 import PageContainer from '../../components/layout/PageContainer';
@@ -11,7 +11,7 @@ function VolunteerSettings() {
       <PageHeader
         title="Settings"
         subtitle="Manage your account security and preferences."
-        icon={Lock}
+        icon={Settings}
       />
       <div className="space-y-6">
         <PasswordResetCard />

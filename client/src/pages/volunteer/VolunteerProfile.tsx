@@ -16,6 +16,7 @@ import {
   Upload,
   X,
   Users,
+  User,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -490,7 +491,7 @@ function VolunteerProfile() {
       <PageHeader
         title="Profile"
         subtitle="Manage your details, availability, and focus areas."
-        icon={FileText}
+        icon={User}
         actions={(
           <div className="flex flex-wrap gap-2 justify-end">
             <LinkButton to="/volunteer/certificate" color="secondary" className="btn btn-outline" size="sm">

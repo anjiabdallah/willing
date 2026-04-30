@@ -174,10 +174,8 @@ function PostingCard({
                             </span>
                           )
                         : (
-                            <span className="badge badge-secondary inline-flex items-center gap-2 px-3 min-w-30 h-7">
-                              {' '}
+                            <span className="badge badge-secondary inline-flex items-center gap-2 px-3 min-w-30 h-7 whitespace-nowrap">
                               <ClipboardList size={14} />
-                              {' '}
                               Review Based
                             </span>
                           )

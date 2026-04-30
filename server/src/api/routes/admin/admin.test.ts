@@ -275,6 +275,16 @@ describe('Admin crises routes', () => {
     expect(response.body.crisis).toMatchObject({ name: 'Test Crisis', description: 'Test description', pinned: false });
   });
 
+  test('POST /admin/crises accepts missing description', async () => {
+    const response = await server
+      .post('/admin/crises')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'No Description Crisis' })
+      .expect(201);
+
+    expect(response.body.crisis).toMatchObject({ name: 'No Description Crisis', description: null, pinned: false });
+  });
+
   test('PUT /admin/crises/:id updates the crisis', async () => {
     const crisis = await transaction
       .insertInto('crisis')

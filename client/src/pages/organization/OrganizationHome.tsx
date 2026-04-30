@@ -1,4 +1,4 @@
-import { ClipboardList, Plus } from 'lucide-react';
+import { ClipboardList, Home, Plus } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 import CalendarInfo from '../../components/CalendarInfo';
@@ -202,7 +202,7 @@ function OrganizationHome() {
       <PageHeader
         title="My Postings"
         subtitle="Track, manage, and update your organization opportunities."
-        icon={ClipboardList}
+        icon={Home}
         badge={
           postings && (
             <div className="badge badge-primary">

@@ -37,7 +37,7 @@ export default function LoadingList({ count = 3 }: LoadingListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
       {items.map(i => (
         <div key={i} className="card bg-base-100 shadow-md border border-base-300 min-h-96">
           <div className="p-4 md:p-5 mt-1 flex items-center justify-between gap-4">

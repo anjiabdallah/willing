@@ -646,10 +646,10 @@ function ControlledCalendarInfo({
             <button
               ref={startTriggerRef}
               type="button"
-              className="input input-bordered flex w-full items-center justify-between gap-2"
+              className="input input-bordered flex w-full min-w-0 items-center justify-between gap-2"
               onClick={() => openOrTogglePicker(selectedFromDate ?? selectedToDate ?? new Date())}
             >
-              <span className="truncate text-left">{valueText}</span>
+              <span className="truncate text-left min-w-0 flex-1">{valueText}</span>
               <CalendarDays size={16} className="shrink-0 opacity-70" />
             </button>
 
@@ -764,10 +764,10 @@ function ControlledCalendarInfo({
             <button
               ref={startTriggerRef}
               type="button"
-              className="input input-bordered flex w-full items-center justify-between gap-2"
+              className="input input-bordered flex w-full min-w-0 items-center justify-between gap-2"
               onClick={() => openOrTogglePicker(selectedDate ?? new Date())}
             >
-              <span className="truncate text-left">{singleText}</span>
+              <span className="truncate text-left min-w-0 flex-1">{singleText}</span>
               <CalendarDays size={16} className="shrink-0 opacity-70" />
             </button>
 
@@ -860,10 +860,10 @@ function ControlledCalendarInfo({
           <button
             ref={startTriggerRef}
             type="button"
-            className="input input-bordered flex w-full items-center justify-between gap-2"
+            className="input input-bordered flex w-full min-w-0 items-center justify-between gap-2"
             onClick={() => openOrTogglePicker(parsedSelectedDates[0] ?? new Date())}
           >
-            <span className="truncate overflow-hidden whitespace-nowrap text-ellipsis block max-w-[calc(100%-2.5rem)]" title={allSelectedDateText || dateListText}>{dateListText}</span>
+            <span className="truncate overflow-hidden whitespace-nowrap text-ellipsis block min-w-0 flex-1" title={allSelectedDateText || dateListText}>{dateListText}</span>
             <CalendarDays size={16} className="shrink-0 opacity-70" />
           </button>
 

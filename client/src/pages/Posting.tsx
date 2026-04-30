@@ -56,7 +56,7 @@ import useNotifications from '../notifications/useNotifications';
 import { postingEditFormSchema, type PostingEditFormData } from '../schemas/posting';
 import { executeAndShowError, FormField, FormRootError } from '../utils/formUtils.tsx';
 import requestServer from '../utils/requestServer.ts';
-import { toLocalTime, toUtcTime } from '../utils/timeUtils.ts';
+import { toLocalTime, toUtcDateTime, shiftDate } from '../utils/timeUtils.ts';
 import useAsync from '../utils/useAsync';
 import { useOrganization } from '../utils/useUsers.ts';
 
@@ -570,10 +570,16 @@ function PostingPage() {
           is_closed: data.is_closed,
           skills: skills.length > 0 ? skills : undefined,
           crisis_id: selectedCrisisId ?? null,
-          start_date: data.start_date,
-          start_time: data.start_time ? toUtcTime(data.start_time) : data.start_time,
-          end_date: data.end_date,
-          end_time: data.end_time ? toUtcTime(data.end_time) : data.end_time,
+          ...(() => {
+            const startUtc = data.start_time ? toUtcDateTime(data.start_time) : null;
+            const endUtc = data.end_time ? toUtcDateTime(data.end_time) : null;
+            return {
+              start_date: startUtc ? shiftDate(data.start_date, startUtc.dateDelta) : data.start_date,
+              start_time: startUtc ? startUtc.time : data.start_time,
+              end_date: endUtc ? shiftDate(data.end_date, endUtc.dateDelta) : data.end_date,
+              end_time: endUtc ? endUtc.time : data.end_time,
+            };
+          })(),
         };
 
         const response = await updatePosting(id, payload);

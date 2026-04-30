@@ -97,16 +97,7 @@ const areSkillListsEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
 };
-const formatDateToIso = (date: Date) =>
-  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
-const normalizeStoredDate = (value: Date | string | null | undefined) => {
-  if (value instanceof Date) return formatDateToIso(value);
-  if (typeof value === 'string') {
-    const datePart = value.split('T')[0]?.trim();
-    return datePart || undefined;
-  }
-  return undefined;
-};
+
 const parseIsoDateParts = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return undefined;
@@ -140,27 +131,7 @@ const assertStartDateNotInPast = (startDate: Date | string, res: Response) => {
     throw new Error('Start date cannot be in the past');
   }
 };
-const getPostingDates = (startDate: Date | string, endDate: Date | string): string[] => {
-  const normalizedStartDate = normalizeStoredDate(startDate);
-  const normalizedEndDate = normalizeStoredDate(endDate);
-  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
-  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
 
-  if (!startParts || !endParts) {
-    return [];
-  }
-
-  const result: string[] = [];
-  const current = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day));
-  const end = new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day));
-
-  while (current.getTime() <= end.getTime()) {
-    result.push(formatDateToIso(current));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-
-  return result;
-};
 const areDatesEqual = (left: Date | undefined, right: Date | undefined) => (left?.getTime() ?? null) === (right?.getTime() ?? null);
 const areTimeValuesEqual = (left: string | undefined, right: string | undefined) => (left ?? null) === (right ?? null);
 const isPostingFull = (maxVolunteers: number | null | undefined, enrollmentCount: number) => maxVolunteers !== undefined && maxVolunteers !== null && enrollmentCount >= maxVolunteers;

@@ -15,7 +15,7 @@ import { ToggleButton } from '../../components/ToggleButton';
 import { postingFormSchema, type PostingFormData } from '../../schemas/posting';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
-import { toUtcTime } from '../../utils/timeUtils.ts';
+import { toUtcDateTime, shiftDate } from '../../utils/timeUtils.ts';
 import { useOrganization } from '../../utils/useUsers';
 
 import type { OrganizationCrisesResponse, PostingCreateResponse } from '../../../../server/src/api/types';
@@ -76,16 +76,19 @@ export default function PostingCreate() {
         throw new Error('Organization account not found. Please log in again.');
       }
 
+      const startUtc = data.start_time ? toUtcDateTime(data.start_time) : null;
+      const endUtc = data.end_time ? toUtcDateTime(data.end_time) : null;
+
       const payload = {
         title: data.title.trim(),
         description: data.description.trim(),
         location_name: data.location_name.trim(),
         latitude: position[0],
         longitude: position[1],
-        start_date: data.start_date,
-        start_time: data.start_time ? toUtcTime(data.start_time) : data.start_time,
-        end_date: data.end_date,
-        end_time: data.end_time ? toUtcTime(data.end_time) : data.end_time,
+        start_date: startUtc ? shiftDate(data.start_date, startUtc.dateDelta) : data.start_date,
+        start_time: startUtc ? startUtc.time : data.start_time,
+        end_date: endUtc ? shiftDate(data.end_date, endUtc.dateDelta) : data.end_date,
+        end_time: endUtc ? endUtc.time : data.end_time,
         max_volunteers: data.max_volunteers ? Number(data.max_volunteers) : null,
         minimum_age: data.minimum_age ? Number(data.minimum_age) : null,
         automatic_acceptance: data.automatic_acceptance,

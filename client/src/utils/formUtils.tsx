@@ -18,6 +18,38 @@ export async function executeAndShowError<T extends FieldValues>(
   } catch (error: unknown) {
     const serverMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
 
+    const setFieldError = (field: string) => {
+      form.setError(field as Path<T>, {
+        type: 'server',
+        message: serverMessage,
+      });
+    };
+
+    if (/start time cannot be in the past/i.test(serverMessage)) {
+      setFieldError('start_time');
+      return;
+    }
+
+    if (/end time cannot be in the past/i.test(serverMessage)) {
+      setFieldError('end_time');
+      return;
+    }
+
+    if (/end time cannot be before start time/i.test(serverMessage)) {
+      setFieldError('end_time');
+      return;
+    }
+
+    if (/start date cannot be in the past/i.test(serverMessage)) {
+      setFieldError('start_date');
+      return;
+    }
+
+    if (/end date cannot be in the past/i.test(serverMessage)) {
+      setFieldError('end_date');
+      return;
+    }
+
     form.setError('root', {
       type: 'server',
       message: serverMessage,

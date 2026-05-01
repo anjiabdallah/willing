@@ -25,11 +25,49 @@ const parseTimeToMinutes = (time: string) => {
   return hours * 60 + minutes + seconds / 60;
 };
 
+const getLocalTodayDateString = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+const getCurrentLocalMinutes = () => {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+};
+
 const validateTimeOrder = (start_time: string, end_time: string, ctx: z.RefinementCtx) => {
   if (start_time && end_time && parseTimeToMinutes(end_time) < parseTimeToMinutes(start_time)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'End time cannot be before start time',
+      path: ['end_time'],
+    });
+  }
+};
+
+const validateStartTimeNotPast = (start_date: string, start_time: string, ctx: z.RefinementCtx) => {
+  if (
+    start_date === getLocalTodayDateString()
+    && start_time
+    && parseTimeToMinutes(start_time) < getCurrentLocalMinutes()
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Start time cannot be in the past',
+      path: ['start_time'],
+    });
+  }
+};
+
+const validateEndTimeNotPast = (end_date: string, end_time: string, ctx: z.RefinementCtx) => {
+  if (
+    end_date === getLocalTodayDateString()
+    && end_time
+    && parseTimeToMinutes(end_time) < getCurrentLocalMinutes()
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'End time cannot be in the past',
       path: ['end_time'],
     });
   }
@@ -63,6 +101,8 @@ export const postingFormSchema = newPostingSchema
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
     validateTimeOrder(data.start_time, data.end_time, ctx);
+    validateStartTimeNotPast(data.start_date, data.start_time, ctx);
+    validateEndTimeNotPast(data.end_date, data.end_time, ctx);
   });
 
 export type PostingFormData = z.infer<typeof postingFormSchema>;
@@ -94,6 +134,8 @@ export const postingEditFormSchema = newPostingSchema
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
     validateTimeOrder(data.start_time, data.end_time, ctx);
+    validateStartTimeNotPast(data.start_date, data.start_time, ctx);
+    validateEndTimeNotPast(data.end_date, data.end_time, ctx);
   });
 
 export type PostingEditFormData = z.infer<typeof postingEditFormSchema>;

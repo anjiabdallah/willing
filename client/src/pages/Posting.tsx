@@ -1241,7 +1241,7 @@ function PostingPage() {
                           </label>
                           <input
                             type="time"
-                            className="input input-bordered w-full focus:input-primary"
+                            className={`input input-bordered w-full focus:input-primary ${form.formState.errors.start_time ? 'input-error' : ''}`}
                             value={startTime}
                             onChange={(event) => {
                               form.setValue('start_time', event.target.value, {
@@ -1251,6 +1251,9 @@ function PostingPage() {
                               });
                             }}
                           />
+                          {form.formState.errors.start_time?.message && (
+                            <p className="text-error text-sm mt-1">{form.formState.errors.start_time.message as string}</p>
+                          )}
                         </fieldset>
 
                         <fieldset className="fieldset w-full">
@@ -1259,7 +1262,7 @@ function PostingPage() {
                           </label>
                           <input
                             type="time"
-                            className="input input-bordered w-full focus:input-primary"
+                            className={`input input-bordered w-full focus:input-primary ${form.formState.errors.end_time ? 'input-error' : ''}`}
                             value={endTime}
                             onChange={(event) => {
                               form.setValue('end_time', event.target.value, {
@@ -1269,6 +1272,9 @@ function PostingPage() {
                               });
                             }}
                           />
+                          {form.formState.errors.end_time?.message && (
+                            <p className="text-error text-sm mt-1">{form.formState.errors.end_time.message as string}</p>
+                          )}
                         </fieldset>
                       </div>
                     </div>

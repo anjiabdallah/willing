@@ -17,6 +17,24 @@ const notPastDate = (date: string, ctx: z.RefinementCtx, field: string, label: s
   }
 };
 
+const parseTimeToMinutes = (time: string) => {
+  const parts = time.split(':').map(Number);
+  const hours = parts[0] ?? 0;
+  const minutes = parts[1] ?? 0;
+  const seconds = parts[2] ?? 0;
+  return hours * 60 + minutes + seconds / 60;
+};
+
+const validateTimeOrder = (start_time: string, end_time: string, ctx: z.RefinementCtx) => {
+  if (start_time && end_time && parseTimeToMinutes(end_time) < parseTimeToMinutes(start_time)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'End time cannot be before start time',
+      path: ['end_time'],
+    });
+  }
+};
+
 export const postingFormSchema = newPostingSchema
   .omit({
     crisis_id: true,
@@ -44,6 +62,7 @@ export const postingFormSchema = newPostingSchema
   .superRefine((data, ctx) => {
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
+    validateTimeOrder(data.start_time, data.end_time, ctx);
   });
 
 export type PostingFormData = z.infer<typeof postingFormSchema>;
@@ -74,6 +93,7 @@ export const postingEditFormSchema = newPostingSchema
   .superRefine((data, ctx) => {
     notPastDate(data.start_date, ctx, 'start_date', 'Start date');
     notPastDate(data.end_date, ctx, 'end_date', 'End date');
+    validateTimeOrder(data.start_time, data.end_time, ctx);
   });
 
 export type PostingEditFormData = z.infer<typeof postingEditFormSchema>;

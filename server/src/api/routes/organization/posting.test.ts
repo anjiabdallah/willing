@@ -1482,6 +1482,69 @@ describe('Organization posting management', () => {
     expect(response.body.posting.title).toBe('Today Posting');
   });
 
+  test('returns 400 when creating a posting with an end time before the start time', async () => {
+    const { token } = await createOrganizationAccount(transaction, { email: 'org-end-before-start@example.com' });
+    const today = formatDateToIso(new Date());
+
+    const response = await server
+      .post('/organization/posting')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Invalid Time Order Posting',
+        description: 'Should fail when end time is before start time',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: today,
+        start_time: '17:00:00',
+        end_date: today,
+        end_time: '09:00:00',
+        minimum_age: 18,
+        automatic_acceptance: false,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Invalid Time Location',
+        crisis_id: null,
+      })
+      .expect(400);
+
+    expect(response.body.message).toBe('End time cannot be before start time');
+  });
+
+  test('returns 400 when updating a posting with an end time before the start time', async () => {
+    const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-update-end-before-start@example.com' });
+
+    const posting = await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Schedule Update Posting',
+        description: 'Will fail on invalid end time',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: new Date('2026-12-01T00:00:00.000Z'),
+        start_time: '09:00:00',
+        end_date: new Date('2026-12-01T00:00:00.000Z'),
+        end_time: '17:00:00',
+        minimum_age: 18,
+        automatic_acceptance: false,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Update Location',
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const response = await server
+      .put(`/organization/posting/${posting.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ end_time: '08:00:00' })
+      .expect(400);
+
+    expect(response.body.message).toBe('End time cannot be before start time');
+  });
+
   test('returns 400 when creating a posting with today start date but past start time', async () => {
     const { token } = await createOrganizationAccount(transaction, { email: 'org-past-time-create@example.com' });
 

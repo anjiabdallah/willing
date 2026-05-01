@@ -133,6 +133,20 @@ const assertStartDateNotInPast = (startDate: Date | string, res: Response) => {
     throw new Error('Start date cannot be in the past');
   }
 };
+
+const parseTimeToMinutes = (time: string) => {
+  const parts = time.split(':').map(Number);
+  const hours = parts[0] ?? 0;
+  const minutes = parts[1] ?? 0;
+  const seconds = parts[2] ?? 0;
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
+const isEndTimeBeforeStartTime = (startTime: string | undefined, endTime: string | undefined) => {
+  if (!startTime || !endTime) return false;
+  return parseTimeToMinutes(endTime) < parseTimeToMinutes(startTime);
+};
+
 const getPostingDates = (startDate: Date | string, endDate: Date | string): string[] => {
   const normalizedStartDate = normalizeStoredDate(startDate);
   const normalizedEndDate = normalizeStoredDate(endDate);
@@ -221,6 +235,11 @@ function createPostingRouter(db: Kysely<Database>) {
         res.status(400);
         throw new Error('End time cannot be in the past');
       }
+    }
+
+    if (isEndTimeBeforeStartTime(body.start_time, body.end_time)) {
+      res.status(400);
+      throw new Error('End time cannot be before start time');
     }
 
     if (body.crisis_id != null) {
@@ -651,6 +670,11 @@ function createPostingRouter(db: Kysely<Database>) {
         res.status(400);
         throw new Error('End time cannot be in the past');
       }
+    }
+
+    if (isEndTimeBeforeStartTime(effectiveStartTime, effectiveEndTime)) {
+      res.status(400);
+      throw new Error('End time cannot be before start time');
     }
 
     if (body.crisis_id !== undefined && body.crisis_id !== null && body.crisis_id !== posting.crisis_id) {

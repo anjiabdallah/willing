@@ -20,6 +20,7 @@ interface CardProps {
   color?: 'primary' | 'secondary' | 'accent' | 'neutral' | 'success' | 'error' | 'warning' | 'info';
   coloredText?: boolean;
   Icon?: LucideIcon;
+  iconClassName?: string;
   left?: ReactNode;
   right?: ReactNode;
   link?: string;
@@ -35,6 +36,7 @@ function Card({
   color = 'primary',
   coloredText = false,
   Icon,
+  iconClassName,
   left,
   right,
   link,
@@ -50,7 +52,7 @@ function Card({
           <div className={`flex items-center gap-2 ${description ? '' : (children ? 'mb-3' : 'mb-0')}`}>
             { left }
             <h5 className={`font-bold text-lg inline-flex items-center gap-2 ${coloredText ? `text-${color}` : ''}`}>
-              {Icon && <Icon size={17} className={`text-${color} shrink-0`} />}
+              {Icon && <Icon size={17} className={`shrink-0 ${iconClassName ?? `text-${color}`}`} />}
               {link
                 ? (
                     <Link

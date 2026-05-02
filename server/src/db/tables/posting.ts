@@ -4,7 +4,7 @@ import { idSchema, latitudeSchema, longitudeSchema } from '../../schemas/index.t
 
 import type { WithGeneratedColumns, WithGeneratedIDAndTimestamps } from './shared.ts';
 
-export const organizationPostingSchema = zod.object({
+export const postingSchema = zod.object({
   id: idSchema,
   organization_id: zod.number().min(1, 'Organization ID is required'),
   crisis_id: zod.number().int().positive().nullable(),
@@ -28,24 +28,27 @@ export const organizationPostingSchema = zod.object({
   created_at: zod.date(),
 });
 
-export type OrganizationPosting = zod.infer<typeof organizationPostingSchema>;
+export type Posting = zod.infer<typeof postingSchema>;
 
-export type OrganizationPostingTable = WithGeneratedIDAndTimestamps<
-  WithGeneratedColumns<OrganizationPosting, 'allows_partial_attendance'>
+export type PostingTable = WithGeneratedIDAndTimestamps<
+  WithGeneratedColumns<Posting, 'allows_partial_attendance'>
 >;
 
-export const newOrganizationPostingSchema = organizationPostingSchema
+export const newPostingSchema = postingSchema
   .omit({ id: true, posting_profile_vector: true, posting_context_vector: true, created_at: true, updated_at: true, organization_id: true })
   .extend({
     skills: zod
       .array(zod.string().min(1, 'Skill name is required'))
       .optional(),
+    max_volunteers: zod.number().nullable().optional(),
+    minimum_age: zod.number().nullable().optional(),
+    crisis_id: zod.number().int().positive().nullable().optional(),
   })
   .strict();
-export type NewOrganizationPosting = zod.infer<typeof newOrganizationPostingSchema>;
+export type NewPosting = zod.infer<typeof newPostingSchema>;
 
-export const organizationPostingWithoutVectorsSchema = organizationPostingSchema.omit({
+export const postingWithoutVectorsSchema = postingSchema.omit({
   posting_profile_vector: true,
   posting_context_vector: true,
 });
-export type OrganizationPostingWithoutVectors = zod.infer<typeof organizationPostingWithoutVectorsSchema>;
+export type PostingWithoutVectors = zod.infer<typeof postingWithoutVectorsSchema>;

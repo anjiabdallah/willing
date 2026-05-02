@@ -5,7 +5,7 @@ import {
   postingViewModeStorageKey,
   type PostingViewMode,
   type PostingViewModeContextValue,
-} from './PostingViewModeState';
+} from './usePostingViewMode';
 
 export function PostingViewModeProvider({ children }: { children: ReactNode }) {
   const [viewModeState, setViewModeState] = useState<PostingViewMode>(() => {

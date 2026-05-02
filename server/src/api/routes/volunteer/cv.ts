@@ -6,6 +6,7 @@ import { sql, type Kysely } from 'kysely';
 
 import { type DeleteVolunteerCvResponse, type UploadVolunteerCvResponse } from './cv.types.ts';
 import { type Database } from '../../../db/tables/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputeVolunteerProfileVector } from '../../../services/embeddings/updates.ts';
 import { cvMulter, validateCvMiddleware } from '../../../services/uploads/cv.ts';
 import { CV_UPLOAD_DIR } from '../../../services/uploads/paths.ts';
@@ -52,7 +53,9 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
         .execute();
 
       if (canRecomputeProfileVector(req)) {
-        await recomputeVolunteerProfileVector(volunteerId, db);
+        runEmbeddingInBackground(`volunteer:${volunteerId}:profile-vector-cv-upload`, async () => {
+          await recomputeVolunteerProfileVector(volunteerId, db);
+        });
       }
 
       const profile = await getVolunteerProfile(volunteerId);
@@ -125,7 +128,9 @@ function createVolunteerCvRouter(db: Kysely<Database>) {
       .execute();
 
     if (canRecomputeProfileVector(req)) {
-      await recomputeVolunteerProfileVector(req.userJWT!.id, db);
+      runEmbeddingInBackground(`volunteer:${req.userJWT!.id}:profile-vector-cv-delete`, async () => {
+        await recomputeVolunteerProfileVector(req.userJWT!.id, db);
+      });
     }
 
     const profile = await getVolunteerProfile(req.userJWT!.id);

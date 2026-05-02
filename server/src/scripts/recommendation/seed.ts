@@ -159,7 +159,7 @@ async function seedRecommendationDataset() {
     enrollment,
     posting_skill,
     volunteer_skill,
-    organization_posting,
+    posting,
     volunteer_pending_account,
     volunteer_report,
     organization_report,
@@ -401,7 +401,7 @@ async function seedRecommendationDataset() {
     const location = estimateLocationCoordinates(posting.location_name);
 
     const insertedPosting = await database
-      .insertInto('organization_posting')
+      .insertInto('posting')
       .values({
         organization_id: organizationId,
         crisis_id: crisisId,

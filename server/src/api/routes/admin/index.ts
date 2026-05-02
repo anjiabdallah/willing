@@ -25,9 +25,10 @@ import createResetPassword from '../../../auth/resetPassword.ts';
 import executeTransaction from '../../../db/executeTransaction.ts';
 import { type Database } from '../../../db/tables/index.ts';
 import { compare, hash } from '../../../services/bcrypt/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
-import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/smtp/emails.ts';
+import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/resend/emails.ts';
 import { loginInfoSchema } from '../../../types.ts';
 import { parseListQuery } from '../utils/listQuery.ts';
 import { getSingleQueryValue } from '../utils/queryValue.ts';
@@ -82,7 +83,7 @@ function createAdminRouter(db: Kysely<Database>) {
 
     // Delete postings that haven't started yet (with FK cleanup)
     const notStartedPostingIds = await trx
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id', 'title'])
       .where('organization_id', '=', organizationId)
       .where('start_date', '>', today)
@@ -95,12 +96,12 @@ function createAdminRouter(db: Kysely<Database>) {
       const enrolledVolunteers = await trx
         .selectFrom('enrollment')
         .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
-        .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+        .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
         .select([
           'volunteer_account.email as volunteer_email',
           'volunteer_account.first_name',
           'volunteer_account.last_name',
-          'organization_posting.title as posting_title',
+          'posting.title as posting_title',
         ])
         .where('enrollment.posting_id', 'in', notStartedIds)
         .execute();
@@ -121,12 +122,12 @@ function createAdminRouter(db: Kysely<Database>) {
       await trx.deleteFrom('enrollment_application').where('posting_id', 'in', notStartedIds).execute();
       await trx.deleteFrom('enrollment').where('posting_id', 'in', notStartedIds).execute();
       await trx.deleteFrom('posting_skill').where('posting_id', 'in', notStartedIds).execute();
-      await trx.deleteFrom('organization_posting').where('id', 'in', notStartedIds).execute();
+      await trx.deleteFrom('posting').where('id', 'in', notStartedIds).execute();
     }
 
     // Drop enrolled (non-attended) volunteers from active postings belonging to this org
     const activePostingIds = await trx
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select('id')
       .where('organization_id', '=', organizationId)
       .where('start_date', '<=', today)
@@ -140,12 +141,12 @@ function createAdminRouter(db: Kysely<Database>) {
       const droppedVolunteers = await trx
         .selectFrom('enrollment')
         .innerJoin('volunteer_account', 'volunteer_account.id', 'enrollment.volunteer_id')
-        .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+        .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
         .select([
           'volunteer_account.email as volunteer_email',
           'volunteer_account.first_name',
           'volunteer_account.last_name',
-          'organization_posting.title as posting_title',
+          'posting.title as posting_title',
         ])
         .where('enrollment.posting_id', 'in', activeIds)
         .where('enrollment.attended', '=', false)
@@ -174,11 +175,11 @@ function createAdminRouter(db: Kysely<Database>) {
     // Drop volunteer from all active/upcoming postings they're enrolled in (non-attended only)
     const activeEnrollmentIds = await trx
       .selectFrom('enrollment')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
       .select('enrollment.id')
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment.attended', '=', false)
-      .where('organization_posting.end_date', '>=', today)
+      .where('posting.end_date', '>=', today)
       .execute();
 
     const enrollmentIds = activeEnrollmentIds.map(e => e.id);
@@ -191,10 +192,10 @@ function createAdminRouter(db: Kysely<Database>) {
     // Withdraw pending applications for upcoming postings only
     const pendingAppIds = await trx
       .selectFrom('enrollment_application')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment_application.posting_id')
+      .innerJoin('posting', 'posting.id', 'enrollment_application.posting_id')
       .select('enrollment_application.id')
       .where('enrollment_application.volunteer_id', '=', volunteerId)
-      .where('organization_posting.end_date', '>=', today)
+      .where('posting.end_date', '>=', today)
       .execute();
 
     const appIds = pendingAppIds.map(a => a.id);
@@ -881,7 +882,9 @@ function createAdminRouter(db: Kysely<Database>) {
       throw new Error('Failed to create organization account');
     }
 
-    await recomputeOrganizationVector(insertedOrganization.id, db);
+    runEmbeddingInBackground(`organization:${insertedOrganization.id}:context-vector-admin-approval`, async () => {
+      await recomputeOrganizationVector(insertedOrganization.id, db);
+    });
 
     await sendOrganizationAcceptanceEmail(organizationRequest, password);
 

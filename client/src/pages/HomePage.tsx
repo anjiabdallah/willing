@@ -111,7 +111,7 @@ function HomePage() {
           ))}
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 pt-10 md:px-6 xl:px-8">
             <div className="px-4 pt-10 text-center md:px-6 xl:px-8">
-              <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.1] mb-4 pb-2 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary">
+              <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.1] mb-4 pb-2 text-transparent bg-clip-text bg-linear-to-r from-primary via-purple-500 to-secondary animate-fade-in-up">
                 Connecting volunteers to their
                 <br />
                 <span>vision of a better community</span>

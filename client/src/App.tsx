@@ -7,8 +7,8 @@ import LoggedOutPage from './auth/pages/LoggedOutPage';
 import OrganizationPage from './auth/pages/OrganizationPage';
 import SharedPage from './auth/pages/SharedPage';
 import VolunteerPage from './auth/pages/VolunteerPage';
-import { PostingViewModeProvider } from './components/postings/PostingViewModeContext';
 import { ModalProvider } from './contexts/ModalContext.tsx';
+import { PostingViewModeProvider } from './hooks/PostingViewModeContext';
 import { NotificationsProvider } from './notifications/NotificationsContext';
 import AdminCrises from './pages/admin/AdminCrises';
 import AdminHome from './pages/admin/AdminHome';
@@ -17,7 +17,6 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminRequests from './pages/admin/AdminRequests';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogin from './pages/AdminLogin';
-import CalendarInfoDemoPage from './pages/CalendarInfoDemoPage';
 import CertificateVerification from './pages/CertificateVerification';
 import ForgotPassword from './pages/ForgotPassword';
 import GuidePage from './pages/GuidePage';
@@ -25,12 +24,12 @@ import HomePage from './pages/HomePage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrganizationCrisisPostings from './pages/organization/OrganizationCrisisPostings';
 import OrganizationHome from './pages/organization/OrganizationHome';
-import OrganizationPostingAttendance from './pages/organization/OrganizationPostingAttendance';
-import OrganizationPostingCreate from './pages/organization/OrganizationPostingCreate';
 import OrganizationOwnProfile from './pages/organization/OrganizationProfile';
 import OrganizationSearch from './pages/organization/OrganizationSearch';
 import OrganizationSettings from './pages/organization/OrganizationSettings';
 import OrganizationVolunteerProfile from './pages/organization/OrganizationVolunteerProfile';
+import PostingAttendance from './pages/organization/PostingAttendance';
+import PostingCreate from './pages/organization/PostingCreate';
 import OrganizationProfile from './pages/OrganizationProfile';
 import OrganizationRequest from './pages/OrganizationRequest';
 import Posting from './pages/Posting';
@@ -78,8 +77,8 @@ function App() {
                   <Route path="organization" element={<OrganizationPage />}>
                     <Route index element={<OrganizationHome />} />
                     <Route path="search" element={<OrganizationSearch />} />
-                    <Route path="posting" element={<OrganizationPostingCreate />} />
-                    <Route path="posting/:id/attendance" element={<OrganizationPostingAttendance />} />
+                    <Route path="posting" element={<PostingCreate />} />
+                    <Route path="posting/:id/attendance" element={<PostingAttendance />} />
                     <Route path="crises/:crisisId/postings" element={<OrganizationCrisisPostings />} />
                     <Route path="profile" element={<OrganizationOwnProfile />} />
                     <Route path="settings" element={<OrganizationSettings />} />
@@ -99,7 +98,6 @@ function App() {
 
                   <Route path="guide" element={<GuidePage />} />
                   <Route path="certificate/verify" element={<CertificateVerification />} />
-                  <Route path="calendar-demo" element={<CalendarInfoDemoPage />} />
 
                   <Route element={<SharedPage roles={['volunteer', 'organization']} />}>
                     <Route path="posting/:id" element={<Posting />} />

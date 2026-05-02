@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, Building2, ClipboardList, Flag, Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { AlertTriangle, Award, Building2, ClipboardList, Flag, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useContext, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
@@ -114,14 +114,16 @@ function OrganizationProfile() {
   const postingsWithContext = useMemo<PostingWithContext[]>(() => {
     if (!data) return [];
 
-    return data.postings.map(posting => ({
+    const mappedPostings = data.postings.map(posting => ({
       ...posting,
       organization_name: data.organization.name,
       organization_logo_path: data.organization.logo_path,
       crisis_name: null,
-      enrollment_count: 0,
-      application_status: 'none',
+      enrollment_count: posting.enrollment_count,
+      application_status: 'none' as const,
     }));
+
+    return mappedPostings;
   }, [data]);
 
   if (!id) {
@@ -273,6 +275,25 @@ function OrganizationProfile() {
                         >
                           {data.organization.url}
                         </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {data.organization.hours_threshold !== null && (
+                    <div className="flex gap-3">
+                      <Award
+                        size={20}
+                        className="text-primary shrink-0 mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs opacity-70 font-semibold mb-0.5">
+                          CERTIFICATE HOURS THRESHOLD
+                        </p>
+                        <p className="text-sm">
+                          {data.organization.hours_threshold}
+                          {' '}
+                          hours
+                        </p>
                       </div>
                     </div>
                   )}

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle, LockKeyhole, Mail, Send, LogIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import Button from '../components/Button';
@@ -35,8 +35,8 @@ function ForgotPasswordPage() {
     reValidateMode: 'onChange',
   });
 
-  const resetPasswordValue = resetForm.watch('password');
-  const resetConfirmValue = resetForm.watch('confirmPassword');
+  const resetPasswordValue = useWatch({ control: resetForm.control, name: 'password' });
+  const resetConfirmValue = useWatch({ control: resetForm.control, name: 'confirmPassword' });
   useEffect(() => {
     if (!resetConfirmValue) return;
     void resetForm.trigger('confirmPassword');

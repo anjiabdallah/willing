@@ -281,6 +281,7 @@ function OrganizationVolunteerProfile() {
     <PageContainer>
       <PageHeader
         title={volunteerName || 'Volunteer'}
+        subtitle="Review volunteer profile and application details."
         icon={FileText}
         showBack
         defaultBackTo="/organization"

@@ -1,6 +1,6 @@
 import { LayoutGrid, List } from 'lucide-react';
 
-import { usePostingViewMode } from './PostingViewModeState';
+import { usePostingViewMode } from '../../hooks/usePostingViewMode';
 
 function PostingViewModeToggle() {
   const { viewMode, setViewMode } = usePostingViewMode();

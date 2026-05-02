@@ -54,12 +54,12 @@ const getVectorCoverage = async () => {
       .select(sql<number>`count(*)`.as('total'))
       .executeTakeFirstOrThrow(),
     database
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(sql<number>`count(*) filter (where posting_profile_vector is null)`.as('missing'))
       .select(sql<number>`count(*)`.as('total'))
       .executeTakeFirstOrThrow(),
     database
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(sql<number>`count(*) filter (where posting_context_vector is null)`.as('missing'))
       .select(sql<number>`count(*)`.as('total'))
       .executeTakeFirstOrThrow(),
@@ -102,31 +102,31 @@ const getVolunteerRecommendations = async (volunteerId: number) => {
   const hasContext = Boolean(vectors.volunteer_context_vector);
 
   let query = database
-    .selectFrom('organization_posting')
-    .select(['organization_posting.id', 'organization_posting.title'])
-    .where('organization_posting.is_closed', '=', false)
+    .selectFrom('posting')
+    .select(['posting.id', 'posting.title'])
+    .where('posting.is_closed', '=', false)
     .where(({ not, exists, selectFrom, or }) => not(or([
       exists(
         selectFrom('enrollment')
           .select('enrollment.id')
-          .whereRef('enrollment.posting_id', '=', 'organization_posting.id')
+          .whereRef('enrollment.posting_id', '=', 'posting.id')
           .where('enrollment.volunteer_id', '=', volunteerId),
       ),
       exists(
         selectFrom('enrollment_application')
           .select('enrollment_application.id')
-          .whereRef('enrollment_application.posting_id', '=', 'organization_posting.id')
+          .whereRef('enrollment_application.posting_id', '=', 'posting.id')
           .where('enrollment_application.volunteer_id', '=', volunteerId),
       ),
     ])));
 
   if (hasContext && vectors.volunteer_context_vector) {
-    const contextSimilarity = sql<number>`1 - (organization_posting.posting_context_vector <=> ${vectors.volunteer_context_vector}::vector)`;
+    const contextSimilarity = sql<number>`1 - (posting.posting_context_vector <=> ${vectors.volunteer_context_vector}::vector)`;
     query = query.orderBy(sql`${contextSimilarity} desc nulls last`);
 
-    query = query.orderBy('organization_posting.start_date', 'desc').orderBy('organization_posting.start_time', 'desc');
+    query = query.orderBy('posting.start_date', 'desc').orderBy('posting.start_time', 'desc');
   } else {
-    query = query.orderBy('organization_posting.start_date', 'desc').orderBy('organization_posting.start_time', 'desc');
+    query = query.orderBy('posting.start_date', 'desc').orderBy('posting.start_time', 'desc');
   }
 
   return query.limit(TOP_K).execute();
@@ -204,8 +204,8 @@ async function main() {
   console.log(`- organization_account.org_profile_vector missing: ${coverage.organizationProfile.missing}/${coverage.organizationProfile.total}`);
   console.log(`- organization_account.org_history_vector missing: ${coverage.organizationHistory.missing}/${coverage.organizationHistory.total}`);
   console.log(`- organization_account.org_context_vector missing: ${coverage.organizationContext.missing}/${coverage.organizationContext.total}`);
-  console.log(`- organization_posting.posting_profile_vector missing: ${coverage.postingOpportunity.missing}/${coverage.postingOpportunity.total}`);
-  console.log(`- organization_posting.posting_context_vector missing: ${coverage.postingContext.missing}/${coverage.postingContext.total}`);
+  console.log(`- posting.posting_profile_vector missing: ${coverage.postingOpportunity.missing}/${coverage.postingOpportunity.total}`);
+  console.log(`- posting.posting_context_vector missing: ${coverage.postingContext.missing}/${coverage.postingContext.total}`);
   console.log(`- volunteer_account.volunteer_profile_vector missing: ${coverage.volunteerProfile.missing}/${coverage.volunteerProfile.total}`);
   console.log(`- volunteer_account.volunteer_history_vector missing: ${coverage.volunteerExperience.missing}/${coverage.volunteerExperience.total}`);
   console.log(`- volunteer_account.volunteer_context_vector missing: ${coverage.volunteerContext.missing}/${coverage.volunteerContext.total}`);

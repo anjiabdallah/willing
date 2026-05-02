@@ -3,6 +3,7 @@ import { type Kysely, sql } from 'kysely';
 import type { Database } from '../tables/index.ts';
 
 type DatabaseWithPostingTimestamps = Database & {
+  // @ts-expect-error organization_posting was renamed to posting in migration 35
   organization_posting: Database['organization_posting'] & {
     start_timestamp: Date;
     end_timestamp: Date | null;

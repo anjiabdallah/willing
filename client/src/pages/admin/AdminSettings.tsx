@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock, Save, Signature, UserRound } from 'lucide-react';
+import { Save, Settings, Signature, UserRound } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -145,7 +145,7 @@ function AdminSettings() {
       <PageHeader
         title="Settings"
         subtitle="Manage admin security and platform certificate signatory settings."
-        icon={Lock}
+        icon={Settings}
       />
 
       {loading && (

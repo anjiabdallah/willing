@@ -25,8 +25,8 @@ function createPublicRouter(db: Kysely<Database>) {
 
     const [postingsResult, organizationsResult, volunteersResult, newPostingsResult, newOrganizationsResult, newVolunteersResult] = await Promise.all([
       db
-        .selectFrom('organization_posting')
-        .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+        .selectFrom('posting')
+        .innerJoin('organization_account', 'organization_account.id', 'posting.organization_id')
         .select(eb => eb.fn.countAll().as('count'))
         .where('organization_account.is_deleted', '=', false)
         .where('organization_account.is_disabled', '=', false)
@@ -44,10 +44,10 @@ function createPublicRouter(db: Kysely<Database>) {
         .where('is_disabled', '=', false)
         .executeTakeFirstOrThrow(),
       db
-        .selectFrom('organization_posting')
-        .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+        .selectFrom('posting')
+        .innerJoin('organization_account', 'organization_account.id', 'posting.organization_id')
         .select(eb => eb.fn.countAll().as('count'))
-        .where('organization_posting.created_at', '>=', weekAgo)
+        .where('posting.created_at', '>=', weekAgo)
         .where('organization_account.is_deleted', '=', false)
         .where('organization_account.is_disabled', '=', false)
         .executeTakeFirstOrThrow(),

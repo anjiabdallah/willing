@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle, LockIcon, LockKeyhole, Save } from 'lucide-react';
 import { useContext, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import zod from 'zod';
 
 import Button from './Button';
@@ -31,8 +31,8 @@ function PasswordResetCard() {
     reValidateMode: 'onChange',
   });
 
-  const newPasswordValue = form.watch('newPassword');
-  const confirmPasswordValue = form.watch('confirmedNewPassword');
+  const newPasswordValue = useWatch({ control: form.control, name: 'newPassword' });
+  const confirmPasswordValue = useWatch({ control: form.control, name: 'confirmedNewPassword' });
   useEffect(() => {
     if (!confirmPasswordValue) return;
     void form.trigger('confirmedNewPassword');

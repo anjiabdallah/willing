@@ -1,6 +1,6 @@
 import database from '../../db/index.ts';
 
-import type { Database, OrganizationPosting, OrganizationRequest } from '../../db/tables/index.ts';
+import type { Database, Posting, OrganizationRequest } from '../../db/tables/index.ts';
 import type { Kysely } from 'kysely';
 
 type OrganizationRequestOptions = {
@@ -8,11 +8,11 @@ type OrganizationRequestOptions = {
   name?: string;
 };
 
-type OrganizationPostingOptions = {
+type PostingOptions = {
   organizationId: number;
   title?: string;
   created_at?: Date;
-  overrides?: Partial<Omit<OrganizationPosting, 'id'>>;
+  overrides?: Partial<Omit<Posting, 'id'>>;
   skills?: string[];
 };
 
@@ -62,10 +62,10 @@ export async function createOrganizationRequest(arg1?: DbExecutor | Organization
   return request;
 }
 
-export async function createOrganizationPosting(options: OrganizationPostingOptions): Promise<OrganizationPosting>;
-export async function createOrganizationPosting(db: DbExecutor, options: OrganizationPostingOptions): Promise<OrganizationPosting>;
-export async function createOrganizationPosting(arg1: DbExecutor | OrganizationPostingOptions, arg2?: OrganizationPostingOptions): Promise<OrganizationPosting> {
-  const [db, options] = resolveFixtureArgs<OrganizationPostingOptions>(arg1, arg2);
+export async function createPosting(options: PostingOptions): Promise<Posting>;
+export async function createPosting(db: DbExecutor, options: PostingOptions): Promise<Posting>;
+export async function createPosting(arg1: DbExecutor | PostingOptions, arg2?: PostingOptions): Promise<Posting> {
+  const [db, options] = resolveFixtureArgs<PostingOptions>(arg1, arg2);
 
   const {
     organizationId,
@@ -80,7 +80,7 @@ export async function createOrganizationPosting(arg1: DbExecutor | OrganizationP
   const endDate = overrides?.end_date ?? new Date('2026-01-02');
 
   const posting = await db
-    .insertInto('organization_posting')
+    .insertInto('posting')
     .values({
       organization_id: organizationId,
       title,

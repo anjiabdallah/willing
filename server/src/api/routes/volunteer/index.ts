@@ -28,12 +28,13 @@ import executeTransaction from '../../../db/executeTransaction.ts';
 import { type Database, type VolunteerAccountWithoutPassword, newVolunteerAccountSchema, newOrganizationReportSchema, volunteerAccountSchema } from '../../../db/tables/index.ts';
 import { emailSchema } from '../../../schemas/index.ts';
 import { CERTIFICATE_PAYLOAD_VERSION, CERTIFICATE_TYPE, signCertificateVerificationPayload } from '../../../services/certificates/token.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import {
   recomputeVolunteerExperienceVector,
   recomputeVolunteerProfileVector,
 } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
-import { sendVolunteerVerificationEmail } from '../../../services/smtp/emails.ts';
+import { sendVolunteerVerificationEmail } from '../../../services/resend/emails.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
 import { normalizeSearchTerms } from '../utils/postingList.js';
 import { canRecomputeProfileVector } from '../utils/rateLimit.ts';
@@ -263,8 +264,12 @@ function createVolunteerRouter(db: Kysely<Database>) {
       return createdVolunteer;
     });
 
-    await recomputeVolunteerProfileVector(volunteer.id, db);
-    await recomputeVolunteerExperienceVector(volunteer.id, db);
+    runEmbeddingInBackground(`volunteer:${volunteer.id}:profile-vector-initial`, async () => {
+      await recomputeVolunteerProfileVector(volunteer.id, db);
+    });
+    runEmbeddingInBackground(`volunteer:${volunteer.id}:experience-vector-initial`, async () => {
+      await recomputeVolunteerExperienceVector(volunteer.id, db);
+    });
 
     const token = await generateJWT({ id: volunteer.id, role: 'volunteer', token_version: 0 });
 
@@ -360,7 +365,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
 
     let query = db
       .selectFrom('organization_account')
-      .leftJoin('organization_posting', 'organization_posting.organization_id', 'organization_account.id')
+      .leftJoin('posting', 'posting.organization_id', 'organization_account.id')
       .leftJoin('organization_certificate_info', 'organization_certificate_info.id', 'organization_account.certificate_info_id')
       .select([
         'organization_account.id',
@@ -368,7 +373,7 @@ function createVolunteerRouter(db: Kysely<Database>) {
         'organization_account.description',
         'organization_account.location_name',
         'organization_account.logo_path',
-        sql<number>`COALESCE(COUNT(organization_posting.id), 0)`.as('posting_count'),
+        sql<number>`COALESCE(COUNT(posting.id), 0)`.as('posting_count'),
       ])
       .where('organization_account.is_deleted', '=', false)
       .where('organization_account.is_disabled', '=', false)
@@ -436,16 +441,16 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const hoursPerAttendedDateExpr = sql<number>`GREATEST(
       0,
       EXTRACT(EPOCH FROM (
-        (enrollment_date.date + organization_posting.end_time)
-        - (enrollment_date.date + organization_posting.start_time)
+        (enrollment_date.date + posting.end_time)
+        - (enrollment_date.date + posting.start_time)
       )) / 3600.0
     )`;
 
     const totalHoursRow = await db
       .selectFrom('enrollment_date')
       .innerJoin('enrollment', 'enrollment.id', 'enrollment_date.enrollment_id')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
-      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'posting.organization_id')
       .select(sql<number>`COALESCE(SUM(${hoursPerAttendedDateExpr}), 0)`.as('total_hours'))
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment_date.attended', '=', true)
@@ -454,8 +459,8 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const organizations = await db
       .selectFrom('enrollment_date')
       .innerJoin('enrollment', 'enrollment.id', 'enrollment_date.enrollment_id')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
-      .innerJoin('organization_account', 'organization_account.id', 'organization_posting.organization_id')
+      .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
+      .innerJoin('organization_account', 'organization_account.id', 'posting.organization_id')
       .leftJoin(
         'organization_certificate_info',
         'organization_certificate_info.id',
@@ -552,23 +557,23 @@ function createVolunteerRouter(db: Kysely<Database>) {
     const hoursPerAttendedDateExpr = sql<number>`GREATEST(
       0,
       EXTRACT(EPOCH FROM (
-        (enrollment_date.date + organization_posting.end_time)
-        - (enrollment_date.date + organization_posting.start_time)
+        (enrollment_date.date + posting.end_time)
+        - (enrollment_date.date + posting.start_time)
       )) / 3600.0
     )`;
 
     const rows = await db
       .selectFrom('enrollment_date')
       .innerJoin('enrollment', 'enrollment.id', 'enrollment_date.enrollment_id')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
       .select([
-        'organization_posting.organization_id as organization_id',
+        'posting.organization_id as organization_id',
         sql<number>`COALESCE(SUM(${hoursPerAttendedDateExpr}), 0)`.as('hours'),
       ])
       .where('enrollment.volunteer_id', '=', volunteerId)
       .where('enrollment_date.attended', '=', true)
       .where('enrollment.created_at', '<=', issuedAt)
-      .groupBy('organization_posting.organization_id')
+      .groupBy('posting.organization_id')
       .execute();
 
     const hoursByOrganizationId = new Map<number, number>();
@@ -577,6 +582,11 @@ function createVolunteerRouter(db: Kysely<Database>) {
     });
 
     const totalHours = Number(rows.reduce((sum, row) => sum + Number(row.hours ?? 0), 0).toFixed(2));
+
+    if (totalHours <= 0) {
+      res.status(400);
+      throw new Error('You need completed volunteering hours before generating a certificate.');
+    }
 
     if (selectedOrgIds.length > 0) {
       const activeOrganizations = await db
@@ -782,7 +792,9 @@ function createVolunteerRouter(db: Kysely<Database>) {
     });
 
     if (shouldRecomputeProfileVector && canRecomputeProfileVector(req)) {
-      await recomputeVolunteerProfileVector(volunteerId, db);
+      runEmbeddingInBackground(`volunteer:${volunteerId}:profile-vector-update`, async () => {
+        await recomputeVolunteerProfileVector(volunteerId, db);
+      });
     }
 
     const profile = await getVolunteerProfile(volunteerId);

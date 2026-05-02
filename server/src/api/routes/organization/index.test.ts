@@ -59,7 +59,7 @@ describe('Organization index routes', () => {
     });
 
     await transaction
-      .insertInto('organization_posting')
+      .insertInto('posting')
       .values([
         {
           organization_id: firstOrg.id,
@@ -157,9 +157,10 @@ describe('Organization index routes', () => {
 
   test('GET /organization/:id returns public organization profile with postings and skills', async () => {
     const { organization } = await createOrganizationAccount(transaction, { email: 'org-public-profile@example.com' });
+    const { volunteer } = await createVolunteerAccount(transaction, { email: 'org-profile-volunteer@example.com' });
 
     const posting = await transaction
-      .insertInto('organization_posting')
+      .insertInto('posting')
       .values({
         organization_id: organization.id,
         title: 'Public Posting',
@@ -185,6 +186,33 @@ describe('Organization index routes', () => {
       .values({ posting_id: posting.id, name: 'First Aid' })
       .execute();
 
+    await transaction
+      .insertInto('enrollment')
+      .values({
+        volunteer_id: volunteer.id,
+        posting_id: posting.id,
+        attended: false,
+      })
+      .execute();
+
+    const certificateInfo = await transaction
+      .insertInto('organization_certificate_info')
+      .values({
+        certificate_feature_enabled: true,
+        hours_threshold: 4,
+        signatory_name: null,
+        signatory_position: null,
+        signature_path: null,
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+
+    await transaction
+      .updateTable('organization_account')
+      .set({ certificate_info_id: certificateInfo.id })
+      .where('id', '=', organization.id)
+      .execute();
+
     const response = await server
       .get(`/organization/${organization.id}`)
       .expect(200);
@@ -193,12 +221,14 @@ describe('Organization index routes', () => {
       id: organization.id,
       name: organization.name,
       email: organization.email,
+      hours_threshold: 4,
     });
     expect(response.body.postings).toHaveLength(1);
     expect(response.body.postings[0]).toMatchObject({
       id: posting.id,
       title: 'Public Posting',
       location_name: 'Public Venue',
+      enrollment_count: 1,
     });
     expect(response.body.postings[0].skills).toEqual(
       expect.arrayContaining([
@@ -432,7 +462,7 @@ describe('Organization index routes', () => {
     const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-cv-success@example.com' });
     const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-cv@example.com' });
     const posting = await transaction
-      .insertInto('organization_posting')
+      .insertInto('posting')
       .values({
         organization_id: organization.id,
         title: 'CV Event',
@@ -485,7 +515,7 @@ describe('Organization index routes', () => {
     const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-cv-missing@example.com' });
     const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-cv-missing@example.com' });
     const posting = await transaction
-      .insertInto('organization_posting')
+      .insertInto('posting')
       .values({
         organization_id: organization.id,
         title: 'CV Missing Event',

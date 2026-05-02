@@ -1,4 +1,4 @@
-import { ClipboardList, Plus } from 'lucide-react';
+import { ClipboardList, Home, Plus } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 import CalendarInfo from '../../components/CalendarInfo';
@@ -10,11 +10,11 @@ import PostingCollection from '../../components/postings/PostingCollection';
 import {
   buildSharedPostingQuery,
   hasSharedAdvancedPostingFilters,
-  organizationPostingSortOptions,
-  resolveOrganizationPostingSortOption,
-  toOrganizationPostingSortOptionValue,
-  type OrganizationPostingSortBy,
-  type OrganizationPostingSortOptionValue,
+  postingSortOptions,
+  resolvePostingSortOption,
+  toPostingSortOptionValue,
+  type PostingSortBy,
+  type PostingSortOptionValue,
   type PostingSortDir,
   type SharedPostingFilterFields,
 } from '../../components/postings/postingFilterConfig';
@@ -28,22 +28,22 @@ import { useOrganization } from '../../utils/useUsers';
 import type {
   OrganizationCrisesResponse,
   OrganizationGetMeResponse,
-  OrganizationPostingListResponse,
+  PostingListResponse,
 } from '../../../../server/src/api/types';
 import type { PostingWithContext } from '../../../../server/src/types';
 
-type OrganizationPostingFilters = SharedPostingFilterFields & {
-  sortBy: OrganizationPostingSortBy;
+type PostingFilters = SharedPostingFilterFields & {
+  sortBy: PostingSortBy;
   sortDir: PostingSortDir;
   hideFull: boolean;
   crisisId: 'all' | `${number}`;
 };
 
-type OrganizationPostingFilterFormValues = Omit<OrganizationPostingFilters, 'sortBy' | 'sortDir'> & {
-  sortOption: OrganizationPostingSortOptionValue;
+type PostingFilterFormValues = Omit<PostingFilters, 'sortBy' | 'sortDir'> & {
+  sortOption: PostingSortOptionValue;
 };
 
-const defaultFilters: OrganizationPostingFilters = {
+const defaultFilters: PostingFilters = {
   search: '',
   sortBy: 'created_at',
   sortDir: 'desc',
@@ -57,9 +57,9 @@ const defaultFilters: OrganizationPostingFilters = {
   organizationCertificateFilter: 'all',
 };
 
-const defaultFormValues: OrganizationPostingFilterFormValues = {
+const defaultFormValues: PostingFilterFormValues = {
   search: defaultFilters.search,
-  sortOption: toOrganizationPostingSortOptionValue(defaultFilters.sortBy, defaultFilters.sortDir),
+  sortOption: toPostingSortOptionValue(defaultFilters.sortBy, defaultFilters.sortDir),
   hideFull: defaultFilters.hideFull,
   crisisId: defaultFilters.crisisId,
   startDateFrom: defaultFilters.startDateFrom,
@@ -71,11 +71,11 @@ const defaultFormValues: OrganizationPostingFilterFormValues = {
 };
 const organizationHomeFiltersStorageKey = 'organization-home-posting-filters';
 
-const toOrganizationPostingFilterFormValues = (
-  filters: OrganizationPostingFilters,
-): OrganizationPostingFilterFormValues => ({
+const toPostingFilterFormValues = (
+  filters: PostingFilters,
+): PostingFilterFormValues => ({
   search: filters.search,
-  sortOption: toOrganizationPostingSortOptionValue(filters.sortBy, filters.sortDir),
+  sortOption: toPostingSortOptionValue(filters.sortBy, filters.sortDir),
   hideFull: filters.hideFull,
   crisisId: filters.crisisId,
   startDateFrom: filters.startDateFrom,
@@ -86,10 +86,10 @@ const toOrganizationPostingFilterFormValues = (
   organizationCertificateFilter: filters.organizationCertificateFilter,
 });
 
-const fromOrganizationPostingFilterFormValues = (
-  values: OrganizationPostingFilterFormValues,
-): OrganizationPostingFilters => {
-  const selectedSortOption = resolveOrganizationPostingSortOption(values.sortOption);
+const fromPostingFilterFormValues = (
+  values: PostingFilterFormValues,
+): PostingFilters => {
+  const selectedSortOption = resolvePostingSortOption(values.sortOption);
 
   return {
     search: values.search,
@@ -108,25 +108,25 @@ const fromOrganizationPostingFilterFormValues = (
 
 function OrganizationHome() {
   const organization = useOrganization();
-  const [initialFilters] = useState<OrganizationPostingFilters>(() => {
+  const [initialFilters] = useState<PostingFilters>(() => {
     if (typeof window === 'undefined') return defaultFilters;
     const raw = window.sessionStorage.getItem(organizationHomeFiltersStorageKey);
     if (!raw) return defaultFilters;
 
     try {
-      const parsed = JSON.parse(raw) as Partial<OrganizationPostingFilters>;
+      const parsed = JSON.parse(raw) as Partial<PostingFilters>;
       return { ...defaultFilters, ...parsed };
     } catch {
       return defaultFilters;
     }
   });
   const initialFormValues = useMemo(
-    () => toOrganizationPostingFilterFormValues(initialFilters),
+    () => toPostingFilterFormValues(initialFilters),
     [initialFilters],
   );
 
-  const fetchOrganizationPostings = useCallback(
-    async (nextFilters: OrganizationPostingFilters) => {
+  const fetchPostingsFn = useCallback(
+    async (nextFilters: PostingFilters) => {
       const query = buildSharedPostingQuery(nextFilters);
       if (nextFilters.hideFull) {
         query.hide_full = 'true';
@@ -136,7 +136,7 @@ function OrganizationHome() {
         query.crisis_id = nextFilters.crisisId;
       }
 
-      const response = await requestServer<OrganizationPostingListResponse>(
+      const response = await requestServer<PostingListResponse>(
         '/organization/posting',
         {
           includeJwt: true,
@@ -153,7 +153,7 @@ function OrganizationHome() {
     loading,
     error,
     trigger: fetchPostings,
-  } = useAsync(fetchOrganizationPostings, { immediate: false });
+  } = useAsync(fetchPostingsFn, { immediate: false });
 
   const { data: crises } = useAsync(
     async () => {
@@ -170,8 +170,8 @@ function OrganizationHome() {
     { immediate: true },
   );
 
-  const applyFilters = useCallback(async (formValues: OrganizationPostingFilterFormValues) => {
-    const normalizedFilters = fromOrganizationPostingFilterFormValues(formValues);
+  const applyFilters = useCallback(async (formValues: PostingFilterFormValues) => {
+    const normalizedFilters = fromPostingFilterFormValues(formValues);
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem(organizationHomeFiltersStorageKey, JSON.stringify(normalizedFilters));
     }
@@ -185,14 +185,16 @@ function OrganizationHome() {
     const orgName = organizationMe?.organization.name ?? organization?.name ?? '';
     const orgLogoPath = organizationMe?.organization.logo_path ?? organization?.logo_path ?? null;
 
-    return postings.map(posting => ({
+    const mapped = postings.map(posting => ({
       ...posting,
       organization_name: orgName,
       organization_logo_path: orgLogoPath,
       crisis_name: posting.crisis_id ? (crisisNameById.get(posting.crisis_id) ?? null) : null,
       enrollment_count: posting.enrollment_count,
-      application_status: 'none',
+      application_status: 'none' as const,
     }));
+
+    return mapped;
   }, [crisisNameById, organization?.logo_path, organization?.name, organizationMe?.organization.logo_path, organizationMe?.organization.name, postings]);
 
   return (
@@ -200,7 +202,7 @@ function OrganizationHome() {
       <PageHeader
         title="My Postings"
         subtitle="Track, manage, and update your organization opportunities."
-        icon={ClipboardList}
+        icon={Home}
         badge={
           postings && (
             <div className="badge badge-primary">
@@ -232,7 +234,7 @@ function OrganizationHome() {
         searchFieldName="search"
         searchPlaceholder="Search by title, description, or location"
         sortFieldName="sortOption"
-        sortOptions={organizationPostingSortOptions.map(option => ({
+        sortOptions={postingSortOptions.map(option => ({
           label: option.label,
           value: option.value,
         }))}
@@ -327,12 +329,6 @@ function OrganizationHome() {
 
       {error && <div className="mb-4 text-sm text-base-content/70">Unable to load postings.</div>}
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      )}
-
       {!loading && (!postings || postings.length === 0) && (
         <EmptyState
           Icon={ClipboardList}
@@ -341,14 +337,13 @@ function OrganizationHome() {
         />
       )}
 
-      {!loading && postingsWithContext.length > 0 && (
-        <PostingCollection
-          postings={postingsWithContext}
-          crisisTagClickable
-          crisisBasePath="/organization/crises"
-          cardsContainerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        />
-      )}
+      <PostingCollection
+        postings={postingsWithContext}
+        loading={loading}
+        crisisTagClickable
+        crisisBasePath="/organization/crises"
+        cardsContainerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      />
     </PageContainer>
   );
 }

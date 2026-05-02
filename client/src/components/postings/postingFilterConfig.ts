@@ -21,17 +21,17 @@ export type SharedPostingFilterFields = {
   organizationCertificateFilter: 'all' | 'enabled' | 'disabled';
 };
 
-export type OrganizationPostingSortBy = SharedPostingSortBy | 'title';
-export type OrganizationPostingSortOptionValue = SharedPostingSortOptionValue | 'title_asc' | 'title_desc';
+export type PostingSortBy = SharedPostingSortBy | 'title';
+export type PostingSortOptionValue = SharedPostingSortOptionValue | 'title_asc' | 'title_desc';
 
-export type OrganizationPostingSortOption = {
-  value: OrganizationPostingSortOptionValue;
+export type PostingSortOption = {
+  value: PostingSortOptionValue;
   label: string;
-  sortBy: OrganizationPostingSortBy;
+  sortBy: PostingSortBy;
   sortDir: PostingSortDir;
 };
 
-export const organizationPostingSortOptions: OrganizationPostingSortOption[] = [
+export const postingSortOptions: PostingSortOption[] = [
   { value: 'created_at_desc', label: 'Most Recent', sortBy: 'created_at', sortDir: 'desc' },
   { value: 'start_date_asc', label: 'Start Date (Oldest)', sortBy: 'start_date', sortDir: 'asc' },
   { value: 'start_date_desc', label: 'Start Date (Newest)', sortBy: 'start_date', sortDir: 'desc' },
@@ -66,14 +66,14 @@ const getSortOptionByFields = <
   sortDir: PostingSortDir,
 ): TOption => options.find(option => option.sortBy === sortBy && option.sortDir === sortDir) ?? options[0];
 
-export const toOrganizationPostingSortOptionValue = (
-  sortBy: OrganizationPostingSortBy,
+export const toPostingSortOptionValue = (
+  sortBy: PostingSortBy,
   sortDir: PostingSortDir,
-): OrganizationPostingSortOptionValue => getSortOptionByFields(organizationPostingSortOptions, sortBy, sortDir).value;
+): PostingSortOptionValue => getSortOptionByFields(postingSortOptions, sortBy, sortDir).value;
 
-export const resolveOrganizationPostingSortOption = (
-  value: OrganizationPostingSortOptionValue,
-): OrganizationPostingSortOption => organizationPostingSortOptions.find(option => option.value === value) ?? organizationPostingSortOptions[0];
+export const resolvePostingSortOption = (
+  value: PostingSortOptionValue,
+): PostingSortOption => postingSortOptions.find(option => option.value === value) ?? postingSortOptions[0];
 
 export const toVolunteerPostingSortOptionValue = (
   sortBy: VolunteerPostingSortBy,

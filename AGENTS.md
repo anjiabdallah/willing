@@ -91,6 +91,7 @@ Willing connects volunteers with organizations that publish real-world help oppo
 ## Repository Map
 
 - `client/src/main.tsx`: route tree and page wiring
+- `client/src/constants.ts`: shared theme constants (colors, domain mappings)
 - `client/src/auth/*`: auth context, guards, user hooks
 - `client/src/utils/requestServer.ts`: shared HTTP helper (includes JWT support)
 - `client/src/utils/formUtils.tsx`: reusable form components (`FormField`, `FormRootError`, helpers)
@@ -248,6 +249,11 @@ Set the mock's resolved value in `beforeEach`, reset in `afterEach`.
 6. Keep response and payload shapes consistent across client and server.
 7. Keep changes minimal and targeted; avoid unrelated refactors.
 8. For transactional DB logic, prefer `executeTransaction` from `server/src/db/executeTransaction.ts` instead of raw `db.transaction().execute(...)`, especially because tests often pass controlled transactions.
+9. **Time storage convention**: All `start_time` and `end_time` values are stored in UTC in the database. The client is responsible for:
+   - **Before sending to server**: Convert local time to UTC by subtracting the local timezone offset, using the `toUtcTime` helper defined in `PostingCreate.tsx` and `Posting.tsx`. The offset is obtained via `getLocalOffsetMinutes()` which uses `new Date().getTimezoneOffset()` — never hardcode a timezone offset.
+   - **Before displaying to user**: Convert UTC time back to local time by adding the local timezone offset. This is handled by `formatTime12Hour` in `postingUtils.ts` and by the `toLocalTime` helper when populating form fields in `Posting.tsx`.
+   - Never send raw local times to the server. Never display raw UTC times to the user. Never hardcode a timezone offset value.
+   - The server stores and compares times as UTC and appends `Z` when constructing datetime strings for comparison in `postingTime.ts`
 
 ## Type Safety Requirements
 
@@ -329,6 +335,8 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 - **`IconButton`**: Compact square icon-only action. Requires `Icon`; use for secondary utility actions (for example edit/delete/open details), not primary page CTAs.
 - **`LinkButton`**: Navigation action that routes with React Router (`to`, optional `state`) while keeping button styling. Use this for navigation, not imperative `navigate` calls on click where a link is sufficient.
 - **`Card`**: Reusable content container with optional heading metadata and actions. Optional props: `title`, `description`, `Icon`, `left`, `right`, `link`, `color`, `coloredText`, `padding` (default `true`), `children`.
+- **`StatCard`**: Statistics card with icon, text label, and content value. Required props: `text`, `content`, `icon`. Optional prop: `color` (default `primary`).
+- **`LoadingList`**: Loading skeleton for posting lists (cards/list view based on `usePostingViewMode`). Optional prop: `count` (default `3`).
 - Prefer these reusable components over raw `<button>`/`<Link>` when DaisyUI button styling is desired.
 - Use `loading` for async actions and keep controls disabled during submission (`Button`/`IconButton` already disable while loading).
 - Keep variants semantically consistent: use `color="primary"` for main actions, `ghost`/`outline` for secondary actions, and `error` only for destructive actions.
@@ -343,6 +351,23 @@ All components are in `client/src/components/`. **Use these instead of recreatin
    - Retry/refresh/reset actions → `RotateCcw` or `RefreshCcw`
    - Approve/accept actions → `Check` or `CheckCircle`
    - Reject/decline actions → `X` or `XCircle`
+
+### Shared Theme Constants (`client/src/constants.ts`)
+
+- **`DOMAIN_COLORS`**: Color mapping object for consistent DaisyUI color assignment across domain areas. Used with `color` props in components like `StatCard` and `Card`.
+  - Keys: `profile`, `account`, `stats`, `skills`, `experience`, `cv`, `certificate`, `crisis`, `report`, `request`, `settings`, `attendance`, `verification`, `pending`, `enrollment`, `neutral`.
+  - Values: DaisyUI color names (`primary`, `secondary`, `success`, `error`, `warning`, `info`, `accent`).
+
+### Animation Utilities (`client/src/index.css`)
+
+- **`animate-fade-in-up`**: CSS animation class for fade-in with upward motion (`0.5s ease-out`). Use for loading-to-content transitions.
+
+### UI Guidelines
+
+1. **Cards should have icons and descriptions**: All `Card` components should include both `Icon` and `description` props for consistency across the platform.
+2. **Headers should be consistent**: Use `PageHeader` with appropriate `Icon` and `subtitle` props on all pages.
+3. **Loading states**: Use `LoadingList` for posting list skeletons; ensure smooth transitions with `animate-fade-in-up` when content loads.
+4. **Domain color mapping**: Use `DOMAIN_COLORS` from `client/src/constants.ts` for consistent color assignment in domain-specific components.
 
 ### Skill Components (`client/src/components/skills/`)
 
@@ -377,12 +402,13 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 - **`PasswordResetCard`**: Self-contained password reset form integrated with auth context and validation/error handling.
 - **`ToggleButton`**: React-hook-form-friendly toggle group. Required props: `form`, `name`, `label`, `options`. Optional props: `disabled` (default `false`), `compact` (default `false`). Option-level optional fields: `description`, `Icon`, `btnColor`.
-- **`CalendarInfo`**: Shared date input abstraction supporting form mode and controlled mode. Supports single-date, interval (`start/end`, default), range, and multiple-date selection modes in controlled usage, plus single-date form usage via `dateName`. Optional common props: `startLabel`, `endLabel`, `className`, `disabledDates`, `dateDetails`.
+- **`CalendarInfo`**: Shared date input abstraction supporting form mode and controlled mode. Supports single-date, range (default), and multiple-date selection modes in controlled usage, plus single-date form usage via `dateName`. The picker uses fixed weeks, shows outside days, and includes a native month/year input for direct navigation. Optional common props: `startLabel`, `endLabel`, `className`, `disabledDates`, `dateDetails`.
 
 ### Interaction and Workflow Components
 
 - **`Loading`**: DaisyUI loading spinner. Optional prop: `size` (`xs`, `sm`, `md`, `lg`, `xl`; default `md`).
 - **`EmptyState`**: Generic empty-state panel with centered icon and text for no-data/result cases. Required props: `title`, `description`, `Icon`.
+- **`Collapse`**: Reusable bordered expandable container. Required props: `title`, `children`. Optional props: `defaultOpen`, `withArrow`, `className`, `titleClassName`, `contentClassName`.
 - **`OrganizationProfilePicture`**: Shared organization avatar/logo renderer with initials fallback. Required props: `organizationName`, `organizationId`. Optional props: `logoPath`, `size` (default `96`), `className`, `linkToOrganizationPage` (default `false`), `linkClassName`, `onLinkClick`.
 - **`LocationPicker`**: Leaflet map picker with draggable marker, click-to-place, Lebanon geocoding search, and read-only mode. Required props: `position`, `setPosition`. Optional props: `readOnly` (default `false`), `className`.
 - **`OrganizationRequestReviewCard`**: Admin review card for organization onboarding requests. Required props: `request`, `refreshOrganizationRequests`.
@@ -425,8 +451,8 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 5. Until experience entities are implemented in DB, do not generate or recompute experience-derived embeddings from synthetic or temporary tables.
 6. Vector definitions in current schema:
    `organization_account.org_vector`: embedding of organization profile fields.
-   `organization_posting.opportunity_vector`: embedding of posting fields and skills.
-   `organization_posting.posting_context_vector`: normalized weighted combination of posting + organization vectors (70/30).
+   `posting.opportunity_vector`: embedding of posting fields and skills.
+   `posting.posting_context_vector`: normalized weighted combination of posting + organization vectors (70/30).
    `volunteer_account.profile_vector`: embedding of volunteer profile fields, skills, and parsed CV text (if available).
    `volunteer_account.experience_vector`: weighted aggregation from attended posting context vectors (latest-first, max 10).
 

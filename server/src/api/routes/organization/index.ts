@@ -23,7 +23,7 @@ import {
   type OrganizationVolunteerProfileResponse,
   type OrganizationUploadLogoResponse,
 } from './index.types.ts';
-import createOrganizationPostingRouter from './posting.ts';
+import createPostingRouter from './posting.ts';
 import authorizeOnly from '../../../auth/authorizeOnly.ts';
 import createResetPassword from '../../../auth/resetPassword.ts';
 import {
@@ -33,29 +33,15 @@ import {
   type PostingSkill,
   type Database,
 } from '../../../db/tables/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
-import { sendAdminOrganizationRequestEmail } from '../../../services/smtp/emails.ts';
+import { sendAdminOrganizationRequestEmail } from '../../../services/resend/emails.ts';
 import { orgLogoMulter } from '../../../services/uploads/orgLogo.ts';
 import { CV_UPLOAD_DIR, ORG_LOGO_UPLOAD_DIR, ORG_SIGNATURE_UPLOAD_DIR } from '../../../services/uploads/paths.ts';
 import uploadSingle from '../../../services/uploads/uploadSingle.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
 import { normalizeSearchTerms } from '../utils/postingList.js';
 import { canRecomputeProfileVector } from '../utils/rateLimit.ts';
-
-const organizationProfileResponseColumns = [
-  'id',
-  'name',
-  'email',
-  'phone_number',
-  'url',
-  'description',
-  'latitude',
-  'longitude',
-  'location_name',
-  'logo_path',
-  'created_at',
-  'updated_at',
-] as const;
 
 const organizationPrivateResponseColumns = [
   'id',
@@ -70,26 +56,26 @@ const organizationPrivateResponseColumns = [
   'logo_path',
 ] as const;
 
-const organizationPostingResponseColumns = [
-  'organization_posting.id',
-  'organization_posting.organization_id',
-  'organization_posting.crisis_id',
-  'organization_posting.title',
-  'organization_posting.description',
-  'organization_posting.latitude',
-  'organization_posting.longitude',
-  'organization_posting.max_volunteers',
-  'organization_posting.start_date',
-  'organization_posting.start_time',
-  'organization_posting.end_date',
-  'organization_posting.end_time',
-  'organization_posting.minimum_age',
-  'organization_posting.automatic_acceptance',
-  'organization_posting.is_closed',
-  'organization_posting.allows_partial_attendance',
-  'organization_posting.location_name',
-  'organization_posting.created_at',
-  'organization_posting.updated_at',
+const postingResponseColumns = [
+  'posting.id',
+  'posting.organization_id',
+  'posting.crisis_id',
+  'posting.title',
+  'posting.description',
+  'posting.latitude',
+  'posting.longitude',
+  'posting.max_volunteers',
+  'posting.start_date',
+  'posting.start_time',
+  'posting.end_date',
+  'posting.end_time',
+  'posting.minimum_age',
+  'posting.automatic_acceptance',
+  'posting.is_closed',
+  'posting.allows_partial_attendance',
+  'posting.location_name',
+  'posting.created_at',
+  'posting.updated_at',
 ] as const;
 
 const organizationProfileUpdateSchema = organizationAccountSchema
@@ -118,23 +104,23 @@ function createOrganizationRouter(db: Kysely<Database>) {
     const relatedApplication = await db
       .selectFrom('enrollment_application')
       .innerJoin(
-        'organization_posting',
-        'organization_posting.id',
+        'posting',
+        'posting.id',
         'enrollment_application.posting_id',
       )
       .select('enrollment_application.id')
       .where('enrollment_application.volunteer_id', '=', volunteerId)
-      .where('organization_posting.organization_id', '=', organizationId)
+      .where('posting.organization_id', '=', organizationId)
       .executeTakeFirst();
 
     if (relatedApplication) return true;
 
     const relatedEnrollment = await db
       .selectFrom('enrollment')
-      .innerJoin('organization_posting', 'organization_posting.id', 'enrollment.posting_id')
+      .innerJoin('posting', 'posting.id', 'enrollment.posting_id')
       .select('enrollment.id')
       .where('enrollment.volunteer_id', '=', volunteerId)
-      .where('organization_posting.organization_id', '=', organizationId)
+      .where('posting.organization_id', '=', organizationId)
       .executeTakeFirst();
 
     return Boolean(relatedEnrollment);
@@ -287,8 +273,14 @@ function createOrganizationRouter(db: Kysely<Database>) {
 
     const organization = await db
       .selectFrom('organization_account')
-      .select([...organizationProfileResponseColumns, 'is_deleted', 'is_disabled'])
-      .where('id', '=', orgId)
+      .leftJoin(
+        'organization_certificate_info',
+        'organization_certificate_info.id',
+        'organization_account.certificate_info_id',
+      )
+      .selectAll('organization_account')
+      .select(['organization_certificate_info.hours_threshold'])
+      .where('organization_account.id', '=', orgId)
       .executeTakeFirst();
 
     if (!organization) {
@@ -304,11 +296,21 @@ function createOrganizationRouter(db: Kysely<Database>) {
     const { is_deleted: _d, is_disabled: _i, ...organizationProfile } = organization;
 
     const postings = await db
-      .selectFrom('organization_posting')
-      .select(organizationPostingResponseColumns)
+      .selectFrom('posting')
+      .select(postingResponseColumns)
       .where('organization_id', '=', orgId)
-      .orderBy('organization_posting.start_date', 'asc')
-      .orderBy('organization_posting.start_time', 'asc')
+      .orderBy(sql<number>`CASE
+        WHEN posting.end_date IS NOT NULL
+         AND posting.end_time IS NOT NULL
+         AND to_timestamp(
+           to_char(posting.end_date, 'YYYY-MM-DD') || ' ' || posting.end_time,
+           'YYYY-MM-DD HH24:MI'
+         ) < now()
+        THEN 1
+        ELSE 0
+      END`, 'asc')
+      .orderBy('posting.start_date', 'asc')
+      .orderBy('posting.start_time', 'asc')
       .execute();
 
     const postingIds = postings.map(p => p.id);
@@ -319,6 +321,22 @@ function createOrganizationRouter(db: Kysely<Database>) {
           .where('posting_id', 'in', postingIds)
           .execute()
       : [];
+
+    const enrollmentsByPosting = postingIds.length > 0
+      ? await db
+          .selectFrom('enrollment')
+          .select([
+            'posting_id',
+            sql<number>`COUNT(*)`.as('enrollment_count'),
+          ])
+          .where('posting_id', 'in', postingIds)
+          .groupBy('posting_id')
+          .execute()
+      : [];
+
+    const enrollmentCountByPostingId = new Map<number, number>(
+      enrollmentsByPosting.map(row => [row.posting_id, Number(row.enrollment_count ?? 0)]),
+    );
 
     const skillsByPostingId = new Map<number, PostingSkill[]>();
     skills.forEach((skill) => {
@@ -331,6 +349,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
     const postingsWithSkills = postings.map(posting => ({
       ...posting,
       skills: skillsByPostingId.get(posting.id) || [],
+      enrollment_count: enrollmentCountByPostingId.get(posting.id) ?? 0,
     }));
 
     res.json({ organization: organizationProfile, postings: postingsWithSkills });
@@ -435,7 +454,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
 
     let query = db
       .selectFrom('organization_account')
-      .leftJoin('organization_posting', 'organization_posting.organization_id', 'organization_account.id')
+      .leftJoin('posting', 'posting.organization_id', 'organization_account.id')
       .leftJoin('organization_certificate_info', 'organization_certificate_info.id', 'organization_account.certificate_info_id')
       .select([
         'organization_account.id',
@@ -443,7 +462,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
         'organization_account.description',
         'organization_account.location_name',
         'organization_account.logo_path',
-        sql<number>`COALESCE(COUNT(organization_posting.id), 0)`.as('posting_count'),
+        sql<number>`COALESCE(COUNT(posting.id), 0)`.as('posting_count'),
       ])
       .where('organization_account.is_deleted', '=', false)
       .where('organization_account.is_disabled', '=', false)
@@ -632,7 +651,9 @@ function createOrganizationRouter(db: Kysely<Database>) {
     }
 
     if (shouldRecomputeOrganizationVector && canRecomputeProfileVector(req)) {
-      await recomputeOrganizationVector(organizationId, db);
+      runEmbeddingInBackground(`organization:${organizationId}:context-vector-profile-update`, async () => {
+        await recomputeOrganizationVector(organizationId, db);
+      });
     }
 
     const organization = await db
@@ -735,7 +756,7 @@ function createOrganizationRouter(db: Kysely<Database>) {
 
   organizationRouter.post('/reset-password', createResetPassword(db));
 
-  organizationRouter.use('/posting', createOrganizationPostingRouter(db));
+  organizationRouter.use('/posting', createPostingRouter(db));
   organizationRouter.use('/certificate-info', createOrganizationCertificateInfoRouter(db));
 
   return organizationRouter;

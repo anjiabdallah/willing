@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
 import PostingSearchView from '../../components/postings/PostingSearchView.tsx';
@@ -29,7 +30,7 @@ function OrganizationSearch() {
       <PostingSearchView
         title="Search Opportunities"
         subtitle="Browse all active postings and crises across organizations."
-        icon={undefined}
+        icon={Search}
         showBack={false}
         actions={<PostingViewModeToggle />}
         fetchUrl="/organization/posting/discover"

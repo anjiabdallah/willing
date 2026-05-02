@@ -14,7 +14,7 @@ export const PostingViewModeContext = createContext<PostingViewModeContextValue 
 export function usePostingViewMode() {
   const context = useContext(PostingViewModeContext);
   if (!context) {
-    throw new Error('usePostingViewMode must be used within PostingViewModeProvider');
+    return { viewMode: 'cards' as PostingViewMode, setViewMode: () => {} };
   }
   return context;
 }

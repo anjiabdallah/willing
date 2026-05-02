@@ -1,0 +1,18 @@
+export const DOMAIN_COLORS = {
+  profile: 'primary',
+  account: 'secondary',
+  stats: 'primary',
+  skills: 'secondary',
+  experience: 'secondary',
+  cv: 'secondary',
+  certificate: 'primary',
+  crisis: 'accent',
+  report: 'error',
+  request: 'warning',
+  settings: 'warning',
+  attendance: 'success',
+  verification: 'success',
+  pending: 'warning',
+  enrollment: 'success',
+  neutral: 'ghost',
+} as const;

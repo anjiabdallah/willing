@@ -6,6 +6,10 @@ import { sql } from 'kysely';
 
 import config from '../config.ts';
 import database from '../db/index.ts';
+import {
+  buildRecommendationCvFileName,
+  writeRecommendationCvPdf,
+} from './data/recommendation/cvPdf.ts';
 import { hash } from '../services/bcrypt/index.ts';
 
 const PASSWORD_PLAIN = process.argv[2] || 'Willing123';
@@ -45,6 +49,9 @@ async function seed() {
     );
   }
 
+  const DEST_CVS_DIR = path.resolve(config.UPLOAD_DIR, 'cvs');
+  fs.mkdirSync(DEST_CVS_DIR, { recursive: true });
+
   await sql`
   TRUNCATE TABLE
     enrollment_application_date,
@@ -53,7 +60,7 @@ async function seed() {
     enrollment,
     posting_skill,
     volunteer_skill,
-    organization_posting,
+    posting,
     platform_certificate_settings,
     organization_certificate_info,
     volunteer_pending_account,
@@ -802,92 +809,1074 @@ async function seed() {
 
   // Volunteers
 
-  const volunteerValues = [
-    { first_name: 'Karim', last_name: 'Mansour', email: 'vol1@willing.social', gender: 'male', date_of_birth: '1998-03-15', description: 'Experienced in field logistics and heavy lifting. Reliable in high-pressure environments.' },
-    { first_name: 'Aya', last_name: 'Sadek', email: 'vol2@willing.social', gender: 'female', date_of_birth: '2000-07-22', description: 'Former student tutor with strong communication skills and a passion for education.' },
-    { first_name: 'Jad', last_name: 'Nassar', email: 'vol3@willing.social', gender: 'male', date_of_birth: '1996-11-04', description: 'Paramedic student with first aid certification and crisis response training.' },
-    { first_name: 'Hala', last_name: 'Farah', email: 'vol4@willing.social', gender: 'female', date_of_birth: '1994-01-30', description: 'Social worker background. Comfortable with elderly care and emotional support.' },
-    { first_name: 'Tarek', last_name: 'Slim', email: 'vol5@willing.social', gender: 'male', date_of_birth: '2001-09-18', description: 'Environmentally conscious and physically fit. Loves outdoor community work.' },
-    { first_name: 'Nina', last_name: 'Choufany', email: 'vol6@willing.social', gender: 'female', date_of_birth: '2002-05-11', description: 'Art teacher background. Great with children and creative activities.' },
-    { first_name: 'Marc', last_name: 'Hamamji', email: 'vol7@willing.social', gender: 'male', date_of_birth: '1999-12-01', description: 'Software developer who volunteers for tech literacy programs and remote support.' },
-    { first_name: 'Rana', last_name: 'Saad', email: 'vol8@willing.social', gender: 'female', date_of_birth: '1997-08-25', description: 'Catering background. Expert in food prep and community kitchen coordination.' },
-    { first_name: 'Ziad', last_name: 'Bou Habib', email: 'vol9@willing.social', gender: 'male', date_of_birth: '2003-02-14', description: 'Detail-oriented and great at organizing and sorting donated supplies.' },
-    { first_name: 'Maya', last_name: 'Tannous', email: 'vol10@willing.social', gender: 'female', date_of_birth: '2001-06-06', description: 'Flexible volunteer. Prefers to keep profile private.' },
-    { first_name: 'Sami', last_name: 'Khater', email: 'vol11@willing.social', gender: 'male', date_of_birth: '1995-04-09', description: 'Operations-minded volunteer with warehouse and dispatch experience.' },
-    { first_name: 'Lea', last_name: 'Rizk', email: 'vol12@willing.social', gender: 'female', date_of_birth: '1999-10-02', description: 'Community educator who enjoys tutoring, facilitation, and youth engagement.' },
-    { first_name: 'Omar', last_name: 'Haddad', email: 'vol13@willing.social', gender: 'male', date_of_birth: '1997-12-19', description: 'Tech-savvy coordinator comfortable with helplines, spreadsheets, and operations support.' },
-    { first_name: 'Dana', last_name: 'Mokbel', email: 'vol14@willing.social', gender: 'female', date_of_birth: '2000-03-27', description: 'Patient and dependable volunteer with experience in admin support and event coordination.' },
-    { first_name: 'Carly', last_name: 'Estephan', email: 'vol15@willing.social', gender: 'female', date_of_birth: '1998-12-12', description: 'Passionate volunteer with a background in community outreach and event planning.' },
-    { first_name: 'Rami', last_name: 'Khoury', email: 'vol16@willing.social', gender: 'male', date_of_birth: '1996-05-20', description: 'Civil engineering student comfortable with construction and debris clearance.' },
-    { first_name: 'Sara', last_name: 'Najjar', email: 'vol17@willing.social', gender: 'female', date_of_birth: '2002-08-14', description: 'Psychology student with an interest in psychosocial support and trauma care.' },
-    { first_name: 'Elie', last_name: 'Gemayel', email: 'vol18@willing.social', gender: 'male', date_of_birth: '1993-03-07', description: 'Experienced first responder with firefighting and emergency management background.' },
-    { first_name: 'Lara', last_name: 'Hayek', email: 'vol19@willing.social', gender: 'female', date_of_birth: '1999-11-30', description: 'Nurse with ICU experience. Comfortable in medical triage and patient care settings.' },
-    { first_name: 'Charbel', last_name: 'Abi Nader', email: 'vol20@willing.social', gender: 'male', date_of_birth: '2000-04-22', description: 'Fitness coach passionate about inclusive sports and physical rehabilitation.' },
-    { first_name: 'Nour', last_name: 'Khalil', email: 'vol21@willing.social', gender: 'female', date_of_birth: '2001-07-03', description: 'Graphic designer volunteering for awareness campaigns and community art projects.' },
-    { first_name: 'Fares', last_name: 'Aziz', email: 'vol22@willing.social', gender: 'male', date_of_birth: '1997-01-18', description: 'Experienced driver and fleet coordinator. Available for supply transport missions.' },
-    { first_name: 'Zeina', last_name: 'Saade', email: 'vol23@willing.social', gender: 'female', date_of_birth: '2003-09-25', description: 'University student active in campus environmental clubs and beach cleanup campaigns.' },
-    { first_name: 'Ali', last_name: 'Berro', email: 'vol24@willing.social', gender: 'male', date_of_birth: '1995-12-11', description: 'Carpenter and handyman with experience in shelter repair and carpentry.' },
-    { first_name: 'Nadine', last_name: 'Harb', email: 'vol25@willing.social', gender: 'female', date_of_birth: '1998-06-29', description: 'Social media manager helping NGOs tell stories and reach wider audiences.' },
-    { first_name: 'Bassem', last_name: 'Chaaban', email: 'vol26@willing.social', gender: 'male', date_of_birth: '1992-02-04', description: 'Former army officer with crisis management and team leadership experience.' },
-    { first_name: 'Tala', last_name: 'Srour', email: 'vol27@willing.social', gender: 'female', date_of_birth: '2004-03-17', description: 'High school student eager to contribute to local relief and community events.' },
-    { first_name: 'Georges', last_name: 'Daou', email: 'vol28@willing.social', gender: 'male', date_of_birth: '1990-10-08', description: 'Retired schoolteacher willing to tutor children and run literacy workshops.' },
-    { first_name: 'Hiba', last_name: 'Itani', email: 'vol29@willing.social', gender: 'female', date_of_birth: '2002-12-22', description: 'Trained sign language interpreter with experience in inclusive events.' },
-    { first_name: 'Bilal', last_name: 'Moussawi', email: 'vol30@willing.social', gender: 'male', date_of_birth: '1999-05-15', description: 'Mechanic and driver with experience supporting mobile relief convoys.' },
-    { first_name: 'Carla', last_name: 'Aoun', email: 'vol31@willing.social', gender: 'female', date_of_birth: '2001-08-30', description: 'Dietitian student interested in community nutrition and food security programs.' },
-    { first_name: 'Hassan', last_name: 'Jaber', email: 'vol32@willing.social', gender: 'male', date_of_birth: '1994-04-14', description: 'Agricultural specialist supporting farm recovery and soil restoration efforts.' },
-    { first_name: 'Mia', last_name: 'Stephan', email: 'vol33@willing.social', gender: 'female', date_of_birth: '2003-01-09', description: 'Theater student running storytelling and drama workshops for displaced youth.' },
-    { first_name: 'Kamal', last_name: 'Saleh', email: 'vol34@willing.social', gender: 'male', date_of_birth: '1988-07-21', description: 'Experienced plumber and water systems technician supporting flood and WASH recovery.' },
-    { first_name: 'Joelle', last_name: 'Abou Jaoude', email: 'vol35@willing.social', gender: 'female', date_of_birth: '2000-09-05', description: 'Public health graduate working on community health education and hygiene promotion.' },
-    { first_name: 'Wissam', last_name: 'Khalife', email: 'vol36@willing.social', gender: 'male', date_of_birth: '1996-03-28', description: 'IT support volunteer helping NGOs with tech setup, connectivity, and device repair.' },
-    { first_name: 'Rola', last_name: 'Hamdan', email: 'vol37@willing.social', gender: 'female', date_of_birth: '1991-11-13', description: 'Lawyer providing pro-bono legal information and referral services to displaced persons.' },
-    { first_name: 'Khaled', last_name: 'Mikati', email: 'vol38@willing.social', gender: 'male', date_of_birth: '2002-06-07', description: 'Football coach organizing youth leagues and inclusive sport days in North Lebanon.' },
-    { first_name: 'Cynthia', last_name: 'Frem', email: 'vol39@willing.social', gender: 'female', date_of_birth: '1997-02-16', description: 'Event planner supporting community fundraisers, awareness drives, and distribution events.' },
-    { first_name: 'Mazen', last_name: 'Abou Rizk', email: 'vol40@willing.social', gender: 'male', date_of_birth: '1993-08-03', description: 'Structural engineer assessing damaged buildings and guiding repair volunteers safely.' },
-    { first_name: 'Ghada', last_name: 'Rahhal', email: 'vol41@willing.social', gender: 'female', date_of_birth: '2001-04-19', description: 'Arabic calligrapher and art educator bringing creative healing workshops to communities.' },
-    { first_name: 'Tony', last_name: 'Khoury', email: 'vol42@willing.social', gender: 'male', date_of_birth: '1998-10-27', description: 'Supply chain analyst helping NGOs optimize donations and distribution logistics.' },
-    { first_name: 'Dina', last_name: 'Mansour', email: 'vol43@willing.social', gender: 'female', date_of_birth: '2000-01-14', description: 'Medical laboratory student assisting in blood drives and health screening days.' },
-    { first_name: 'Fouad', last_name: 'Geagea', email: 'vol44@willing.social', gender: 'male', date_of_birth: '1989-05-31', description: 'Experienced chef and culinary trainer managing large-scale community kitchens.' },
-    { first_name: 'Leen', last_name: 'Khoury', email: 'vol45@willing.social', gender: 'female', date_of_birth: '2004-07-11', description: 'Teen volunteer passionate about environmental activism and ocean conservation.' },
-    { first_name: 'Adnan', last_name: 'Wehbe', email: 'vol46@willing.social', gender: 'male', date_of_birth: '1986-12-24', description: 'Former UNHCR field officer with refugee registration and case management experience.' },
-    { first_name: 'Reem', last_name: 'Diab', email: 'vol47@willing.social', gender: 'female', date_of_birth: '2002-03-03', description: 'Student journalist documenting community relief efforts for awareness and advocacy.' },
-    { first_name: 'Nidal', last_name: 'Haidar', email: 'vol48@willing.social', gender: 'male', date_of_birth: '1995-09-17', description: 'Solar energy technician supporting off-grid power solutions for relief organizations.' },
-    { first_name: 'Aline', last_name: 'Eid', email: 'vol49@willing.social', gender: 'female', date_of_birth: '1999-06-20', description: 'Early childhood educator running learning circles and play-based activities for young children.' },
-    { first_name: 'Riad', last_name: 'Zein', email: 'vol50@willing.social', gender: 'male', date_of_birth: '1997-08-08', description: 'Warehouse supervisor with extensive experience managing large donation stockrooms.' },
-    { first_name: 'Myriam', last_name: 'Aboud', email: 'vol51@willing.social', gender: 'female', date_of_birth: '2003-11-04', description: 'Music student offering music therapy and choir workshops in shelters and community centers.' },
-    { first_name: 'Saad', last_name: 'Farran', email: 'vol52@willing.social', gender: 'male', date_of_birth: '1990-03-22', description: 'Veterinarian assisting animal rescue and care efforts in disaster-affected regions.' },
-    { first_name: 'Natalia', last_name: 'Frem', email: 'vol53@willing.social', gender: 'female', date_of_birth: '2001-05-29', description: 'Fashion design student upcycling donated clothing for distribution in refugee camps.' },
-    { first_name: 'Bassel', last_name: 'Khodr', email: 'vol54@willing.social', gender: 'male', date_of_birth: '1994-07-16', description: 'Geography teacher assisting with mapping disaster zones and logistics planning for NGOs.' },
-    { first_name: 'Hind', last_name: 'Assaf', email: 'vol55@willing.social', gender: 'female', date_of_birth: '1998-02-11', description: 'Community organizer experienced in mobilizing volunteers for neighborhood recovery projects.' },
-    { first_name: 'Youssef', last_name: 'Nasser', email: 'vol56@willing.social', gender: 'male', date_of_birth: '2002-10-18', description: 'Engineering student building makeshift infrastructure for displaced communities.' },
-    { first_name: 'Abir', last_name: 'Mourad', email: 'vol57@willing.social', gender: 'female', date_of_birth: '1993-04-05', description: 'Accountant volunteering for NGO financial transparency and grant reporting support.' },
-    { first_name: 'Ramzi', last_name: 'Charaf', email: 'vol58@willing.social', gender: 'male', date_of_birth: '1988-01-29', description: 'Veteran field coordinator managing large multi-organization volunteer deployments.' },
-    { first_name: 'Pamela', last_name: 'Harb', email: 'vol59@willing.social', gender: 'female', date_of_birth: '2004-08-22', description: 'Teen environmental volunteer running awareness campaigns in her school district.' },
-    { first_name: 'Fadi', last_name: 'Daher', email: 'vol60@willing.social', gender: 'male', date_of_birth: '1996-06-13', description: 'Pharmacist supporting medicine distribution, cold chain management, and health fairs.' },
-    { first_name: 'Yasmine', last_name: 'Saleh', email: 'vol61@willing.social', gender: 'female', date_of_birth: '2000-12-01', description: 'Child psychologist providing age-appropriate mental health activities in displacement shelters.' },
-    { first_name: 'Marwan', last_name: 'Khoury', email: 'vol62@willing.social', gender: 'male', date_of_birth: '1991-09-09', description: 'Professional chef running food safety training and community cooking events.' },
-    { first_name: 'Rania', last_name: 'Tabbara', email: 'vol63@willing.social', gender: 'female', date_of_birth: '1997-03-14', description: 'Environmental scientist supporting coastal pollution assessment and cleanup coordination.' },
-    { first_name: 'Majd', last_name: 'Makhoul', email: 'vol64@willing.social', gender: 'male', date_of_birth: '2003-07-27', description: 'Youth activist and community garden project leader in Tripoli.' },
-    { first_name: 'Sana', last_name: 'Itani', email: 'vol65@willing.social', gender: 'female', date_of_birth: '1999-01-23', description: 'Human resources professional streamlining volunteer onboarding and coordination systems.' },
-    { first_name: 'Khalil', last_name: 'Nassif', email: 'vol66@willing.social', gender: 'male', date_of_birth: '1992-11-06', description: 'Electrician providing safe wiring and generator support to shelters and relief centers.' },
-    { first_name: 'Lina', last_name: 'Feghali', email: 'vol67@willing.social', gender: 'female', date_of_birth: '2001-02-28', description: 'Social media coordinator amplifying NGO volunteer calls and community stories online.' },
-    { first_name: 'Malek', last_name: 'Haddad', email: 'vol68@willing.social', gender: 'male', date_of_birth: '2004-04-14', description: 'Student athlete coaching youth sports and running inclusive fitness sessions.' },
-    { first_name: 'Riwa', last_name: 'Ghanem', email: 'vol69@willing.social', gender: 'female', date_of_birth: '2002-06-30', description: 'Biology student assisting environmental NGOs with species monitoring and habitat restoration.' },
-    { first_name: 'Majd', last_name: 'Farhat', email: 'vol70@willing.social', gender: 'male', date_of_birth: '1985-08-15', description: 'Logistics manager with 15 years of supply chain experience supporting humanitarian relief operations.' },
-    { first_name: 'Dalia', last_name: 'Sleiman', email: 'vol71@willing.social', gender: 'female', date_of_birth: '1998-10-10', description: 'Occupational therapist supporting recovery and daily living activities for injured residents.' },
-    { first_name: 'Nasser', last_name: 'Khalife', email: 'vol72@willing.social', gender: 'male', date_of_birth: '2000-03-03', description: 'Community radio presenter using media skills to broadcast relief announcements and volunteer calls.' },
-    { first_name: 'Rouba', last_name: 'Karam', email: 'vol73@willing.social', gender: 'female', date_of_birth: '1995-07-19', description: 'Medical doctor volunteering in crisis clinics and mobile health units across Lebanon.' },
-    { first_name: 'Samer', last_name: 'Abdo', email: 'vol74@willing.social', gender: 'male', date_of_birth: '1993-05-26', description: 'Marine biologist monitoring ecosystem recovery along Lebanon\'s coastline after pollution events.' },
-    { first_name: 'Lara', last_name: 'Gemayel', email: 'vol75@willing.social', gender: 'female', date_of_birth: '2002-09-12', description: 'Architecture student helping design accessible and dignified shelter spaces for displaced families.' },
-    { first_name: 'Imad', last_name: 'Chahrour', email: 'vol76@willing.social', gender: 'male', date_of_birth: '1990-01-17', description: 'Safety officer ensuring volunteer protection standards on field sites and distribution points.' },
-    { first_name: 'Celine', last_name: 'Nasr', email: 'vol77@willing.social', gender: 'female', date_of_birth: '2001-11-20', description: 'Fundraising and grant writing volunteer helping small NGOs access emergency funding.' },
-    { first_name: 'Joe', last_name: 'Abi Khalil', email: 'vol78@willing.social', gender: 'male', date_of_birth: '1997-04-06', description: 'Drone operator mapping flood damage and wildfire zones to support relief planning.' },
-    { first_name: 'Mirna', last_name: 'Khoury', email: 'vol79@willing.social', gender: 'female', date_of_birth: '2003-02-08', description: 'Youth mentor running after-school and weekend programs for at-risk teenagers.' },
-    { first_name: 'Firas', last_name: 'Barakat', email: 'vol80@willing.social', gender: 'male', date_of_birth: '1991-06-24', description: 'Trauma surgeon with extensive field hospital experience, supporting emergency medical teams.' },
-  ].map(v => ({ ...v, password: passwordHash, gender: v.gender as 'male' | 'female' | 'other' }));
+  type SeedVolunteer = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    gender: string;
+    date_of_birth: string;
+    description: string;
+    skills?: string[];
+    education?: string;
+    experience?: string[];
+    projects?: string[];
+  };
+
+  const seedVolunteers: SeedVolunteer[] = [
+    {
+      first_name: 'Karim', last_name: 'Mansour', email: 'vol1@willing.social', gender: 'male', date_of_birth: '1998-03-15',
+      description: 'Experienced in field logistics and heavy lifting. Reliable in high-pressure environments.',
+      education: 'Diploma in Logistics & Supply Chain Management, Lebanese International University, 2019',
+      experience: [
+        'Field Operations Assistant, Lebanese Red Cross, 2021 - present: Coordinated supply delivery and managed field teams during emergency relief operations across Beirut and Mount Lebanon.',
+        'Warehouse Associate, Carrefour Lebanon, 2019 - 2021: Managed inventory, packing, and dispatch for high-volume distribution center.',
+      ],
+      projects: [
+        'Beirut Port Explosion Relief, 2020: Led a 12-person volunteer logistics team distributing food and medical supplies to over 400 displaced families.',
+        'Winter Aid Drive, 2022: Organized collection, sorting, and delivery of donated clothing and blankets to refugee settlements in the Bekaa Valley.',
+      ],
+    },
+    {
+      first_name: 'Aya', last_name: 'Sadek', email: 'vol2@willing.social', gender: 'female', date_of_birth: '2000-07-22',
+      description: 'Former student tutor with strong communication skills and a passion for education.',
+      education: 'B.A. in Education, Lebanese American University, 2022',
+      experience: [
+        'Student Tutor, LAU Learning Center, 2020-2022: Provided one-on-one academic support in Arabic, math, and science to undergraduate students.',
+        'Volunteer Teacher, Teach For Lebanon, 2022-present: Delivered after-school literacy sessions to underprivileged children in Tripoli.',
+      ],
+      projects: [
+        'Reading Circle Initiative, 2021: Launched a weekly reading program for 30 primary school students in Byblos.',
+        'Youth Communication Workshop, 2022: Designed and facilitated a 3-day public speaking workshop for high school students.',
+      ],
+    },
+    {
+      first_name: 'Jad', last_name: 'Nassar', email: 'vol3@willing.social', gender: 'male', date_of_birth: '1996-11-04',
+      description: 'Paramedic student with first aid certification and crisis response training.',
+      education: 'B.S. in Emergency Medical Services, Lebanese American University, 2023',
+      experience: [
+        'Paramedic Intern, Lebanese Red Cross, 2022-present: Assisted in emergency response operations and patient triage across Beirut.',
+        'First Aid Trainer, Scout Movement Lebanon, 2021-2022: Trained over 100 scouts in CPR and basic first aid techniques.',
+      ],
+      projects: [
+        'Mass Casualty Drill, 2022: Participated in a simulated mass casualty exercise coordinated with Civil Defense Lebanon.',
+        'Community First Aid Day, 2023: Organized a free first aid awareness event reaching over 200 residents in Jounieh.',
+      ],
+    },
+    {
+      first_name: 'Hala', last_name: 'Farah', email: 'vol4@willing.social', gender: 'female', date_of_birth: '1994-01-30',
+      description: 'Social worker background. Comfortable with elderly care and emotional support.',
+      education: 'B.S. in Social Work, Lebanese University, 2016',
+      experience: [
+        'Social Worker, Caritas Lebanon, 2016-present: Provided case management and psychosocial support to elderly and vulnerable populations.',
+        'Volunteer Counselor, SKILD Center, 2019-2021: Supported families of children with special needs through group therapy sessions.',
+      ],
+      projects: [
+        'Elderly Outreach Program, 2020: Coordinated weekly home visits for 40 isolated elderly residents in Sin El Fil.',
+        'Grief Support Circle, 2021: Facilitated bi-weekly emotional support groups for families affected by the Beirut explosion.',
+      ],
+    },
+    {
+      first_name: 'Tarek', last_name: 'Slim', email: 'vol5@willing.social', gender: 'male', date_of_birth: '2001-09-18',
+      description: 'Environmentally conscious and physically fit. Loves outdoor community work.',
+      education: 'B.S. in Environmental Science, Lebanese American University, expected 2024',
+      experience: [
+        'Field Volunteer, Green Area NGO, 2021-present: Participated in reforestation and coastal cleanup campaigns across Lebanon.',
+        'Environmental Educator, Live Love Lebanon, 2022: Led outdoor workshops on waste sorting and recycling for school groups.',
+      ],
+      projects: [
+        'Cedar Reforestation Drive, 2022: Planted over 500 cedar saplings in the Shouf Biosphere Reserve with a team of 20 volunteers.',
+        'Beach Cleanup Campaign, 2023: Organized a cleanup of Ramlet el Baida beach removing over 800kg of waste.',
+      ],
+    },
+    {
+      first_name: 'Nina', last_name: 'Choufany', email: 'vol6@willing.social', gender: 'female', date_of_birth: '2002-05-11',
+      description: 'Art teacher background. Great with children and creative activities.',
+      education: 'B.F.A. in Art Education, Lebanese University, expected 2024',
+      experience: [
+        'Art Teacher Intern, Sagesse School, 2022-2023: Designed and delivered creative art lessons for children aged 6-12.',
+        'Creative Workshop Facilitator, Basmeh & Zeitooneh, 2023-present: Ran weekly art and storytelling sessions for displaced children.',
+      ],
+      projects: [
+        'Mural for Hope, 2022: Led a community mural project in Bourj Hammoud involving 25 children from refugee families.',
+        'Art Therapy Weekend, 2023: Organized a two-day art therapy retreat for trauma-affected youth in the Bekaa Valley.',
+      ],
+    },
+    {
+      first_name: 'Marc', last_name: 'Hamamji', email: 'vol7@willing.social', gender: 'male', date_of_birth: '1999-12-01',
+      description: 'Software developer who volunteers for tech literacy programs and remote support.',
+      education: 'B.S. in Computer Science, American University of Beirut, 2022',
+      experience: [
+        'Software Developer, Murex, 2022-present: Developed and maintained financial software solutions for international clients.',
+        'Tech Literacy Volunteer, Restart Lebanon, 2021-present: Taught basic computer skills and internet safety to adults in underserved communities.',
+      ],
+      projects: [
+        'Digital Skills Bootcamp, 2022: Co-designed a 6-week coding bootcamp for 20 unemployed youth in Beirut.',
+        'NGO Website Rebuild, 2023: Volunteered to redesign and redeploy the website of a local relief organization pro bono.',
+      ],
+    },
+    {
+      first_name: 'Rana', last_name: 'Saad', email: 'vol8@willing.social', gender: 'female', date_of_birth: '1997-08-25',
+      description: 'Catering background. Expert in food prep and community kitchen coordination.',
+      education: 'Diploma in Culinary Arts, AUST, 2018',
+      experience: [
+        'Catering Coordinator, La Cuisine Beirut, 2018-2022: Managed food preparation and service logistics for large-scale events.',
+        'Community Kitchen Lead, Foodblessed Lebanon, 2020-present: Coordinated daily meal preparation for over 300 beneficiaries.',
+      ],
+      projects: [
+        'Ramadan Kitchen Drive, 2021: Organized a community kitchen serving 500 daily meals throughout the holy month.',
+        'Food Safety Training, 2022: Delivered hygiene and food handling workshops to 15 volunteer kitchen staff.',
+      ],
+    },
+    {
+      first_name: 'Ziad', last_name: 'Bou Habib', email: 'vol9@willing.social', gender: 'male', date_of_birth: '2003-02-14',
+      description: 'Detail-oriented and great at organizing and sorting donated supplies.',
+      education: 'B.B.A. in Business Administration, Holy Spirit University of Kaslik, expected 2025',
+      experience: [
+        'Warehouse Volunteer, Beit el Baraka, 2021-present: Sorted, labeled, and organized thousands of donated items for distribution.',
+        'Inventory Assistant, Spinneys Lebanon, 2022: Supported stock management and shelf organization during summer placement.',
+      ],
+      projects: [
+        'Donation Drive Coordination, 2022: Helped sort and categorize over 2 tons of donated goods following winter flood relief.',
+        'Supply Labeling System, 2023: Designed a simple color-coded labeling system adopted by the warehouse team.',
+      ],
+    },
+    {
+      first_name: 'Maya', last_name: 'Tannous', email: 'vol10@willing.social', gender: 'female', date_of_birth: '2001-06-06',
+      description: 'Flexible volunteer. Prefers to keep profile private.',
+      education: 'B.A. in Communication Arts, Lebanese American University, expected 2023',
+      experience: [
+        'General Volunteer, Lebanese Red Cross, 2021-present: Assisted in various relief operations and community events.',
+        'Event Helper, Arcenciel, 2022: Supported logistics and setup for community fundraising events.',
+      ],
+      projects: [
+        'Community Outreach Day, 2022: Assisted in organizing a neighborhood awareness event in Hamra.',
+      ],
+    },
+    {
+      first_name: 'Sami', last_name: 'Khater', email: 'vol11@willing.social', gender: 'male', date_of_birth: '1995-04-09',
+      description: 'Operations-minded volunteer with warehouse and dispatch experience.',
+      education: 'B.S. in Industrial Engineering, Lebanese American University, 2017',
+      experience: [
+        'Operations Supervisor, DHL Lebanon, 2017-present: Managed warehouse logistics, dispatch scheduling, and inventory control.',
+        'Logistics Volunteer, Offre Joie, 2020-present: Coordinated supply chain operations during emergency relief deployments.',
+      ],
+      projects: [
+        'Post-Explosion Warehouse Setup, 2020: Helped establish an emergency supply depot in Karantina within 72 hours of the Beirut blast.',
+        'Relief Dispatch System, 2021: Designed a volunteer dispatch schedule that reduced delivery times by 30%.',
+      ],
+    },
+    {
+      first_name: 'Lea', last_name: 'Rizk', email: 'vol12@willing.social', gender: 'female', date_of_birth: '1999-10-02',
+      description: 'Community educator who enjoys tutoring, facilitation, and youth engagement.',
+      education: 'B.A. in Education, Notre Dame University, 2021',
+      experience: [
+        'Youth Facilitator, Himaya NGO, 2021-present: Led child protection workshops and educational sessions for at-risk youth.',
+        'Tutor, Natmeh Lebanon, 2020-2022: Provided academic tutoring in French and Arabic to students from low-income families.',
+      ],
+      projects: [
+        'Summer Learning Camp, 2022: Co-organized a 3-week educational summer camp for 50 children in the Metn area.',
+        'Youth Leadership Workshop, 2023: Facilitated a weekend leadership training for 25 teenagers in Byblos.',
+      ],
+    },
+    {
+      first_name: 'Omar', last_name: 'Haddad', email: 'vol13@willing.social', gender: 'male', date_of_birth: '1997-12-19',
+      description: 'Tech-savvy coordinator comfortable with helplines, spreadsheets, and operations support.',
+      education: 'B.S. in Information Technology, Lebanese University, 2020',
+      experience: [
+        'IT Coordinator, UNHCR Lebanon, 2020-present: Managed helpline systems, data entry, and digital operations support.',
+        'Operations Volunteer, Impact Lebanon, 2021-2022: Maintained spreadsheets and coordination tools for volunteer deployment.',
+      ],
+      projects: [
+        'Helpline Digitization, 2021: Migrated a paper-based intake system to a digital platform reducing processing time by 40%.',
+        'Volunteer Tracker Tool, 2022: Built a Google Sheets-based volunteer tracking dashboard used by 5 NGO partners.',
+      ],
+    },
+    {
+      first_name: 'Dana', last_name: 'Mokbel', email: 'vol14@willing.social', gender: 'female', date_of_birth: '2000-03-27',
+      description: 'Patient and dependable volunteer with experience in admin support and event coordination.',
+      education: 'B.B.A. in Management, Saint Joseph University, expected 2022',
+      experience: [
+        'Administrative Assistant, Nawaya Network, 2021-present: Managed scheduling, correspondence, and event logistics for NGO programs.',
+        'Event Coordinator Volunteer, Souk el Tayeb, 2022: Supported the coordination of community market events in Beirut.',
+      ],
+      projects: [
+        'Volunteer Orientation Program, 2022: Developed and ran a structured onboarding session for 30 new volunteers.',
+        'Annual Fundraiser Gala, 2023: Coordinated logistics for a 200-person charity fundraising dinner.',
+      ],
+    },
+    {
+      first_name: 'Carly', last_name: 'Estephan', email: 'vol15@willing.social', gender: 'female', date_of_birth: '1998-12-12',
+      description: 'Passionate volunteer with a background in community outreach and event planning.',
+      education: 'B.A. in Public Relations, Lebanese American University, 2021',
+      experience: [
+        'Community Outreach Officer, Arcenciel, 2021-present: Planned and executed outreach campaigns targeting marginalized communities.',
+        'Event Planner, Eventum Lebanon, 2020-2021: Coordinated logistics for corporate and community events across Beirut.',
+      ],
+      projects: [
+        'Inclusion Awareness Campaign, 2022: Led a city-wide awareness drive promoting disability inclusion in public spaces.',
+        'Volunteer Recruitment Fair, 2023: Organized a fair that connected over 150 prospective volunteers with 20 NGOs.',
+      ],
+    },
+    {
+      first_name: 'Rami', last_name: 'Khoury', email: 'vol16@willing.social', gender: 'male', date_of_birth: '1996-05-20',
+      description: 'Civil engineering student comfortable with construction and debris clearance.',
+      education: 'B.S. in Civil Engineering, American University of Beirut, 2019',
+      experience: [
+        'Site Engineer, Khatib & Alami, 2019-present: Supervised construction and infrastructure rehabilitation projects across Lebanon.',
+        'Debris Clearance Volunteer, Offre Joie, 2020: Led volunteer teams in structural debris removal following the Beirut port explosion.',
+      ],
+      projects: [
+        'Mar Mikhael Rebuild, 2020: Coordinated structural assessment and clearance of 12 damaged buildings in Mar Mikhael.',
+        'Shelter Repair Initiative, 2022: Supervised repair of 8 homes for displaced families in the South Lebanon region.',
+      ],
+    },
+    {
+      first_name: 'Sara', last_name: 'Najjar', email: 'vol17@willing.social', gender: 'female', date_of_birth: '2002-08-14',
+      description: 'Psychology student with an interest in psychosocial support and trauma care.',
+      education: 'B.A. in Psychology, Lebanese American University, expected 2024',
+      experience: [
+        'Psychosocial Support Intern, IRC Lebanon, 2023-present: Assisted in delivering structured psychosocial support activities for displaced youth.',
+        'Peer Support Volunteer, AUB Counseling Center, 2022-2023: Provided peer emotional support and referrals to students in distress.',
+      ],
+      projects: [
+        'Trauma Awareness Workshop, 2023: Co-facilitated a trauma-informed care workshop for 20 frontline volunteers.',
+        'Safe Space Program, 2023: Helped establish a weekly safe space group for adolescent girls in a Bekaa displacement shelter.',
+      ],
+    },
+    {
+      first_name: 'Elie', last_name: 'Gemayel', email: 'vol18@willing.social', gender: 'male', date_of_birth: '1993-03-07',
+      description: 'Experienced first responder with firefighting and emergency management background.',
+      education: 'Diploma in Fire Safety & Emergency Management, Civil Defense Lebanon Training Institute, 2014',
+      experience: [
+        'Firefighter, Lebanese Civil Defense, 2014-present: Responded to fire emergencies, search and rescue operations, and hazmat incidents.',
+        'Emergency Response Trainer, Lebanese Red Cross, 2018-present: Trained volunteers in emergency protocols and crisis management.',
+      ],
+      projects: [
+        'Port Explosion Response, 2020: Deployed as part of the first responder team at the Beirut port explosion site.',
+        'Wildfire Containment, 2022: Led a volunteer team in containing a forest fire in the Chouf mountains.',
+      ],
+    },
+    {
+      first_name: 'Lara', last_name: 'Hayek', email: 'vol19@willing.social', gender: 'female', date_of_birth: '1999-11-30',
+      description: 'Nurse with ICU experience. Comfortable in medical triage and patient care settings.',
+      education: 'B.S. in Nursing, Saint Joseph University, 2021',
+      experience: [
+        'ICU Nurse, Hotel Dieu de France Hospital, 2021-present: Provided critical care nursing in a high-acuity intensive care unit.',
+        'Medical Volunteer, Lebanese Red Cross, 2020-present: Assisted in medical triage and patient care during emergency operations.',
+      ],
+      projects: [
+        'Field Triage Unit, 2020: Staffed an emergency triage point treating over 150 casualties following the Beirut explosion.',
+        'Mobile Health Clinic, 2022: Participated in a mobile clinic providing primary care to underserved villages in North Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Charbel', last_name: 'Abi Nader', email: 'vol20@willing.social', gender: 'male', date_of_birth: '2000-04-22',
+      description: 'Fitness coach passionate about inclusive sports and physical rehabilitation.',
+      education: 'B.S. in Kinesiology & Physical Education, Lebanese American University, 2022',
+      experience: [
+        'Fitness Coach, FitZone Gym, 2022-present: Designed personalized fitness programs and led group training sessions.',
+        'Inclusive Sports Volunteer, Arcenciel, 2021-present: Facilitated adaptive sports sessions for participants with physical disabilities.',
+      ],
+      projects: [
+        'Adaptive Sports Day, 2022: Organized an inclusive sports event with 60 participants including persons with disabilities.',
+        'Rehabilitation Through Sport, 2023: Launched a 6-week physical rehabilitation program for injured conflict survivors.',
+      ],
+    },
+    {
+      first_name: 'Nour', last_name: 'Khalil', email: 'vol21@willing.social', gender: 'female', date_of_birth: '2001-07-03',
+      description: 'Graphic designer volunteering for awareness campaigns and community art projects.',
+      education: 'B.F.A. in Graphic Design, Lebanese American University, expected 2023',
+      experience: [
+        'Junior Graphic Designer, Leo Burnett Beirut, 2022-present: Created visual content for brand campaigns and social media.',
+        'Design Volunteer, Kafa NGO, 2021-present: Produced awareness posters, infographics, and digital assets for GBV campaigns.',
+      ],
+      projects: [
+        'Mental Health Awareness Campaign, 2022: Designed a full visual identity for a national mental health awareness week.',
+        'Community Mural Project, 2023: Art-directed a street mural in Gemmayzeh celebrating community resilience.',
+      ],
+    },
+    {
+      first_name: 'Fares', last_name: 'Aziz', email: 'vol22@willing.social', gender: 'male', date_of_birth: '1997-01-18',
+      description: 'Experienced driver and fleet coordinator. Available for supply transport missions.',
+      education: 'Diploma in Logistics & Transport Management, Beirut Arab University, 2018',
+      experience: [
+        'Fleet Coordinator, Aramex Lebanon, 2018-present: Managed a fleet of 15 delivery vehicles and coordinated daily dispatch routes.',
+        'Transport Volunteer, World Food Programme Lebanon, 2020-present: Drove supply convoys delivering food parcels to remote communities.',
+      ],
+      projects: [
+        'Emergency Supply Convoy, 2020: Coordinated 3 convoy runs delivering relief supplies to 6 villages post-explosion.',
+        'Refugee Settlement Delivery, 2022: Managed weekly delivery runs to 4 informal settlements in the Bekaa Valley.',
+      ],
+    },
+    {
+      first_name: 'Zeina', last_name: 'Saade', email: 'vol23@willing.social', gender: 'female', date_of_birth: '2003-09-25',
+      description: 'University student active in campus environmental clubs and beach cleanup campaigns.',
+      education: 'B.S. in Environmental Health, American University of Beirut, expected 2025',
+      experience: [
+        'Environmental Club President, AUB, 2022-present: Led campus sustainability initiatives and organized community cleanup events.',
+        'Beach Cleanup Volunteer, Our Sea Our Home, 2021-present: Participated in monthly coastal cleanup campaigns across Lebanese shores.',
+      ],
+      projects: [
+        'Zero Waste Campus Week, 2022: Organized a week-long zero waste awareness campaign reaching 500 AUB students.',
+        'Coastal Biodiversity Survey, 2023: Assisted marine biology faculty in documenting coastal species affected by pollution.',
+      ],
+    },
+    {
+      first_name: 'Ali', last_name: 'Berro', email: 'vol24@willing.social', gender: 'male', date_of_birth: '1995-12-11',
+      description: 'Carpenter and handyman with experience in shelter repair and carpentry.',
+      education: 'Vocational Certificate in Carpentry & Woodworking, LVPA Beirut, 2015',
+      experience: [
+        'Carpenter, Berro Woodworks, 2015-present: Custom furniture fabrication and structural woodwork for residential and commercial clients.',
+        'Shelter Repair Volunteer, Habitat for Humanity Lebanon, 2020-present: Repaired and reinforced damaged homes for vulnerable families.',
+      ],
+      projects: [
+        'Post-Blast Shelter Repairs, 2020: Completed emergency carpentry repairs on 20 blast-damaged homes in Geitawi.',
+        'Refugee Shelter Build, 2022: Helped construct 5 prefabricated wooden shelters for displaced families in Akkar.',
+      ],
+    },
+    {
+      first_name: 'Nadine', last_name: 'Harb', email: 'vol25@willing.social', gender: 'female', date_of_birth: '1998-06-29',
+      description: 'Social media manager helping NGOs tell stories and reach wider audiences.',
+      education: 'B.A. in Marketing & Communication, Saint Joseph University, 2020',
+      experience: [
+        'Social Media Manager, Annahar Digital, 2020-present: Managed content strategy and community engagement across digital platforms.',
+        'Digital Storytelling Volunteer, Basmeh & Zeitooneh, 2021-present: Created social media content amplifying refugee community stories.',
+      ],
+      projects: [
+        'NGO Digital Bootcamp, 2022: Trained 12 NGO staff members in social media strategy and content creation.',
+        'Voices from the Field Campaign, 2023: Produced a 10-part digital series documenting volunteer stories across Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Bassem', last_name: 'Chaaban', email: 'vol26@willing.social', gender: 'male', date_of_birth: '1992-02-04',
+      description: 'Former army officer with crisis management and team leadership experience.',
+      education: 'B.S. in Military Science, Lebanese Military Academy, 2014',
+      experience: [
+        'Army Officer, Lebanese Armed Forces, 2014-2020: Led field units in security operations and crisis response missions.',
+        'Crisis Management Volunteer, Lebanese Civil Defense, 2020-present: Coordinated volunteer teams during large-scale emergency responses.',
+      ],
+      projects: [
+        'Disaster Response Coordination, 2020: Directed a 50-person volunteer response team during the Beirut port explosion.',
+        'Crisis Leadership Training, 2022: Delivered a 2-day crisis management workshop for 30 NGO field coordinators.',
+      ],
+    },
+    {
+      first_name: 'Tala', last_name: 'Srour', email: 'vol27@willing.social', gender: 'female', date_of_birth: '2004-03-17',
+      description: 'High school student eager to contribute to local relief and community events.',
+      education: 'Currently enrolled, International College Beirut, expected graduation 2022',
+      experience: [
+        'Community Event Volunteer, Rotaract Club Beirut, 2022-present: Assisted in organizing charity events and community service days.',
+        'Relief Helper, Lebanese Red Cross Youth, 2022: Supported distribution of aid packages during holiday relief drives.',
+      ],
+      projects: [
+        'School Fundraiser for Refugees, 2022: Organized a bake sale and raffle raising funds for a local refugee family.',
+        'Neighborhood Cleanup Day, 2023: Mobilized 15 classmates for a community cleanup in the Hamra neighborhood.',
+      ],
+    },
+    {
+      first_name: 'Georges', last_name: 'Daou', email: 'vol28@willing.social', gender: 'male', date_of_birth: '1990-10-08',
+      description: 'Retired schoolteacher willing to tutor children and run literacy workshops.',
+      education: 'B.A. in Arabic Language & Literature, Lebanese University, 1992',
+      experience: [
+        'Arabic Teacher, Collège Notre Dame de Jamhour, 1992-2020: Taught Arabic language and literature to secondary school students.',
+        'Literacy Workshop Facilitator, Arcenciel, 2020-present: Ran weekly Arabic literacy sessions for adults and children in shelters.',
+      ],
+      projects: [
+        'Summer Literacy Program, 2021: Delivered a 4-week reading and writing program for 35 children in Tripoli.',
+        'Adult Literacy Circle, 2022: Established an ongoing weekly literacy group for 20 displaced adult learners.',
+      ],
+    },
+    {
+      first_name: 'Hiba', last_name: 'Itani', email: 'vol29@willing.social', gender: 'female', date_of_birth: '2002-12-22',
+      description: 'Trained sign language interpreter with experience in inclusive events.',
+      education: 'B.A. in Deaf Studies & Sign Language Interpretation, Lebanese University, expected 2024',
+      experience: [
+        'Sign Language Interpreter Intern, Haraki NGO, 2022-present: Provided interpretation services at public events and community meetings.',
+        'Inclusion Volunteer, Arcenciel, 2021-2022: Supported deaf and hard-of-hearing participants in community programs.',
+      ],
+      projects: [
+        'Accessible Relief Briefing, 2022: Provided live sign language interpretation at a disaster relief information session.',
+        'Deaf Awareness Day, 2023: Helped organize an inclusive community event celebrating deaf culture and accessibility.',
+      ],
+    },
+    {
+      first_name: 'Bilal', last_name: 'Moussawi', email: 'vol30@willing.social', gender: 'male', date_of_birth: '1999-05-15',
+      description: 'Mechanic and driver with experience supporting mobile relief convoys.',
+      education: 'Vocational Certificate in Automotive Mechanics, NSSF Technical Institute, 2019',
+      experience: [
+        'Mechanic, Al Moussawi Auto Service, 2019-present: Performed vehicle maintenance and emergency repairs for fleet clients.',
+        'Convoy Support Volunteer, World Vision Lebanon, 2020-present: Maintained and drove vehicles on humanitarian supply runs.',
+      ],
+      projects: [
+        'Mobile Convoy Maintenance, 2021: Ensured mechanical readiness of 8 relief vehicles during a 3-week Bekaa deployment.',
+        'Vehicle Donation Drive, 2022: Helped refurbish 3 donated vehicles for use by a local relief organization.',
+      ],
+    },
+    {
+      first_name: 'Carla', last_name: 'Aoun', email: 'vol31@willing.social', gender: 'female', date_of_birth: '2001-08-30',
+      description: 'Dietitian student interested in community nutrition and food security programs.',
+      education: 'B.S. in Nutrition & Dietetics, American University of Beirut, expected 2023',
+      experience: [
+        'Nutrition Intern, WFP Lebanon, 2022-present: Assisted in food security assessments and nutrition education sessions.',
+        'Food Security Volunteer, Feeding Lebanon, 2021-2022: Helped prepare and distribute nutritious meals to food-insecure families.',
+      ],
+      projects: [
+        'Community Nutrition Workshop, 2022: Designed and delivered a nutrition education session for 40 mothers in the Bekaa.',
+        'School Meal Program, 2023: Assisted in planning balanced weekly menus for a feeding program serving 200 students.',
+      ],
+    },
+    {
+      first_name: 'Hassan', last_name: 'Jaber', email: 'vol32@willing.social', gender: 'male', date_of_birth: '1994-04-14',
+      description: 'Agricultural specialist supporting farm recovery and soil restoration efforts.',
+      education: 'B.S. in Agriculture & Food Sciences, American University of Beirut, 2016',
+      experience: [
+        'Agricultural Advisor, Ministry of Agriculture Lebanon, 2016-present: Provided technical guidance to farmers on sustainable practices.',
+        'Farm Recovery Volunteer, Souk el Tayeb, 2020-present: Supported smallholder farmers in restoring crops after disaster damage.',
+      ],
+      projects: [
+        'Soil Restoration Project, 2021: Led a soil remediation effort across 10 farming plots in South Lebanon.',
+        'Farmer Training Program, 2022: Delivered agricultural best practice workshops to 30 smallholder farmers in Akkar.',
+      ],
+    },
+    {
+      first_name: 'Mia', last_name: 'Stephan', email: 'vol33@willing.social', gender: 'female', date_of_birth: '2003-01-09',
+      description: 'Theater student running storytelling and drama workshops for displaced youth.',
+      education: 'B.F.A. in Theater Arts, Lebanese American University, expected 2025',
+      experience: [
+        'Drama Workshop Facilitator, Zico House Beirut, 2022-present: Led weekly drama and improvisation sessions for youth aged 12-18.',
+        'Storytelling Volunteer, Basmeh & Zeitooneh, 2022: Ran storytelling circles for displaced children in Beirut informal settlements.',
+      ],
+      projects: [
+        'Voices of Displacement, 2022: Produced a short play co-written with displaced youth performed at a community theater.',
+        'Drama Therapy Camp, 2023: Co-facilitated a week-long drama therapy camp for 30 conflict-affected children in the Bekaa.',
+      ],
+    },
+    {
+      first_name: 'Kamal', last_name: 'Saleh', email: 'vol34@willing.social', gender: 'male', date_of_birth: '1988-07-21',
+      description: 'Experienced plumber and water systems technician supporting flood and WASH recovery.',
+      education: 'Vocational Certificate in Plumbing & Water Systems, CNRS Technical Institute, 2008',
+      experience: [
+        'Senior Plumber, Saleh Technical Services, 2008-present: Installed and maintained water systems for residential and commercial properties.',
+        'WASH Technician Volunteer, UNICEF Lebanon, 2019-present: Repaired water and sanitation infrastructure in displacement settings.',
+      ],
+      projects: [
+        'Flood Recovery WASH Response, 2021: Restored water supply to 3 flood-damaged villages in North Lebanon within 5 days.',
+        'Shelter Sanitation Upgrade, 2022: Installed proper sanitation facilities in 2 informal displacement settlements in Akkar.',
+      ],
+    },
+    {
+      first_name: 'Joelle', last_name: 'Abou Jaoude', email: 'vol35@willing.social', gender: 'female', date_of_birth: '2000-09-05',
+      description: 'Public health graduate working on community health education and hygiene promotion.',
+      education: 'B.S. in Public Health, American University of Beirut, 2022',
+      experience: [
+        'Health Educator, Ministry of Public Health Lebanon, 2022-present: Delivered community health sessions on hygiene and disease prevention.',
+        'Hygiene Promotion Volunteer, IRC Lebanon, 2021-2022: Conducted hygiene promotion visits in refugee settlements across the Bekaa.',
+      ],
+      projects: [
+        'Cholera Prevention Campaign, 2022: Led hygiene awareness sessions reaching over 300 households during a cholera outbreak.',
+        'School Health Program, 2023: Implemented a handwashing and hygiene curriculum in 5 public schools in Tripoli.',
+      ],
+    },
+    {
+      first_name: 'Wissam', last_name: 'Khalife', email: 'vol36@willing.social', gender: 'male', date_of_birth: '1996-03-28',
+      description: 'IT support volunteer helping NGOs with tech setup, connectivity, and device repair.',
+      education: 'B.S. in Computer Engineering, Lebanese University, 2018',
+      experience: [
+        'IT Support Engineer, Touch Lebanon, 2018-present: Provided network setup, device repair, and technical support services.',
+        'Tech Support Volunteer, Restart Lebanon, 2020-present: Repaired donated laptops and set up internet connectivity for NGO offices.',
+      ],
+      projects: [
+        'NGO Tech Setup, 2020: Deployed and configured IT infrastructure for 3 relief organizations post-explosion.',
+        'Device Repair Workshop, 2022: Trained 10 volunteers to perform basic laptop and tablet repairs for community use.',
+      ],
+    },
+    {
+      first_name: 'Rola', last_name: 'Hamdan', email: 'vol37@willing.social', gender: 'female', date_of_birth: '1991-11-13',
+      description: 'Lawyer providing pro-bono legal information and referral services to displaced persons.',
+      education: 'LL.B. in Law, Saint Joseph University, 2013',
+      experience: [
+        'Lawyer, Hamdan & Associates, 2013-present: Specialized in civil and refugee law with focus on displacement and human rights.',
+        'Pro-Bono Legal Aid Volunteer, UNHCR Lebanon, 2015-present: Provided free legal consultations and referrals to displaced persons.',
+      ],
+      projects: [
+        'Legal Aid Clinic, 2020: Ran a weekly drop-in legal clinic serving over 80 displaced families in Beirut.',
+        'Know Your Rights Workshop, 2022: Delivered legal rights awareness sessions to 50 Syrian refugees in the Bekaa Valley.',
+      ],
+    },
+    {
+      first_name: 'Khaled', last_name: 'Mikati', email: 'vol38@willing.social', gender: 'male', date_of_birth: '2002-06-07',
+      description: 'Football coach organizing youth leagues and inclusive sport days in North Lebanon.',
+      education: 'B.S. in Sports Science, Lebanese University, expected 2024',
+      experience: [
+        'Youth Football Coach, Tripoli Sports Club, 2021-present: Trained and mentored youth football teams aged 10-17.',
+        'Inclusive Sports Volunteer, Right to Play Lebanon, 2022-present: Organized inclusive sport sessions for children with and without disabilities.',
+      ],
+      projects: [
+        'North Lebanon Youth League, 2022: Coordinated a 6-team youth football tournament involving 90 players from Tripoli.',
+        'Unified Sports Day, 2023: Organized a mixed-ability sports day with 80 participants in Tripoli.',
+      ],
+    },
+    {
+      first_name: 'Cynthia', last_name: 'Frem', email: 'vol39@willing.social', gender: 'female', date_of_birth: '1997-02-16',
+      description: 'Event planner supporting community fundraisers, awareness drives, and distribution events.',
+      education: 'B.B.A. in Hospitality & Event Management, Notre Dame University, 2019',
+      experience: [
+        'Event Manager, LBCI Events, 2019-present: Planned and executed large-scale media and community events across Lebanon.',
+        'Fundraiser Coordinator Volunteer, Beit el Baraka, 2020-present: Organized charity events and donation drives for vulnerable families.',
+      ],
+      projects: [
+        'Annual Charity Gala, 2021: Managed all logistics for a 300-person charity fundraiser raising over $15,000.',
+        'Community Distribution Event, 2022: Coordinated a large-scale aid distribution event serving 500 families in Baalbek.',
+      ],
+    },
+    {
+      first_name: 'Mazen', last_name: 'Abou Rizk', email: 'vol40@willing.social', gender: 'male', date_of_birth: '1993-08-03',
+      description: 'Structural engineer assessing damaged buildings and guiding repair volunteers safely.',
+      education: 'B.S. in Structural Engineering, American University of Beirut, 2015',
+      experience: [
+        'Structural Engineer, Dar Al-Handasah, 2015-present: Assessed and designed structural rehabilitation for damaged infrastructure.',
+        'Building Assessment Volunteer, Order of Engineers Lebanon, 2020-present: Conducted safety assessments on blast and disaster-damaged buildings.',
+      ],
+      projects: [
+        'Post-Explosion Assessment, 2020: Assessed structural safety of over 60 buildings in the Beirut port blast zone.',
+        'Rural Housing Rehabilitation, 2022: Supervised structural repairs on 15 homes damaged by floods in Akkar.',
+      ],
+    },
+    {
+      first_name: 'Ghada', last_name: 'Rahhal', email: 'vol41@willing.social', gender: 'female', date_of_birth: '2001-04-19',
+      description: 'Arabic calligrapher and art educator bringing creative healing workshops to communities.',
+      education: 'B.F.A. in Fine Arts with Calligraphy Specialization, Lebanese University, expected 2023',
+      experience: [
+        'Art Educator, Sursock Museum Education Program, 2022-present: Facilitated creative arts workshops for community groups.',
+        'Calligraphy Workshop Facilitator, Basmeh & Zeitooneh, 2021-present: Led Arabic calligraphy sessions for displaced adults and youth.',
+      ],
+      projects: [
+        'Healing Through Art, 2022: Designed a 6-week art therapy curriculum for trauma-affected women in Beirut.',
+        'Calligraphy for Community, 2023: Produced a collaborative calligraphy artwork displayed at a community center opening.',
+      ],
+    },
+    {
+      first_name: 'Tony', last_name: 'Khoury', email: 'vol42@willing.social', gender: 'male', date_of_birth: '1998-10-27',
+      description: 'Supply chain analyst helping NGOs optimize donations and distribution logistics.',
+      education: 'B.S. in Supply Chain Management, Lebanese American University, 2020',
+      experience: [
+        'Supply Chain Analyst, Majid Al Futtaim Lebanon, 2020-present: Optimized procurement, inventory, and distribution processes.',
+        'Logistics Volunteer, World Food Programme Lebanon, 2021-present: Analyzed and improved donation intake and distribution workflows for NGO partners.',
+      ],
+      projects: [
+        'NGO Distribution Audit, 2021: Identified and resolved logistics inefficiencies saving 20% in delivery costs for a Beirut NGO.',
+        'Donation Tracking System, 2022: Built a simple inventory management tool adopted by 3 relief organizations.',
+      ],
+    },
+    {
+      first_name: 'Dina', last_name: 'Mansour', email: 'vol43@willing.social', gender: 'female', date_of_birth: '2000-01-14',
+      description: 'Medical laboratory student assisting in blood drives and health screening days.',
+      education: 'B.S. in Medical Laboratory Sciences, Saint Joseph University, expected 2022',
+      experience: [
+        'Lab Intern, Hotel Dieu de France Hospital, 2021-2022: Assisted in sample processing, blood typing, and diagnostic testing.',
+        'Blood Drive Volunteer, Lebanese Red Cross, 2020-present: Registered donors, collected samples, and coordinated blood donation events.',
+      ],
+      projects: [
+        'Campus Blood Drive, 2021: Organized a university blood donation event collecting 80 units in a single day.',
+        'Community Health Screening, 2022: Assisted in a free health screening day testing 150 residents for diabetes and hypertension.',
+      ],
+    },
+    {
+      first_name: 'Fouad', last_name: 'Geagea', email: 'vol44@willing.social', gender: 'male', date_of_birth: '1989-05-31',
+      description: 'Experienced chef and culinary trainer managing large-scale community kitchens.',
+      education: 'Diploma in Professional Culinary Arts, AUST Culinary Institute, 2010',
+      experience: [
+        'Head Chef, Le Chef Restaurant Gemmayzeh, 2010-present: Managed kitchen operations and staff training for a high-volume restaurant.',
+        'Community Kitchen Manager, Foodblessed Lebanon, 2019-present: Oversaw daily preparation and service of 500+ meals for vulnerable populations.',
+      ],
+      projects: [
+        'Crisis Kitchen Mobilization, 2020: Set up and ran an emergency kitchen feeding 700 people daily in the weeks after the Beirut blast.',
+        'Culinary Training for Youth, 2022: Delivered a vocational cooking course to 20 unemployed young adults in Tripoli.',
+      ],
+    },
+    {
+      first_name: 'Leen', last_name: 'Khoury', email: 'vol45@willing.social', gender: 'female', date_of_birth: '2004-07-11',
+      description: 'Teen volunteer passionate about environmental activism and ocean conservation.',
+      education: 'Currently enrolled, Lycee Abdel Kader, expected graduation 2022',
+      experience: [
+        'Student Environmental Activist, Youth for Climate Lebanon, 2021-present: Organized school-based climate awareness campaigns.',
+        'Ocean Conservation Volunteer, Our Sea Our Home, 2022-present: Participated in coastal cleanups and marine awareness events.',
+      ],
+      projects: [
+        'School Recycling Program, 2022: Introduced a classroom recycling initiative adopted school-wide.',
+        'Ocean Awareness Day, 2023: Helped organize a coastal event with 60 student volunteers removing plastic waste.',
+      ],
+    },
+    {
+      first_name: 'Adnan', last_name: 'Wehbe', email: 'vol46@willing.social', gender: 'male', date_of_birth: '1986-12-24',
+      description: 'Former UNHCR field officer with refugee registration and case management experience.',
+      education: 'M.A. in International Humanitarian Action, American University of Beirut, 2012',
+      experience: [
+        'Field Officer, UNHCR Lebanon, 2012-2022: Managed refugee registration, case management, and protection monitoring across Lebanon.',
+        'Humanitarian Consultant, NRC Lebanon, 2022-present: Advised NGOs on refugee response strategy and field operations.',
+      ],
+      projects: [
+        'Bekaa Registration Drive, 2018: Led a team registering over 3,000 newly arrived refugees in the Bekaa Valley.',
+        'Protection Monitoring Report, 2020: Compiled and presented a regional protection assessment to UN agency partners.',
+      ],
+    },
+    {
+      first_name: 'Reem', last_name: 'Diab', email: 'vol47@willing.social', gender: 'female', date_of_birth: '2002-03-03',
+      description: 'Student journalist documenting community relief efforts for awareness and advocacy.',
+      education: 'B.A. in Journalism & Media Studies, Lebanese American University, expected 2024',
+      experience: [
+        'Student Reporter, LAU Outlook, 2021-present: Covered community stories and investigative pieces for the university newspaper.',
+        'Advocacy Volunteer, Reporters Without Borders Lebanon, 2022: Documented frontline relief stories for advocacy publications.',
+      ],
+      projects: [
+        'Relief Stories Series, 2022: Produced a 5-article series profiling volunteers and beneficiaries of Beirut relief operations.',
+        'Community Voices Documentary, 2023: Co-produced a short documentary on displaced families in North Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Nidal', last_name: 'Haidar', email: 'vol48@willing.social', gender: 'male', date_of_birth: '1995-09-17',
+      description: 'Solar energy technician supporting off-grid power solutions for relief organizations.',
+      education: 'B.S. in Electrical Engineering, Lebanese University, 2017',
+      experience: [
+        'Solar Technician, Solartech Lebanon, 2017-present: Installed and maintained off-grid solar power systems across Lebanon.',
+        'Energy Volunteer, Arcenciel, 2020-present: Deployed solar solutions for displacement shelters and relief organization offices.',
+      ],
+      projects: [
+        'Shelter Solar Installation, 2021: Installed solar panels providing electricity to 3 community shelters in Akkar.',
+        'Off-Grid Power for NGO, 2022: Designed and deployed a full solar energy system for a relief organization field office.',
+      ],
+    },
+    {
+      first_name: 'Aline', last_name: 'Eid', email: 'vol49@willing.social', gender: 'female', date_of_birth: '1999-06-20',
+      description: 'Early childhood educator running learning circles and play-based activities for young children.',
+      education: 'B.A. in Early Childhood Education, Notre Dame University, 2021',
+      experience: [
+        'Kindergarten Teacher, Little Stars School Byblos, 2021-present: Developed and delivered play-based learning programs for children aged 3-6.',
+        'Early Childhood Volunteer, Save the Children Lebanon, 2020-present: Ran learning circles and structured play sessions for displaced young children.',
+      ],
+      projects: [
+        'Play & Learn Program, 2022: Launched a weekly play-based learning session for 25 children in a Beirut displacement shelter.',
+        'Early Learning Kit Distribution, 2023: Assembled and distributed 100 early learning activity kits to families in Tripoli.',
+      ],
+    },
+    {
+      first_name: 'Riad', last_name: 'Zein', email: 'vol50@willing.social', gender: 'male', date_of_birth: '1997-08-08',
+      description: 'Warehouse supervisor with extensive experience managing large donation stockrooms.',
+      education: 'B.B.A. in Operations Management, Beirut Arab University, 2019',
+      experience: [
+        'Warehouse Supervisor, Spinneys Lebanon, 2019-present: Managed stockroom operations, inventory control, and team supervision.',
+        'Donations Warehouse Lead, Beit el Baraka, 2020-present: Oversaw intake, sorting, and dispatch of donated goods for relief distribution.',
+      ],
+      projects: [
+        'Emergency Stockroom Setup, 2020: Established a functional donations warehouse from scratch within 48 hours post-explosion.',
+        'Inventory Digitization, 2022: Introduced a barcode-based inventory system improving accuracy by 35%.',
+      ],
+    },
+    {
+      first_name: 'Myriam', last_name: 'Aboud', email: 'vol51@willing.social', gender: 'female', date_of_birth: '2003-11-04',
+      description: 'Music student offering music therapy and choir workshops in shelters and community centers.',
+      education: 'B.Mus. in Music Performance, Lebanese National Higher Conservatory of Music, expected 2025',
+      experience: [
+        'Music Therapy Volunteer, Embrace Lebanon, 2022-present: Facilitated music therapy sessions for trauma-affected individuals in shelters.',
+        'Choir Workshop Facilitator, Zico House, 2022: Led weekly choir rehearsals for community members of all ages.',
+      ],
+      projects: [
+        'Shelter Choir Program, 2022: Established a weekly choir group for 20 displaced residents in a Beirut shelter.',
+        'Healing Notes Concert, 2023: Organized a community concert featuring shelter choir participants raising awareness for mental health.',
+      ],
+    },
+    {
+      first_name: 'Saad', last_name: 'Farran', email: 'vol52@willing.social', gender: 'male', date_of_birth: '1990-03-22',
+      description: 'Veterinarian assisting animal rescue and care efforts in disaster-affected regions.',
+      education: 'D.V.M. in Veterinary Medicine, Lebanese University, 2014',
+      experience: [
+        'Veterinarian, Animal Care Clinic Beirut, 2014-present: Provided medical care, surgery, and emergency treatment for animals.',
+        'Animal Rescue Volunteer, Animals Lebanon, 2020-present: Rescued, treated, and rehomed animals displaced by disasters.',
+      ],
+      projects: [
+        'Post-Explosion Animal Rescue, 2020: Rescued over 40 animals trapped or injured in the Beirut port blast zone.',
+        'Disaster Area Veterinary Clinic, 2022: Set up a mobile veterinary clinic serving animals in flood-affected villages in Akkar.',
+      ],
+    },
+    {
+      first_name: 'Natalia', last_name: 'Frem', email: 'vol53@willing.social', gender: 'female', date_of_birth: '2001-05-29',
+      description: 'Fashion design student upcycling donated clothing for distribution in refugee camps.',
+      education: 'B.F.A. in Fashion Design, ESMOD Beirut, expected 2023',
+      experience: [
+        'Fashion Design Intern, Starch Foundation, 2022-present: Assisted emerging designers in sustainable and upcycled fashion production.',
+        'Clothing Upcycling Volunteer, Basmeh & Zeitooneh, 2021-present: Sorted and creatively altered donated clothing for refugee camp distribution.',
+      ],
+      projects: [
+        'Upcycle for Dignity, 2022: Transformed 500 donated garments into wearable clothing distributed to refugee families.',
+        'Fashion for Good Workshop, 2023: Led a sewing and upcycling workshop teaching 15 refugee women basic tailoring skills.',
+      ],
+    },
+    {
+      first_name: 'Bassel', last_name: 'Khodr', email: 'vol54@willing.social', gender: 'male', date_of_birth: '1994-07-16',
+      description: 'Geography teacher assisting with mapping disaster zones and logistics planning for NGOs.',
+      education: 'B.A. in Geography & GIS, Lebanese University, 2016',
+      experience: [
+        'Geography Teacher, Makassed Schools Beirut, 2016-present: Taught geography, cartography, and GIS to secondary students.',
+        'Disaster Mapping Volunteer, MapAction Lebanon, 2020-present: Produced GIS maps of disaster-affected zones for humanitarian response planning.',
+      ],
+      projects: [
+        'Beirut Blast Impact Map, 2020: Created detailed GIS maps of the blast damage zone used by 6 relief organizations.',
+        'Flood Zone Mapping, 2022: Mapped flood-affected areas in North Lebanon to assist in aid prioritization.',
+      ],
+    },
+    {
+      first_name: 'Hind', last_name: 'Assaf', email: 'vol55@willing.social', gender: 'female', date_of_birth: '1998-02-11',
+      description: 'Community organizer experienced in mobilizing volunteers for neighborhood recovery projects.',
+      education: 'B.A. in Sociology, American University of Beirut, 2020',
+      experience: [
+        'Community Organizer, Beirut Urban Lab, 2020-present: Facilitated neighborhood engagement and volunteer mobilization for urban recovery.',
+        'Volunteer Coordinator, Offre Joie, 2020-present: Recruited and managed volunteer teams for large-scale relief operations.',
+      ],
+      projects: [
+        'Gemmayze Recovery Project, 2020: Mobilized 80 volunteers for a 3-month neighborhood rehabilitation effort.',
+        'Community Resilience Forum, 2022: Organized a multi-stakeholder community forum bringing together 120 residents and NGOs.',
+      ],
+    },
+    {
+      first_name: 'Youssef', last_name: 'Nasser', email: 'vol56@willing.social', gender: 'male', date_of_birth: '2002-10-18',
+      description: 'Engineering student building makeshift infrastructure for displaced communities.',
+      education: 'B.S. in Civil Engineering, Lebanese American University, expected 2024',
+      experience: [
+        'Engineering Intern, CDR Lebanon, 2022-present: Assisted in infrastructure assessment and rehabilitation project planning.',
+        'Infrastructure Volunteer, Habitat for Humanity Lebanon, 2021-present: Built and repaired basic structures for displaced families.',
+      ],
+      projects: [
+        'Makeshift Shelter Build, 2022: Led construction of 4 temporary shelters for displaced families in the Bekaa Valley.',
+        'Community Water Point, 2023: Helped install a communal water access point for a 50-family informal settlement.',
+      ],
+    },
+    {
+      first_name: 'Abir', last_name: 'Mourad', email: 'vol57@willing.social', gender: 'female', date_of_birth: '1993-04-05',
+      description: 'Accountant volunteering for NGO financial transparency and grant reporting support.',
+      education: 'B.B.A. in Accounting, Saint Joseph University, 2015',
+      experience: [
+        'Senior Accountant, Deloitte Lebanon, 2015-present: Managed audit, financial reporting, and compliance for NGO and corporate clients.',
+        'Finance Volunteer, Transparency International Lebanon, 2019-present: Provided pro-bono financial review and grant reporting support to small NGOs.',
+      ],
+      projects: [
+        'NGO Financial Audit, 2021: Conducted a pro-bono financial audit for a local relief organization ensuring donor compliance.',
+        'Grant Reporting Workshop, 2022: Delivered a training session on grant financial reporting to staff of 5 NGOs.',
+      ],
+    },
+    {
+      first_name: 'Ramzi', last_name: 'Charaf', email: 'vol58@willing.social', gender: 'male', date_of_birth: '1988-01-29',
+      description: 'Veteran field coordinator managing large multi-organization volunteer deployments.',
+      education: 'M.A. in Humanitarian Assistance, Lebanese American University, 2012',
+      experience: [
+        'Field Coordinator, OCHA Lebanon, 2012-present: Managed inter-agency coordination and volunteer deployments during humanitarian crises.',
+        'Deployment Manager, Offre Joie, 2015-present: Coordinated large-scale volunteer mobilizations across Lebanon for relief operations.',
+      ],
+      projects: [
+        'Multi-Agency Explosion Response, 2020: Coordinated 200+ volunteers from 10 organizations in the Beirut blast response.',
+        'National Volunteer Deployment Plan, 2021: Developed a standardized volunteer deployment framework adopted by 8 NGOs.',
+      ],
+    },
+    {
+      first_name: 'Pamela', last_name: 'Harb', email: 'vol59@willing.social', gender: 'female', date_of_birth: '2004-08-22',
+      description: 'Teen environmental volunteer running awareness campaigns in her school district.',
+      education: 'Currently enrolled, College Protestant Francais, expected graduation 2022',
+      experience: [
+        'Environmental Club Leader, College Protestant Francais, 2021-present: Organized school-wide environmental campaigns and green initiatives.',
+        'Awareness Campaign Volunteer, Youth for Climate Lebanon, 2022-present: Participated in climate marches and community awareness drives.',
+      ],
+      projects: [
+        'Plastic-Free School Campaign, 2022: Led a campaign eliminating single-use plastics in the school cafeteria.',
+        'Tree Planting Day, 2023: Organized a school tree planting event with 40 student volunteers.',
+      ],
+    },
+    {
+      first_name: 'Fadi', last_name: 'Daher', email: 'vol60@willing.social', gender: 'male', date_of_birth: '1996-06-13',
+      description: 'Pharmacist supporting medicine distribution, cold chain management, and health fairs.',
+      education: 'Pharm.D. in Pharmacy, Saint Joseph University, 2019',
+      experience: [
+        'Clinical Pharmacist, Sacre Coeur Hospital Beirut, 2019-present: Managed pharmaceutical dispensing, drug interaction review, and patient counseling.',
+        'Medicine Distribution Volunteer, Lebanese Red Cross, 2020-present: Coordinated medicine collection, cold chain management, and distribution for relief operations.',
+      ],
+      projects: [
+        'Emergency Pharmacy Setup, 2020: Established a temporary community pharmacy dispensing essential medicines post-explosion.',
+        'Health Fair Medication Drive, 2022: Organized medicine collection and free dispensing at a community health fair serving 300 residents.',
+      ],
+    },
+    {
+      first_name: 'Yasmine', last_name: 'Saleh', email: 'vol61@willing.social', gender: 'female', date_of_birth: '2000-12-01',
+      description: 'Child psychologist providing age-appropriate mental health activities in displacement shelters.',
+      education: 'M.A. in Child Psychology, Saint Joseph University, expected 2023',
+      experience: [
+        'Psychology Intern, LFPME, 2022-present: Delivered structured psychosocial support activities for children in displacement settings.',
+        'Mental Health Volunteer, Embrace Lebanon, 2021-present: Facilitated group mental health sessions for children aged 6-14 in shelters.',
+      ],
+      projects: [
+        'Child Wellbeing Program, 2022: Designed a 10-week mental health activity program for 40 displaced children in Beirut.',
+        'Play Therapy Initiative, 2023: Introduced play therapy techniques used by 5 other volunteers in a Bekaa shelter program.',
+      ],
+    },
+    {
+      first_name: 'Marwan', last_name: 'Khoury', email: 'vol62@willing.social', gender: 'male', date_of_birth: '1991-09-09',
+      description: 'Professional chef running food safety training and community cooking events.',
+      education: 'Diploma in Culinary Arts, Le Cordon Bleu Paris, 2013',
+      experience: [
+        'Executive Chef, Liza Restaurant Beirut, 2013-present: Led kitchen operations and menu development for an award-winning restaurant.',
+        'Food Safety Trainer, Ministry of Economy Lebanon, 2019-present: Delivered food safety and hygiene training to catering and relief kitchen staff.',
+      ],
+      projects: [
+        'Community Cooking Festival, 2022: Organized a food festival celebrating Lebanese cuisine and raising funds for local relief.',
+        'Relief Kitchen Staff Training, 2021: Trained 20 volunteer kitchen workers in food safety and bulk meal preparation.',
+      ],
+    },
+    {
+      first_name: 'Rania', last_name: 'Tabbara', email: 'vol63@willing.social', gender: 'female', date_of_birth: '1997-03-14',
+      description: 'Environmental scientist supporting coastal pollution assessment and cleanup coordination.',
+      education: 'B.S. in Environmental Science, American University of Beirut, 2019',
+      experience: [
+        'Environmental Scientist, Ministry of Environment Lebanon, 2019-present: Conducted coastal and marine pollution assessments and remediation planning.',
+        'Cleanup Coordinator, Our Sea Our Home, 2020-present: Organized and led coastal cleanup operations across Lebanese shores.',
+      ],
+      projects: [
+        'Coastal Pollution Report, 2021: Co-authored a pollution assessment report on 10km of Beirut coastline submitted to the Ministry.',
+        'Northern Shores Cleanup, 2022: Coordinated a cleanup campaign with 50 volunteers removing 1.2 tons of waste from Batroun beaches.',
+      ],
+    },
+    {
+      first_name: 'Majd', last_name: 'Makhoul', email: 'vol64@willing.social', gender: 'male', date_of_birth: '2003-07-27',
+      description: 'Youth activist and community garden project leader in Tripoli.',
+      education: 'B.S. in Agricultural Sciences, Lebanese University, expected 2025',
+      experience: [
+        'Community Garden Coordinator, Tripoli Urban Agriculture Initiative, 2022-present: Managed a community garden project providing fresh produce to local families.',
+        'Youth Activist, Lebanese Environment Forum, 2021-present: Organized youth-led environmental campaigns and community engagement events.',
+      ],
+      projects: [
+        'Tripoli Community Garden, 2022: Established a 500sqm community garden producing vegetables for 20 local families.',
+        'Green Schools Initiative, 2023: Launched an environmental education program in 3 Tripoli schools.',
+      ],
+    },
+    {
+      first_name: 'Sana', last_name: 'Itani', email: 'vol65@willing.social', gender: 'female', date_of_birth: '1999-01-23',
+      description: 'Human resources professional streamlining volunteer onboarding and coordination systems.',
+      education: 'B.B.A. in Human Resources Management, Lebanese American University, 2021',
+      experience: [
+        'HR Coordinator, Booz Allen Hamilton Beirut, 2021-present: Managed recruitment, onboarding, and HR operations for regional office.',
+        'Volunteer Management Lead, Offre Joie, 2021-present: Designed and implemented volunteer onboarding, scheduling, and retention systems.',
+      ],
+      projects: [
+        'Volunteer Onboarding Redesign, 2022: Reduced volunteer onboarding time by 50% through a new digital intake process.',
+        'HR Workshop for NGOs, 2023: Delivered a volunteer management best practices workshop to staff from 8 NGOs.',
+      ],
+    },
+    {
+      first_name: 'Khalil', last_name: 'Nassif', email: 'vol66@willing.social', gender: 'male', date_of_birth: '1992-11-06',
+      description: 'Electrician providing safe wiring and generator support to shelters and relief centers.',
+      education: 'Vocational Certificate in Electrical Installation, CNRS Technical Institute, 2012',
+      experience: [
+        'Master Electrician, Nassif Electric, 2012-present: Installed and maintained electrical systems for residential and commercial clients.',
+        'Electrical Support Volunteer, Arcenciel, 2020-present: Provided safe wiring and generator installation for displacement shelters and relief offices.',
+      ],
+      projects: [
+        'Shelter Electrical Setup, 2020: Wired and connected generators to provide electricity for 5 Beirut community shelters post-explosion.',
+        'Relief Center Power Upgrade, 2022: Upgraded the electrical system of a major relief coordination center in Tripoli.',
+      ],
+    },
+    {
+      first_name: 'Lina', last_name: 'Feghali', email: 'vol67@willing.social', gender: 'female', date_of_birth: '2001-02-28',
+      description: 'Social media coordinator amplifying NGO volunteer calls and community stories online.',
+      education: 'B.A. in Digital Media & Communication, Notre Dame University, expected 2023',
+      experience: [
+        'Social Media Intern, Annahar, 2022-present: Managed social media accounts and produced digital content for news coverage.',
+        'Digital Volunteer, Impact Lebanon, 2021-present: Created and managed social media content amplifying NGO volunteer recruitment and community stories.',
+      ],
+      projects: [
+        'Volunteer Recruitment Campaign, 2022: Ran a social media campaign that recruited 200 new volunteers for a relief coalition.',
+        'Community Stories Series, 2023: Produced a digital storytelling series reaching 50,000 followers across platforms.',
+      ],
+    },
+    {
+      first_name: 'Malek', last_name: 'Haddad', email: 'vol68@willing.social', gender: 'male', date_of_birth: '2004-04-14',
+      description: 'Student athlete coaching youth sports and running inclusive fitness sessions.',
+      education: 'Currently enrolled, Beirut Islamic College, expected graduation 2022',
+      experience: [
+        'Youth Sports Coach, Beirut Athletic Club, 2022-present: Coached youth basketball and fitness sessions for teenagers.',
+        'Inclusive Fitness Volunteer, Right to Play Lebanon, 2022-present: Led inclusive sport sessions integrating children with and without disabilities.',
+      ],
+      projects: [
+        'Youth Basketball League, 2022: Organized and refereed a 4-team youth basketball tournament in Beirut.',
+        'Inclusive Fitness Day, 2023: Co-organized a community fitness event with 50 participants of mixed abilities.',
+      ],
+    },
+    {
+      first_name: 'Riwa', last_name: 'Ghanem', email: 'vol69@willing.social', gender: 'female', date_of_birth: '2002-06-30',
+      description: 'Biology student assisting environmental NGOs with species monitoring and habitat restoration.',
+      education: 'B.S. in Biology, American University of Beirut, expected 2024',
+      experience: [
+        'Research Assistant, AUB Marine & Freshwater Research Unit, 2022-present: Assisted in species monitoring and habitat assessment fieldwork.',
+        'Habitat Restoration Volunteer, Green Area NGO, 2021-present: Participated in coastal and forest habitat restoration projects.',
+      ],
+      projects: [
+        'Marine Species Survey, 2022: Assisted in documenting marine biodiversity along 5km of Lebanese coastline.',
+        'Reforestation Campaign, 2023: Participated in planting 300 native trees in a degraded forest area in Keserwan.',
+      ],
+    },
+    {
+      first_name: 'Majd', last_name: 'Farhat', email: 'vol70@willing.social', gender: 'male', date_of_birth: '1985-08-15',
+      description: 'Logistics manager with 15 years of supply chain experience supporting humanitarian relief operations.',
+      education: 'M.B.A. in Supply Chain Management, American University of Beirut, 2010',
+      experience: [
+        'Logistics Director, TNT Lebanon, 2010-present: Led national logistics operations including procurement, warehousing, and distribution.',
+        'Humanitarian Logistics Volunteer, WFP Lebanon, 2019-present: Provided expert logistics advisory support for large-scale humanitarian supply chains.',
+      ],
+      projects: [
+        'Post-Blast Logistics Command, 2020: Established a centralized logistics coordination hub serving 15 relief organizations post-explosion.',
+        'Supply Chain Resilience Plan, 2022: Developed a humanitarian supply chain contingency plan adopted by 5 major NGOs in Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Dalia', last_name: 'Sleiman', email: 'vol71@willing.social', gender: 'female', date_of_birth: '1998-10-10',
+      description: 'Occupational therapist supporting recovery and daily living activities for injured residents.',
+      education: 'B.S. in Occupational Therapy, Saint Joseph University, 2020',
+      experience: [
+        'Occupational Therapist, Hôtel-Dieu de France Hospital, 2020-present: Delivered rehabilitation and daily living support for post-surgical and injury patients.',
+        'OT Volunteer, Arcenciel, 2021-present: Provided occupational therapy support to persons with disabilities in community settings.',
+      ],
+      projects: [
+        'Blast Survivor Rehabilitation, 2020: Provided OT support to 25 patients recovering from explosion-related injuries.',
+        'Community OT Outreach, 2022: Ran a monthly outreach clinic providing free OT consultations to underserved residents.',
+      ],
+    },
+    {
+      first_name: 'Nasser', last_name: 'Khalife', email: 'vol72@willing.social', gender: 'male', date_of_birth: '2000-03-03',
+      description: 'Community radio presenter using media skills to broadcast relief announcements and volunteer calls.',
+      education: 'B.A. in Media Studies, Lebanese University, expected 2022',
+      experience: [
+        'Radio Presenter, Radio Liban, 2021-present: Hosted community programs and live broadcasts covering local news and social issues.',
+        'Relief Broadcast Volunteer, Voice of Charity Radio, 2020-present: Produced and presented relief announcements and volunteer recruitment segments.',
+      ],
+      projects: [
+        'Relief Radio Campaign, 2020: Produced a daily radio program broadcasting aid information to affected communities post-explosion.',
+        'Volunteer Call Broadcast Series, 2022: Created a weekly radio segment connecting NGOs with volunteers reaching 10,000 listeners.',
+      ],
+    },
+    {
+      first_name: 'Rouba', last_name: 'Karam', email: 'vol73@willing.social', gender: 'female', date_of_birth: '1995-07-19',
+      description: 'Medical doctor volunteering in crisis clinics and mobile health units across Lebanon.',
+      education: 'M.D. in General Medicine, Saint Joseph University, 2020',
+      experience: [
+        'General Practitioner, Clemenceau Medical Center, 2020-present: Provided primary and emergency care in a busy urban clinic.',
+        'Crisis Clinic Volunteer, Doctors Without Borders Lebanon, 2020-present: Staffed mobile health units and crisis clinics in underserved and disaster-affected areas.',
+      ],
+      projects: [
+        'Mobile Clinic Deployment, 2021: Participated in 12 mobile clinic missions providing care to over 600 patients in remote villages.',
+        'Emergency Field Clinic, 2022: Helped establish a field clinic during a mass displacement event in South Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Samer', last_name: 'Abdo', email: 'vol74@willing.social', gender: 'male', date_of_birth: '1993-05-26',
+      description: 'Marine biologist monitoring ecosystem recovery along Lebanon\'s coastline after pollution events.',
+      education: 'M.S. in Marine Biology, American University of Beirut, 2017',
+      experience: [
+        'Marine Biologist, National Center for Marine Sciences Lebanon, 2017-present: Conducted marine ecosystem research and pollution impact assessments.',
+        'Ecosystem Monitoring Volunteer, Our Sea Our Home, 2019-present: Led volunteer-based coastal ecosystem monitoring surveys.',
+      ],
+      projects: [
+        'Oil Spill Impact Assessment, 2021: Led a scientific assessment of ecosystem damage following an offshore oil spill near Beirut.',
+        'Coastal Recovery Monitoring, 2022: Established a 6-month ecosystem recovery monitoring program along 15km of Lebanese coast.',
+      ],
+    },
+    {
+      first_name: 'Lara', last_name: 'Gemayel', email: 'vol75@willing.social', gender: 'female', date_of_birth: '2002-09-12',
+      description: 'Architecture student helping design accessible and dignified shelter spaces for displaced families.',
+      education: 'B.Arch. in Architecture, American University of Beirut, expected 2024',
+      experience: [
+        'Architecture Intern, Dar Al-Handasah, 2022-present: Assisted in designing community and humanitarian infrastructure projects.',
+        'Shelter Design Volunteer, UN-Habitat Lebanon, 2022-present: Contributed to the design of dignified and accessible shelter solutions for displaced families.',
+      ],
+      projects: [
+        'Dignified Shelter Design, 2022: Co-designed a modular shelter prototype balancing dignity, durability, and low cost.',
+        'Accessible Community Space, 2023: Designed an accessible community gathering space for a displacement camp in the Bekaa.',
+      ],
+    },
+    {
+      first_name: 'Imad', last_name: 'Chahrour', email: 'vol76@willing.social', gender: 'male', date_of_birth: '1990-01-17',
+      description: 'Safety officer ensuring volunteer protection standards on field sites and distribution points.',
+      education: 'B.S. in Occupational Health & Safety, Lebanese University, 2012',
+      experience: [
+        'Safety Officer, Consolidated Contractors Company, 2012-present: Enforced safety protocols on large construction and infrastructure sites.',
+        'Field Safety Volunteer, OCHA Lebanon, 2019-present: Trained and briefed volunteers on safety standards before field deployments.',
+      ],
+      projects: [
+        'Volunteer Safety Protocol, 2020: Developed a field safety briefing guide adopted by 10 relief organizations post-explosion.',
+        'Distribution Point Safety Audit, 2022: Conducted safety assessments of 8 aid distribution sites in South Lebanon.',
+      ],
+    },
+    {
+      first_name: 'Celine', last_name: 'Nasr', email: 'vol77@willing.social', gender: 'female', date_of_birth: '2001-11-20',
+      description: 'Fundraising and grant writing volunteer helping small NGOs access emergency funding.',
+      education: 'B.A. in International Affairs, Lebanese American University, expected 2023',
+      experience: [
+        'Fundraising Intern, Nawaya Network, 2022-present: Supported grant writing, donor outreach, and fundraising campaign management.',
+        'Grant Writing Volunteer, Small NGO Support Initiative, 2021-present: Assisted small Lebanese NGOs in writing and submitting emergency grant applications.',
+      ],
+      projects: [
+        'Emergency Grant Applications, 2021: Helped 3 NGOs secure a total of $45,000 in emergency relief grants.',
+        'Donor Engagement Campaign, 2022: Designed and executed a digital fundraising campaign raising $12,000 for a local relief organization.',
+      ],
+    },
+    {
+      first_name: 'Joe', last_name: 'Abi Khalil', email: 'vol78@willing.social', gender: 'male', date_of_birth: '1997-04-06',
+      description: 'Drone operator mapping flood damage and wildfire zones to support relief planning.',
+      education: 'B.S. in Aerospace Engineering, Lebanese American University, 2019',
+      experience: [
+        'Drone Operator, SkyView Lebanon, 2019-present: Conducted aerial surveys, mapping, and inspection missions for infrastructure and disaster response.',
+        'Aerial Mapping Volunteer, MapAction Lebanon, 2020-present: Used drone technology to map disaster-affected zones for humanitarian response planning.',
+      ],
+      projects: [
+        'Flood Damage Aerial Survey, 2021: Produced drone-based flood damage maps used by 4 NGOs for relief planning in North Lebanon.',
+        'Wildfire Zone Mapping, 2022: Conducted aerial mapping of a wildfire-affected area in the Shouf region aiding evacuation planning.',
+      ],
+    },
+    {
+      first_name: 'Mirna', last_name: 'Khoury', email: 'vol79@willing.social', gender: 'female', date_of_birth: '2003-02-08',
+      description: 'Youth mentor running after-school and weekend programs for at-risk teenagers.',
+      education: 'B.A. in Social Work, Notre Dame University, expected 2025',
+      experience: [
+        'Youth Mentor, Injaz Lebanon, 2022-present: Facilitated after-school entrepreneurship and life skills programs for at-risk youth.',
+        'Weekend Program Volunteer, Himaya NGO, 2021-present: Ran structured weekend activities and mentoring sessions for teenagers from vulnerable backgrounds.',
+      ],
+      projects: [
+        'At-Risk Youth Program, 2022: Designed and delivered a 10-week life skills program for 20 at-risk teenagers in Beirut.',
+        'Youth Leadership Camp, 2023: Co-organized a 3-day leadership camp for 30 adolescents from underserved communities.',
+      ],
+    },
+    {
+      first_name: 'Firas', last_name: 'Barakat', email: 'vol80@willing.social', gender: 'male', date_of_birth: '1991-06-24',
+      description: 'Trauma surgeon with extensive field hospital experience, supporting emergency medical teams.',
+      education: 'M.D. with Surgical Specialization, American University of Beirut Medical Center, 2016',
+      experience: [
+        'Trauma Surgeon, AUB Medical Center, 2016-present: Performed emergency and elective surgeries in a Level 1 trauma center.',
+        'Field Hospital Volunteer, Lebanese Red Cross, 2019-present: Staffed field hospitals and surgical units during mass casualty events.',
+      ],
+      projects: [
+        'Blast Casualty Surgical Response, 2020: Performed emergency surgeries on over 30 critically injured patients in the 48 hours following the Beirut explosion.',
+        'Field Surgical Training, 2022: Trained 10 medical volunteers in damage control surgery techniques for field settings.',
+      ],
+    },
+  ] as SeedVolunteer[];
+
+  const volunteerValues = seedVolunteers.map(v => ({
+    first_name: v.first_name,
+    last_name: v.last_name,
+    email: v.email,
+    gender: v.gender as 'male' | 'female' | 'other',
+    date_of_birth: v.date_of_birth,
+    description: v.description,
+    password: passwordHash,
+  }));
 
   const volunteers = await database.insertInto('volunteer_account')
     .values(volunteerValues)
-    .returning(['id', 'email'])
+    .returning(['id', 'email', 'first_name', 'last_name'])
     .execute();
 
   const volByEmail = new Map(volunteers.map(v => [v.email, v.id]));
@@ -1033,7 +2022,7 @@ async function seed() {
 
   // Postings
 
-  const postings = await database.insertInto('organization_posting')
+  const postings = await database.insertInto('posting')
     .values([
 
       {
@@ -1143,7 +2132,7 @@ async function seed() {
         longitude: 35.4980,
         location_name: 'Ras Beirut School Shelter',
         max_volunteers: 25,
-        ...bt(relDate(6, 7)),
+        ...bt(relDate(6, 7), relDate(6, 11)),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -1242,7 +2231,7 @@ async function seed() {
         longitude: 35.4880,
         location_name: 'Jeel Kitchen, Saida Old City',
         max_volunteers: 14,
-        ...bt(relDate(8, 10)),
+        ...bt(relDate(8, 10), relDate(8, 12)),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -1891,7 +2880,7 @@ async function seed() {
         longitude: 35.5100,
         location_name: 'Basmeh Kitchen, Shatila',
         max_volunteers: 12,
-        ...bt(relDate(17, 10)),
+        ...bt(relDate(17, 10), relDate(17, 12)),
         minimum_age: 16,
         automatic_acceptance: true,
         is_closed: false,
@@ -3006,6 +3995,11 @@ async function seed() {
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Data Entry' },
     { volunteer_id: volByEmail.get('vol14@willing.social')!, name: 'Teamwork' },
 
+    // vol15 – food / distribution
+    { volunteer_id: volByEmail.get('vol15@willing.social')!, name: 'Distribution' },
+    { volunteer_id: volByEmail.get('vol15@willing.social')!, name: 'Packing' },
+    { volunteer_id: volByEmail.get('vol15@willing.social')!, name: 'Teamwork' },
+
     // vol16 – construction
     { volunteer_id: volByEmail.get('vol16@willing.social')!, name: 'Construction' },
     { volunteer_id: volByEmail.get('vol16@willing.social')!, name: 'Physical Stamina' },
@@ -3352,6 +4346,42 @@ async function seed() {
     { volunteer_id: volByEmail.get('vol80@willing.social')!, name: 'Calm Under Pressure' },
   ]).execute();
 
+  for (const insertedVolunteer of volunteers) {
+    const seedVolunteer = seedVolunteers.find(v => v.email === insertedVolunteer.email);
+    if (!seedVolunteer) continue;
+
+    const fileName = buildRecommendationCvFileName({
+      id: insertedVolunteer.id,
+      first_name: insertedVolunteer.first_name,
+      last_name: insertedVolunteer.last_name,
+    });
+    const absolutePath = path.join(DEST_CVS_DIR, fileName);
+
+    const skills = await database
+      .selectFrom('volunteer_skill')
+      .select('name')
+      .where('volunteer_id', '=', insertedVolunteer.id)
+      .execute();
+
+    await writeRecommendationCvPdf(absolutePath, {
+      ...seedVolunteer,
+      id: insertedVolunteer.id,
+      skills: skills.map(s => s.name),
+      education: seedVolunteer.education ?? null,
+      experience: seedVolunteer.experience ?? null,
+      projects: seedVolunteer.projects ?? null,
+    });
+
+    const cvPath = `${fileName}`;
+    await database
+      .updateTable('volunteer_account')
+      .set({
+        cv_path: cvPath,
+      })
+      .where('id', '=', insertedVolunteer.id)
+      .execute();
+  }
+
   // Enrollment Applications (review-based postings)
 
   const applications = await database.insertInto('enrollment_application').values([
@@ -3673,24 +4703,6 @@ async function seed() {
 
     // --- First Aid Support (Nour Relief, review-based) ---
     {
-      volunteer_id: vol('vol3@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'Paramedic student with first aid and triage training.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol19@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'ICU nurse with triage experience, ready to support the medical team.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol80@willing.social'),
-      posting_id: post('First Aid Support'),
-      message: 'Trauma surgeon with field hospital experience.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol73@willing.social'),
       posting_id: post('First Aid Support'),
       message: 'Medical doctor volunteering in crisis clinics across Lebanon.',
@@ -3704,24 +4716,6 @@ async function seed() {
     },
 
     // --- Displaced Families Registration (Nour Relief, review-based, partial) ---
-    {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Social worker, Arabic fluent. Comfortable with intake interviews.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol2@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Strong communication and data entry skills.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol46@willing.social'),
-      posting_id: post('Displaced Families Registration'),
-      message: 'Former UNHCR field officer with refugee registration experience.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol65@willing.social'),
       posting_id: post('Displaced Families Registration'),
@@ -3775,18 +4769,6 @@ async function seed() {
 
     // --- War Survivor Psychosocial Support (Nour Relief, review-based) ---
     {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('War Survivor Psychosocial Support'),
-      message: 'Social work background, familiar with trauma-informed approaches.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol17@willing.social'),
-      posting_id: post('War Survivor Psychosocial Support'),
-      message: 'Psychology student trained in psychosocial first aid.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol61@willing.social'),
       posting_id: post('War Survivor Psychosocial Support'),
       message: 'Child psychologist with psychosocial support training.',
@@ -3826,18 +4808,6 @@ async function seed() {
     },
 
     // --- Psychological First Aid Sessions (Nour Relief, review-based) ---
-    {
-      volunteer_id: vol('vol4@willing.social'),
-      posting_id: post('Psychological First Aid Sessions'),
-      message: 'Social work and mental health background.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol61@willing.social'),
-      posting_id: post('Psychological First Aid Sessions'),
-      message: 'Child psychologist with psychosocial support training.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol17@willing.social'),
       posting_id: post('Psychological First Aid Sessions'),
@@ -3983,18 +4953,6 @@ async function seed() {
 
     // --- Remote Homework Support (Ajialouna, review-based, partial) ---
     {
-      volunteer_id: vol('vol7@willing.social'),
-      posting_id: post('Remote Homework Support'),
-      message: 'Software developer with strong maths and science background.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol2@willing.social'),
-      posting_id: post('Remote Homework Support'),
-      message: 'Experienced tutor covering Arabic, English, and maths.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol28@willing.social'),
       posting_id: post('Remote Homework Support'),
       message: 'Retired schoolteacher, happy to tutor across all subjects.',
@@ -4126,18 +5084,6 @@ async function seed() {
     },
 
     // --- Medical Supplies Inventory & Sorting (Arz Community, review-based) ---
-    {
-      volunteer_id: vol('vol9@willing.social'),
-      posting_id: post('Medical Supplies Inventory & Sorting'),
-      message: 'Detail-oriented and experienced with inventory systems.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol42@willing.social'),
-      posting_id: post('Medical Supplies Inventory & Sorting'),
-      message: 'Supply chain analyst, comfortable managing medical supplies.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol50@willing.social'),
       posting_id: post('Medical Supplies Inventory & Sorting'),
@@ -4283,18 +5229,6 @@ async function seed() {
 
     // --- Volunteer Helpline Shifts (Cedar Response, review-based, partial) ---
     {
-      volunteer_id: vol('vol13@willing.social'),
-      posting_id: post('Volunteer Helpline Shifts'),
-      message: 'Comfortable with helpline systems across multiple shifts.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol14@willing.social'),
-      posting_id: post('Volunteer Helpline Shifts'),
-      message: 'Strong communication and admin coordination skills.',
-      attended: false,
-    },
-    {
       volunteer_id: vol('vol36@willing.social'),
       posting_id: post('Volunteer Helpline Shifts'),
       message: 'IT support background, comfortable with remote helpline systems.',
@@ -4380,18 +5314,6 @@ async function seed() {
     },
 
     // --- Urban Search & Rescue Logistics (Cedar Response, review-based) ---
-    {
-      volunteer_id: vol('vol26@willing.social'),
-      posting_id: post('Urban Search & Rescue Logistics'),
-      message: 'Former army officer with crisis management experience.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol58@willing.social'),
-      posting_id: post('Urban Search & Rescue Logistics'),
-      message: 'Veteran field coordinator with large deployment experience.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol76@willing.social'),
       posting_id: post('Urban Search & Rescue Logistics'),
@@ -4490,18 +5412,6 @@ async function seed() {
     },
 
     // --- School Supply Restocking (Bekaa Uplift, review-based, partial) ---
-    {
-      volunteer_id: vol('vol12@willing.social'),
-      posting_id: post('School Supply Restocking'),
-      message: 'Community educator, happy to support schools recovering from flooding.',
-      attended: false,
-    },
-    {
-      volunteer_id: vol('vol11@willing.social'),
-      posting_id: post('School Supply Restocking'),
-      message: 'Warehouse and operations experience, comfortable with inventory.',
-      attended: false,
-    },
     {
       volunteer_id: vol('vol9@willing.social'),
       posting_id: post('School Supply Restocking'),

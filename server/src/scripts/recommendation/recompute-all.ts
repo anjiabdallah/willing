@@ -14,7 +14,7 @@ const MAX_PASSES = 3;
 const getIds = async () => {
   const [organizationRows, postingRows, volunteerRows] = await Promise.all([
     database.selectFrom('organization_account').select('id').orderBy('id', 'asc').execute(),
-    database.selectFrom('organization_posting').select('id').orderBy('id', 'asc').execute(),
+    database.selectFrom('posting').select('id').orderBy('id', 'asc').execute(),
     database.selectFrom('volunteer_account').select('id').orderBy('id', 'asc').execute(),
   ]);
 
@@ -30,8 +30,8 @@ const getMissingCounts = async () => {
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_profile_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_history_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_context_vector', 'is', null).executeTakeFirstOrThrow(),
-    database.selectFrom('organization_posting').select(eb => eb.fn.countAll().as('count')).where('posting_profile_vector', 'is', null).executeTakeFirstOrThrow(),
-    database.selectFrom('organization_posting').select(eb => eb.fn.countAll().as('count')).where('posting_context_vector', 'is', null).executeTakeFirstOrThrow(),
+    database.selectFrom('posting').select(eb => eb.fn.countAll().as('count')).where('posting_profile_vector', 'is', null).executeTakeFirstOrThrow(),
+    database.selectFrom('posting').select(eb => eb.fn.countAll().as('count')).where('posting_context_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_profile_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_history_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_context_vector', 'is', null).executeTakeFirstOrThrow(),
@@ -50,9 +50,6 @@ const getMissingCounts = async () => {
 };
 
 async function recomputeAllEmbeddings() {
-  if (config.NODE_ENV === 'production') {
-    throw new Error('Refusing to recompute all embeddings in production.');
-  }
   await warnBeforeOpenAiCalls({
     countdownSeconds: 5,
     force: process.argv.includes('--yes') || process.env.SKIP_OPENAI_WARNING === 'true',

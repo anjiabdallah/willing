@@ -5,7 +5,7 @@ import createApp from '../../../app.ts';
 import database from '../../../db/index.ts';
 import * as embeddingService from '../../../services/embeddings/updates.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../../tests/fixtures/accounts.ts';
-import { createOrganizationPosting } from '../../../tests/fixtures/organizationData.ts';
+import { createPosting } from '../../../tests/fixtures/organizationData.ts';
 
 import type { Database } from '../../../db/tables/index.ts';
 import type { ControlledTransaction } from 'kysely';
@@ -30,7 +30,7 @@ describe('Organization attendance endpoints', () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-a@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-a@example.com' });
 
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
       overrides: {
         allows_partial_attendance: true,
@@ -108,7 +108,7 @@ describe('Organization attendance endpoints', () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-full@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-full@example.com' });
 
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
       overrides: {
         allows_partial_attendance: false,
@@ -183,7 +183,7 @@ describe('Organization attendance endpoints', () => {
     const volunteerOne = await createVolunteerAccount(transaction, { email: 'vol-b1@example.com' });
     const volunteerTwo = await createVolunteerAccount(transaction, { email: 'vol-b2@example.com' });
 
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
       overrides: {
         allows_partial_attendance: false,
@@ -239,7 +239,7 @@ describe('Organization attendance endpoints', () => {
       .values({ volunteer_id: volunteer.volunteer.id, name: 'First Aid' })
       .execute();
 
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
       overrides: { allows_partial_attendance: false },
     });
@@ -271,7 +271,7 @@ describe('Organization attendance endpoints', () => {
   test('PATCH /organization/posting/:id/enrollments/:enrollmentId/attendance returns empty result when attendance does not change', async () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-d@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-d@example.com' });
-    const posting = await createOrganizationPosting(transaction, { organizationId: org.organization.id });
+    const posting = await createPosting(transaction, { organizationId: org.organization.id });
 
     const enrollment = await transaction
       .insertInto('enrollment')
@@ -316,7 +316,7 @@ describe('Organization attendance endpoints', () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-noupdate@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-noupdate@example.com' });
 
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
     });
 
@@ -341,7 +341,7 @@ describe('Organization attendance endpoints', () => {
 
   test('PATCH /organization/posting/:id/enrollment-dates/:enrollmentDateId/attendance returns 404 when date record is missing', async () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-date-missing@example.com' });
-    const posting = await createOrganizationPosting(transaction, {
+    const posting = await createPosting(transaction, {
       organizationId: org.organization.id,
       overrides: { allows_partial_attendance: true },
     });
@@ -356,8 +356,8 @@ describe('Organization attendance endpoints', () => {
   test('PATCH /organization/posting/:id/enrollments/:enrollmentId/attendance returns 404 when enrollment does not belong to the posting', async () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-enrollment-mismatch@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-enrollment-mismatch@example.com' });
-    const postingOne = await createOrganizationPosting(transaction, { organizationId: org.organization.id });
-    const postingTwo = await createOrganizationPosting(transaction, { organizationId: org.organization.id });
+    const postingOne = await createPosting(transaction, { organizationId: org.organization.id });
+    const postingTwo = await createPosting(transaction, { organizationId: org.organization.id });
 
     const enrollment = await transaction
       .insertInto('enrollment')
@@ -379,7 +379,7 @@ describe('Organization attendance endpoints', () => {
   test('PATCH /organization/posting/:id/enrollments/:enrollmentId/attendance updates attendance and recomputes vector', async () => {
     const org = await createOrganizationAccount(transaction, { email: 'org-e@example.com' });
     const volunteer = await createVolunteerAccount(transaction, { email: 'vol-e@example.com' });
-    const posting = await createOrganizationPosting(transaction, { organizationId: org.organization.id });
+    const posting = await createPosting(transaction, { organizationId: org.organization.id });
 
     const enrollment = await transaction
       .insertInto('enrollment')

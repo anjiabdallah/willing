@@ -16,13 +16,14 @@ import {
   Upload,
   X,
   Users,
+  User,
+  Award,
 } from 'lucide-react';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useForm } from 'react-hook-form';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { volunteerAccountSchema } from '../../../../server/src/db/tables';
-import AuthContext from '../../auth/AuthContext';
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
@@ -35,6 +36,8 @@ import Loading from '../../components/Loading';
 import PostingList from '../../components/PostingList';
 import SkillsInput from '../../components/skills/SkillsInput';
 import SkillsList from '../../components/skills/SkillsList';
+import StatCard from '../../components/StatCard';
+import { DOMAIN_COLORS } from '../../constants';
 import useNotifications from '../../notifications/useNotifications';
 import { FormField } from '../../utils/formUtils';
 import requestServer, { SERVER_BASE_URL } from '../../utils/requestServer';
@@ -140,11 +143,6 @@ function VolunteerProfile() {
   const [showAllExperiences, setShowAllExperiences] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cvBusy, setCvBusy] = useState(false);
-  const [accountDeletionBusy, setAccountDeletionBusy] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { deleteAccount } = useContext(AuthContext);
   const notifications = useNotifications();
 
   const form = useForm<ProfileFormData>({
@@ -238,7 +236,7 @@ function VolunteerProfile() {
     { notifyOnError: true },
   );
 
-  const formValues = form.watch();
+  const formValues = useWatch ({ control: form.control });
 
   const volunteerName = useMemo(
     () => {
@@ -448,24 +446,6 @@ function VolunteerProfile() {
     }
   };
 
-  const onDeleteAccount = async () => {
-    if (!deletePassword.trim()) {
-      setDeleteError('Please enter your password.');
-      return;
-    }
-    setDeleteError(null);
-
-    try {
-      setAccountDeletionBusy(true);
-      await deleteAccount(deletePassword);
-      notifications.push({ type: 'success', message: 'Your account was deleted.' });
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account.');
-    } finally {
-      setAccountDeletionBusy(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="grow bg-base-200">
@@ -512,11 +492,11 @@ function VolunteerProfile() {
       <PageHeader
         title="Profile"
         subtitle="Manage your details, availability, and focus areas."
-        icon={FileText}
+        icon={User}
         actions={(
-          <>
+          <div className="flex flex-wrap gap-2 justify-end">
             <LinkButton to="/volunteer/certificate" color="secondary" className="btn btn-outline" size="sm">
-              <FileText size={16} />
+              <Award size={16} />
               Generate Certificate
             </LinkButton>
             {isEditMode
@@ -535,7 +515,7 @@ function VolunteerProfile() {
                 Save Changes
               </Button>
             )}
-          </>
+          </div>
         )}
       />
 
@@ -690,62 +670,54 @@ function VolunteerProfile() {
           </Card>
         )}
       >
-        <Card padding={false}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
-            <div className="stat place-items-center">
-              <div className="stat-title text-base">Completed Postings</div>
-              <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                <Users className="h-6 w-6 shrink-0 stroke-current" />
-                <span>{profile.experience_stats.total_completed_experiences}</span>
-              </div>
-            </div>
-            <div className="stat place-items-center">
-              <div className="stat-title text-base">Hours Completed</div>
-              <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                <Clock3 className="h-6 w-6 shrink-0 stroke-current" />
-                <span>{totalCompletedHours.toFixed(1)}</span>
-              </div>
-            </div>
-            <div className="stat place-items-center">
-              <div className="stat-title text-base">Organizations</div>
-              <div className="stat-value text-2xl text-primary/80 inline-flex w-full items-center justify-center gap-2">
-                <Building2 className="h-6 w-6 shrink-0 stroke-current" />
-                <span>{profile.experience_stats.organizations_supported}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card padding={false}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-0 gap-y-3">
-            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
-              <div className="stat-title text-base">Crisis-Related</div>
-              <div className="stat-value text-2xl text-primary/80 flex w-full items-center justify-center gap-2 self-center">
-                <AlertTriangle className="h-6 w-6 shrink-0 stroke-current" />
-                <span>{profile.experience_stats.crisis_related_experiences}</span>
-              </div>
-            </div>
-            <div className="stat place-items-center h-full grid-rows-[auto,1fr]">
-              <div className="stat-title text-base">Total Skills Used</div>
-              <div className="stat-value text-2xl text-primary/80 flex w-full items-center justify-center gap-2 self-center">
-                <Brain className="h-6 w-6 shrink-0 stroke-current" />
-                <span>{profile.experience_stats.total_skills_used}</span>
-              </div>
-            </div>
-            <div className="stat min-w-0 place-items-center h-full grid-rows-[auto,1fr]">
-              <div className="stat-title text-base">Most Volunteered Crisis</div>
-              <div className="stat-value text-lg text-primary/80 flex w-full min-w-0 items-center justify-center gap-2 px-2 self-center">
-                <span className="max-w-full text-center whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
-                  {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            text="Completed Postings"
+            content={profile.experience_stats.total_completed_experiences}
+            icon={Users}
+            color="secondary"
+          />
+          <StatCard
+            text="Hours Completed"
+            content={totalCompletedHours.toFixed(1)}
+            icon={Clock3}
+            color="secondary"
+          />
+          <StatCard
+            text="Organizations"
+            content={profile.experience_stats.organizations_supported}
+            icon={Building2}
+            color="secondary"
+          />
+          <StatCard
+            text="Crisis-Related"
+            content={profile.experience_stats.crisis_related_experiences}
+            icon={AlertTriangle}
+            color="accent"
+          />
+          <StatCard
+            text="Total Skills Used"
+            content={profile.experience_stats.total_skills_used}
+            icon={Brain}
+            color="secondary"
+          />
+          <StatCard
+            text="Most Volunteered Crisis"
+            content={(
+              <span className="whitespace-normal break-words leading-tight overflow-hidden [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
+                {profile.experience_stats.most_volunteered_crisis ?? 'N/A'}
+              </span>
+            )}
+            icon={AlertTriangle}
+            color="accent"
+          />
+        </div>
 
         <Card
           title="Skills"
           description="Add skills to highlight your expertise."
+          Icon={Brain}
+          color={DOMAIN_COLORS.skills}
         >
           {isEditMode
             ? (
@@ -759,6 +731,8 @@ function VolunteerProfile() {
         <Card
           title="Previous Experiences"
           description="Past volunteering experiences completed through the platform."
+          Icon={Users}
+          color={DOMAIN_COLORS.experience}
         >
           {profile.completed_experiences.length === 0
             ? (
@@ -800,6 +774,8 @@ function VolunteerProfile() {
         <Card
           title="CV"
           description="Upload your CV as a PDF with up to 3 pages."
+          Icon={FileText}
+          color={DOMAIN_COLORS.cv}
         >
           <div className="flex flex-col gap-3">
             {profile.volunteer.cv_path
@@ -862,75 +838,6 @@ function VolunteerProfile() {
               </span>
             </div>
           </div>
-        </Card>
-
-        <Card
-          title="Delete Account"
-          description="Permanently delete your volunteer account."
-          Icon={Trash2}
-        >
-          {!showDeleteConfirm
-            ? (
-                <div>
-                  <Button
-                    type="button"
-                    color="error"
-                    style="outline"
-                    onClick={() => {
-                      setShowDeleteConfirm(true);
-                      setDeleteError(null);
-                      setDeletePassword('');
-                    }}
-                    Icon={Trash2}
-                  >
-                    I want to delete my account
-                  </Button>
-                </div>
-              )
-            : (
-                <div className="space-y-3">
-                  <Alert color="error">
-                    <strong>This cannot be undone.</strong>
-                    {' '}
-                    Your upcoming applications will be withdrawn. You will not be able to sign in or recover this account. Your profile will be hidden from the platform, and you will be signed out immediately.
-                  </Alert>
-                  <p className="text-sm font-medium">Enter your password to confirm:</p>
-                  <input
-                    type="password"
-                    className="input input-bordered w-full max-w-sm"
-                    placeholder="Your password"
-                    value={deletePassword}
-                    onChange={e => setDeletePassword(e.target.value)}
-                    disabled={accountDeletionBusy}
-                    onKeyDown={e => e.key === 'Enter' && void onDeleteAccount()}
-                  />
-                  {deleteError && <p className="text-sm text-error">{deleteError}</p>}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      color="error"
-                      onClick={() => void onDeleteAccount()}
-                      loading={accountDeletionBusy}
-                      Icon={Trash2}
-                    >
-                      Permanently Delete My Account
-                    </Button>
-                    <Button
-                      type="button"
-                      style="outline"
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setDeleteError(null);
-                        setDeletePassword('');
-                      }}
-                      disabled={accountDeletionBusy}
-                      Icon={X}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
         </Card>
       </ColumnLayout>
     </PageContainer>

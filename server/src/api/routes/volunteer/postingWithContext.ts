@@ -1,28 +1,30 @@
 import { sql, type Kysely } from 'kysely';
 
 import { type Database } from '../../../db/tables/index.ts';
+import { hasPostingEnded } from '../../../services/posting/postingTime.ts';
+import { rejectEndedPendingApplicationsForPostings } from '../../../services/posting/rejectEndedPendingApplications.ts';
 import { type PostingWithContext, type PostingApplicationStatus } from '../../../types.ts';
 
 export const postingWithContextSelectColumns = [
-  'organization_posting.id',
-  'organization_posting.organization_id',
-  'organization_posting.crisis_id',
-  'organization_posting.title',
-  'organization_posting.description',
-  'organization_posting.latitude',
-  'organization_posting.longitude',
-  'organization_posting.max_volunteers',
-  'organization_posting.start_date',
-  'organization_posting.start_time',
-  'organization_posting.end_date',
-  'organization_posting.end_time',
-  'organization_posting.minimum_age',
-  'organization_posting.automatic_acceptance',
-  'organization_posting.is_closed',
-  'organization_posting.allows_partial_attendance',
-  'organization_posting.location_name',
-  'organization_posting.created_at',
-  'organization_posting.updated_at',
+  'posting.id',
+  'posting.organization_id',
+  'posting.crisis_id',
+  'posting.title',
+  'posting.description',
+  'posting.latitude',
+  'posting.longitude',
+  'posting.max_volunteers',
+  'posting.start_date',
+  'posting.start_time',
+  'posting.end_date',
+  'posting.end_time',
+  'posting.minimum_age',
+  'posting.automatic_acceptance',
+  'posting.is_closed',
+  'posting.allows_partial_attendance',
+  'posting.location_name',
+  'posting.created_at',
+  'posting.updated_at',
   'crisis.name as crisis_name',
   'organization_account.name as organization_name',
   'organization_account.logo_path as organization_logo_path',
@@ -36,8 +38,8 @@ type BuildPostingsWithContextOptions = {
   applicationStatusByPostingId?: ReadonlyMap<number, Extract<PostingApplicationStatus, 'registered' | 'pending'>>;
 };
 
-const formatDateToIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
+const formatDateToIso = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 const normalizeStoredDate = (value: Date | string | null | undefined) => {
   if (value instanceof Date) return formatDateToIso(value);
   if (typeof value === 'string') {
@@ -69,12 +71,12 @@ export const getPostingDates = (startDate: Date | string, endDate: Date | string
   }
 
   const result: string[] = [];
-  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
-  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
+  const current = new Date(Date.UTC(startParts.year, startParts.month - 1, startParts.day));
+  const end = new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day));
 
   while (current.getTime() <= end.getTime()) {
     result.push(formatDateToIso(current));
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   return result;
@@ -112,6 +114,11 @@ export async function buildPostingsWithContext(
   if (postings.length === 0) {
     return [];
   }
+
+  const autoRejectedPostingIds = await rejectEndedPendingApplicationsForPostings(
+    db,
+    postings.map(posting => posting.id),
+  );
 
   const postingIds = postings.map(posting => posting.id);
 
@@ -184,6 +191,9 @@ export async function buildPostingsWithContext(
 
   if (applicationStatusByPostingId) {
     applicationStatusByPostingId.forEach((status, postingId) => {
+      if (status === 'pending' && autoRejectedPostingIds.has(postingId)) {
+        return;
+      }
       resolvedApplicationStatusByPostingId.set(postingId, status);
     });
   } else {
@@ -200,6 +210,7 @@ export async function buildPostingsWithContext(
     crisis_name: posting.crisis_name ?? null,
     skills: skillsByPostingId.get(posting.id) ?? [],
     enrollment_count: countsByPostingId.get(posting.id) ?? 0,
+    has_ended: hasPostingEnded(posting),
     date_capacity: dateCapacityByPostingId.get(posting.id) ?? {},
     application_status: resolvedApplicationStatusByPostingId.get(posting.id) ?? 'none',
   }));

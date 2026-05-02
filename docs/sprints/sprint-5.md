@@ -40,7 +40,7 @@ This section describes the planned scope for Sprint 5.
    - date_of_birth (date)
    - created_at (timestamp)
    - token (varchar)
-4. **organization_posting**: Make end date & time required. Add `allows_partial_attendance` (boolean).
+4. **posting**: Make end date & time required. Add `allows_partial_attendance` (boolean).
 5. **organization_report** (new table):
    - id (serial, PK)
    - reported_organization_id (int, FK)

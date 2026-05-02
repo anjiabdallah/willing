@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
@@ -79,7 +79,7 @@ function VolunteerCrisisPostings() {
     <PostingSearchView
       title={resolvedCrisis?.name ?? 'Crisis'}
       subtitle={subtitle}
-      icon={AlertCircle}
+      icon={AlertTriangle}
       actions={<PostingViewModeToggle />}
       showBack
       defaultBackTo="/volunteer"

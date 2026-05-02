@@ -3,7 +3,10 @@ import {
   Check,
   AlertTriangle,
   Calendar,
+  CalendarX2,
   Cake,
+  CheckCircle2,
+  Clock3,
   Edit3,
   House,
   ListChecks,
@@ -29,6 +32,7 @@ import Alert from '../components/Alert.tsx';
 import Button from '../components/Button.tsx';
 import CalendarInfo from '../components/CalendarInfo.tsx';
 import Card from '../components/Card.tsx';
+import Collapse from '../components/Collapse.tsx';
 import CustomMessageModal from '../components/CustomMessageModal.tsx';
 import EmptyState from '../components/EmptyState.tsx';
 import ColumnLayout from '../components/layout/ColumnLayout.tsx';
@@ -40,24 +44,28 @@ import LocationPicker from '../components/LocationPicker.tsx';
 import OrganizationProfilePicture from '../components/OrganizationProfilePicture.tsx';
 import PostingDateTime from '../components/PostingDateTime.tsx';
 import CrisisCard from '../components/postings/CrisisCard.tsx';
+import { hasPostingEnded as hasPostingEndedByTime } from '../components/postings/postingUtils.ts';
+import useNow from '../components/postings/useNow.ts';
 import SkillsInput from '../components/skills/SkillsInput.tsx';
 import SkillsList from '../components/skills/SkillsList.tsx';
 import { ToggleButton } from '../components/ToggleButton.tsx';
 import VolunteerInfoCollapse from '../components/VolunteerInfoCollapse.tsx';
+import { DOMAIN_COLORS } from '../constants';
 import { useModal } from '../contexts/useModal.ts';
 import useNotifications from '../notifications/useNotifications';
-import { organizationPostingEditFormSchema, type OrganizationPostingEditFormData } from '../schemas/posting';
+import { postingEditFormSchema, type PostingEditFormData } from '../schemas/posting';
 import { executeAndShowError, FormField } from '../utils/formUtils.tsx';
 import requestServer from '../utils/requestServer.ts';
+import { toLocalDateTime, toUtcDateTime } from '../utils/timeUtils.ts';
 import useAsync from '../utils/useAsync';
 import { useOrganization } from '../utils/useUsers.ts';
 
 import type {
   OrganizationCrisisResponse,
   OrganizationCrisesResponse,
-  OrganizationPostingApplicationsReponse,
-  OrganizationPostingEnrollmentsResponse,
-  OrganizationPostingResponse,
+  PostingApplicationsReponse,
+  PostingEnrollmentsResponse,
+  PostingResponse,
   OrganizationProfileResponse,
   VolunteerCrisisResponse,
   VolunteerPostingResponse,
@@ -136,13 +144,7 @@ const getTimeInputValue = (timeValue: string | undefined) => (timeValue ?? '').s
 const getPostingStartDateTime = (posting: PostingWithSkills) => {
   const datePart = getDateInputValue(posting.start_date);
   const timePart = (posting.start_time ?? '').slice(0, 5) || '00:00';
-  return new Date(`${datePart}T${timePart}`);
-};
-
-const getPostingEndDateTime = (posting: PostingWithSkills | PostingWithContext) => {
-  const datePart = getDateInputValue(posting.end_date ?? posting.start_date);
-  const timePart = (posting.end_time ?? '').slice(0, 5) || '23:59';
-  return new Date(`${datePart}T${timePart}`);
+  return new Date(`${datePart}T${timePart}Z`);
 };
 
 const formatDisplayDate = (value?: string) => {
@@ -211,8 +213,8 @@ function PostingPage() {
   const notifications = useNotifications();
   const modal = useModal();
 
-  const form = useForm<OrganizationPostingEditFormData>({
-    resolver: zodResolver(organizationPostingEditFormSchema),
+  const form = useForm<PostingEditFormData>({
+    resolver: zodResolver(postingEditFormSchema),
     mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
@@ -231,6 +233,12 @@ function PostingPage() {
   const startTime = useWatch({ control: form.control, name: 'start_time' }) ?? '';
   const endDate = useWatch({ control: form.control, name: 'end_date' }) ?? '';
   const endTime = useWatch({ control: form.control, name: 'end_time' }) ?? '';
+  const statusNow = useNow();
+  const hasEnded = useMemo(() => (
+    posting
+      ? Boolean(('has_ended' in posting ? posting.has_ended : false) || hasPostingEndedByTime(posting, statusNow))
+      : false
+  ), [posting, statusNow]);
 
   const selectedCrisisName = useMemo(() => {
     if (selectedCrisisId == null) return null;
@@ -376,10 +384,28 @@ function PostingPage() {
         title: postingResponse.posting.title,
         description: postingResponse.posting.description,
         location_name: postingResponse.posting.location_name,
-        start_date: getDateInputValue(postingResponse.posting.start_date),
-        start_time: getTimeInputValue(postingResponse.posting.start_time),
-        end_date: postingResponse.posting.end_date ? getDateInputValue(postingResponse.posting.end_date) : '',
-        end_time: getTimeInputValue(postingResponse.posting.end_time),
+        ...(() => {
+          const startUtcDate = getDateInputValue(postingResponse.posting.start_date);
+          const startUtcTime = getTimeInputValue(postingResponse.posting.start_time);
+          const start = startUtcTime
+            ? toLocalDateTime(startUtcTime, startUtcDate)
+            : { date: startUtcDate, time: startUtcTime };
+
+          const endUtcDate = postingResponse.posting.end_date
+            ? getDateInputValue(postingResponse.posting.end_date)
+            : '';
+          const endUtcTime = getTimeInputValue(postingResponse.posting.end_time);
+          const end = endUtcDate && endUtcTime
+            ? toLocalDateTime(endUtcTime, endUtcDate)
+            : { date: endUtcDate, time: endUtcTime };
+
+          return {
+            start_date: start.date,
+            start_time: start.time,
+            end_date: end.date,
+            end_time: end.time,
+          };
+        })(),
         max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? '',
         minimum_age: postingResponse.posting.minimum_age?.toString() ?? '',
         automatic_acceptance: postingResponse.posting.automatic_acceptance,
@@ -390,7 +416,7 @@ function PostingPage() {
       return;
     }
 
-    const postingResponse = await requestServer<OrganizationPostingResponse>(`/organization/posting/${id}`, { includeJwt: true });
+    const postingResponse = await requestServer<PostingResponse>(`/organization/posting/${id}`, { includeJwt: true });
     const canManageFetchedPosting = account?.id === postingResponse.posting.organization_id;
 
     const postingWithSkills = {
@@ -401,12 +427,12 @@ function PostingPage() {
     setPosting(postingWithSkills);
     setCurrentPostingCrisis(postingResponse.crisis);
     if (canManageFetchedPosting) {
-      const enrollmentsResponse = await requestServer<OrganizationPostingEnrollmentsResponse>(`/organization/posting/${id}/enrollments`, { includeJwt: true });
+      const enrollmentsResponse = await requestServer<PostingEnrollmentsResponse>(`/organization/posting/${id}/enrollments`, { includeJwt: true });
       setEnrollments(enrollmentsResponse.enrollments);
       setPostingEnrollmentCount(enrollmentsResponse.enrollments.length);
 
       if (!postingResponse.posting.automatic_acceptance) {
-        const applicationsResponse = await requestServer<OrganizationPostingApplicationsReponse>(
+        const applicationsResponse = await requestServer<PostingApplicationsReponse>(
           `/organization/posting/${id}/applications`,
           { includeJwt: true },
         );
@@ -454,10 +480,28 @@ function PostingPage() {
       title: postingResponse.posting.title,
       description: postingResponse.posting.description,
       location_name: postingResponse.posting.location_name,
-      start_date: getDateInputValue(postingResponse.posting.start_date),
-      start_time: getTimeInputValue(postingResponse.posting.start_time),
-      end_date: postingResponse.posting.end_date ? getDateInputValue(postingResponse.posting.end_date) : '',
-      end_time: getTimeInputValue(postingResponse.posting.end_time),
+      ...(() => {
+        const startUtcDate = getDateInputValue(postingResponse.posting.start_date);
+        const startUtcTime = getTimeInputValue(postingResponse.posting.start_time);
+        const start = startUtcTime
+          ? toLocalDateTime(startUtcTime, startUtcDate)
+          : { date: startUtcDate, time: startUtcTime };
+
+        const endUtcDate = postingResponse.posting.end_date
+          ? getDateInputValue(postingResponse.posting.end_date)
+          : '';
+        const endUtcTime = getTimeInputValue(postingResponse.posting.end_time);
+        const end = endUtcDate && endUtcTime
+          ? toLocalDateTime(endUtcTime, endUtcDate)
+          : { date: endUtcDate, time: endUtcTime };
+
+        return {
+          start_date: start.date,
+          start_time: start.time,
+          end_date: end.date,
+          end_time: end.time,
+        };
+      })(),
       max_volunteers: postingResponse.posting.max_volunteers?.toString() ?? '',
       minimum_age: postingResponse.posting.minimum_age?.toString() ?? '',
       automatic_acceptance: postingResponse.posting.automatic_acceptance,
@@ -479,7 +523,7 @@ function PostingPage() {
   }, [loadPosting]);
 
   const { trigger: updatePosting } = useAsync(
-    async (postingId: string, payload: Record<string, unknown>) => requestServer<OrganizationPostingResponse>(
+    async (postingId: string, payload: Record<string, unknown>) => requestServer<PostingResponse>(
       `/organization/posting/${postingId}`,
       {
         method: 'PUT',
@@ -527,7 +571,7 @@ function PostingPage() {
   );
 
   const { trigger: loadPostingEnrollments } = useAsync(
-    async (postingId: string) => requestServer<OrganizationPostingEnrollmentsResponse>(
+    async (postingId: string) => requestServer<PostingEnrollmentsResponse>(
       `/organization/posting/${postingId}/enrollments`,
       { includeJwt: true },
     ),
@@ -562,10 +606,20 @@ function PostingPage() {
           is_closed: data.is_closed,
           skills: skills.length > 0 ? skills : undefined,
           crisis_id: selectedCrisisId ?? null,
-          start_date: data.start_date,
-          start_time: data.start_time,
-          end_date: data.end_date,
-          end_time: data.end_time,
+          ...(() => {
+            const start = data.start_time
+              ? toUtcDateTime(data.start_time, data.start_date)
+              : { date: data.start_date, time: data.start_time };
+            const end = data.end_time
+              ? toUtcDateTime(data.end_time, data.end_date || data.start_date)
+              : { date: data.end_date, time: data.end_time };
+            return {
+              start_date: start.date,
+              start_time: start.time,
+              end_date: end.date,
+              end_time: end.time,
+            };
+          })(),
         };
 
         const response = await updatePosting(id, payload);
@@ -596,10 +650,26 @@ function PostingPage() {
       title: posting.title,
       description: posting.description,
       location_name: posting.location_name,
-      start_date: getDateInputValue(posting.start_date),
-      start_time: getTimeInputValue(posting.start_time),
-      end_date: posting.end_date ? getDateInputValue(posting.end_date) : '',
-      end_time: getTimeInputValue(posting.end_time),
+      ...(() => {
+        const startUtcDate = getDateInputValue(posting.start_date);
+        const startUtcTime = getTimeInputValue(posting.start_time);
+        const start = startUtcTime
+          ? toLocalDateTime(startUtcTime, startUtcDate)
+          : { date: startUtcDate, time: startUtcTime };
+
+        const endUtcDate = posting.end_date ? getDateInputValue(posting.end_date) : '';
+        const endUtcTime = getTimeInputValue(posting.end_time);
+        const end = endUtcDate && endUtcTime
+          ? toLocalDateTime(endUtcTime, endUtcDate)
+          : { date: endUtcDate, time: endUtcTime };
+
+        return {
+          start_date: start.date,
+          start_time: start.time,
+          end_date: end.date,
+          end_time: end.time,
+        };
+      })(),
       max_volunteers: posting.max_volunteers?.toString() ?? '',
       minimum_age: posting.minimum_age?.toString() ?? '',
       automatic_acceptance: posting.automatic_acceptance,
@@ -666,13 +736,13 @@ function PostingPage() {
   }, []);
 
   const openApplyModal = useCallback(() => {
-    if (!id || hasPendingApplication || isEnrolled) return;
+    if (!id || hasPendingApplication || isEnrolled || hasEnded) return;
     setSelectedApplicationDates([]);
     setIsApplyModalOpen(true);
-  }, [id, hasPendingApplication, isEnrolled]);
+  }, [id, hasPendingApplication, isEnrolled, hasEnded]);
 
   const submitApplication = useCallback(async (message?: string) => {
-    if (!id || hasPendingApplication || isEnrolled || !posting) return;
+    if (!id || hasPendingApplication || isEnrolled || hasEnded || !posting) return;
 
     if (posting.allows_partial_attendance && !isSingleDayPosting) {
       if (selectedApplicationDates.length === 0) {
@@ -697,14 +767,12 @@ function PostingPage() {
     } finally {
       setApplying(false);
     }
-  }, [applyToPosting, id, hasPendingApplication, isEnrolled, notifications, loadPosting, posting, postingDates, selectedApplicationDates]);
+  }, [applyToPosting, id, hasPendingApplication, isEnrolled, hasEnded, notifications, loadPosting, posting, postingDates, selectedApplicationDates]);
 
   const canWithdrawFromPosting = useMemo(() => {
     if (!posting) return false;
-
-    const endDateTime = getPostingEndDateTime(posting);
-    return !Number.isNaN(endDateTime.getTime()) && new Date() < endDateTime;
-  }, [posting]);
+    return !hasEnded;
+  }, [hasEnded, posting]);
 
   const withdrawApplication = useCallback(async () => {
     if (!id || (!hasPendingApplication && !isEnrolled)) return;
@@ -801,7 +869,7 @@ function PostingPage() {
     setPosition(coords);
   }, []);
 
-  const formValues = form.watch();
+  const formValues = useWatch({ control: form.control });
 
   const formattedStartDate = useMemo(() => formatDisplayDate(startDate), [startDate]);
   const formattedStartTime = useMemo(() => formatDisplayTime(startTime), [startTime]);
@@ -811,24 +879,30 @@ function PostingPage() {
   const applicationStatus = useMemo(() => {
     if (isEnrolled) {
       return {
-        label: 'Accepted',
+        label: 'Enrolled',
         description: 'Your application was accepted and you are enrolled in this posting.',
-        badgeClassName: 'badge-success',
+        badgeClassName: `badge badge-${DOMAIN_COLORS.enrollment} inline-flex items-center gap-1`,
+        cardColor: 'success' as const,
+        Icon: CheckCircle2,
       };
     }
 
     if (hasPendingApplication) {
       return {
-        label: 'Pending',
+        label: 'Pending Review',
         description: 'Your application is waiting for the organization to review it.',
-        badgeClassName: 'badge-warning',
+        badgeClassName: `badge badge-${DOMAIN_COLORS.pending} inline-flex items-center gap-1`,
+        cardColor: 'warning' as const,
+        Icon: Clock3,
       };
     }
 
     return {
       label: 'Not Applied',
       description: 'You have not applied to this posting yet.',
-      badgeClassName: 'badge-ghost',
+      badgeClassName: `badge badge-${DOMAIN_COLORS.neutral} inline-flex items-center gap-1`,
+      cardColor: 'neutral' as const,
+      Icon: ShieldCheck,
     };
   }, [hasPendingApplication, isEnrolled]);
 
@@ -889,7 +963,7 @@ function PostingPage() {
   const canManagePosting = useMemo(() => {
     if (isVolunteerView || !posting || !account?.id) return false;
     return posting.organization_id === account.id;
-  }, [isVolunteerView, posting, account?.id]);
+  }, [isVolunteerView, posting, account]);
 
   const currentEnrollmentCount = useMemo(() => {
     if (!posting) return 0;
@@ -981,7 +1055,7 @@ function PostingPage() {
               disabledDates={fullPostingDates}
               dateDetails={postingDateDetails}
             />
-            <p className="text-xs text-muted mt-2">You must select at least one available day. Full days are unavailable.</p>
+            <p className="text-xs text-muted mt-2">You must select at least one available day.</p>
           </div>
         )}
       </CustomMessageModal>
@@ -1025,13 +1099,14 @@ function PostingPage() {
                   style="outline"
                   Icon={Edit3}
                   size="sm"
+                  disabled={hasEnded}
                 >
                   Edit
                 </Button>
                 <Button
                   color={posting?.is_closed ? 'success' : 'warning'}
                   onClick={onToggleClosed}
-                  disabled={!posting}
+                  disabled={!posting || hasEnded}
                   loading={togglingClosed}
                   Icon={posting?.is_closed ? LockOpen : Lock}
                   size="sm"
@@ -1069,7 +1144,15 @@ function PostingPage() {
                 )}
 
                 <div className="min-w-0">
-                  <h4 className="text-xl font-bold truncate">{formValues.title}</h4>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-xl font-bold truncate">{formValues.title}</h4>
+                    {hasEnded && (
+                      <span className="badge badge-neutral inline-flex items-center gap-1 shrink-0">
+                        <CalendarX2 size={12} />
+                        Ended
+                      </span>
+                    )}
+                  </div>
                   {postingOrganization && (
                     <Link
                       to={`/organization/${postingOrganization.id}`}
@@ -1128,6 +1211,7 @@ function PostingPage() {
                           <CalendarInfo
                             selectionMode="range"
                             rangeLabel="Date Range"
+                            disablePastDates
                             rangeValue={{ from: startDate, to: endDate }}
                             onRangeChange={({ from, to }) => {
                               form.setValue('start_date', from, {
@@ -1165,8 +1249,16 @@ function PostingPage() {
                                 shouldTouch: true,
                                 shouldValidate: true,
                               });
+                              if (endTime) {
+                                void form.trigger(['start_time', 'end_time']);
+                              } else {
+                                void form.trigger('start_time');
+                              }
                             }}
                           />
+                          {form.formState.errors.start_time?.message && (
+                            <p className="text-error text-sm mt-1">{form.formState.errors.start_time.message as string}</p>
+                          )}
                         </fieldset>
 
                         <fieldset className="fieldset w-full">
@@ -1183,8 +1275,16 @@ function PostingPage() {
                                 shouldTouch: true,
                                 shouldValidate: true,
                               });
+                              if (startTime) {
+                                void form.trigger(['start_time', 'end_time']);
+                              } else {
+                                void form.trigger('end_time');
+                              }
                             }}
                           />
+                          {form.formState.errors.end_time?.message && (
+                            <p className="text-error text-sm mt-1">{form.formState.errors.end_time.message as string}</p>
+                          )}
                         </fieldset>
                       </div>
                     </div>
@@ -1275,7 +1375,7 @@ function PostingPage() {
                   <Card
                     title="Crisis Tag"
                     description="Add a crisis tag to this posting."
-                    color="accent"
+                    color={DOMAIN_COLORS.crisis}
                     coloredText={true}
                     Icon={AlertTriangle}
                   >
@@ -1315,7 +1415,10 @@ function PostingPage() {
                 : (
                     <Card
                       title={selectedCrisisName || 'No Crisis'}
-                      color="accent"
+                      description={selectedCrisisName
+                        ? 'Crisis details are currently unavailable.'
+                        : 'This posting is not linked to a crisis event.'}
+                      color={DOMAIN_COLORS.crisis}
                       coloredText={true}
                       Icon={AlertTriangle}
                     />
@@ -1362,11 +1465,13 @@ function PostingPage() {
                     </span>
                   )}
               <p className="text-xs opacity-70 mt-2">
-                {posting?.is_closed
-                  ? 'This posting is closed and no longer accepting applications.'
-                  : isOpen
-                    ? 'Volunteers are accepted automatically.'
-                    : 'Volunteers must be accepted by the organization.'}
+                {hasEnded
+                  ? 'This posting has ended.'
+                  : posting?.is_closed
+                    ? 'This posting is closed and no longer accepting applications.'
+                    : isOpen
+                      ? 'Volunteers are accepted automatically.'
+                      : 'Volunteers must be accepted by the organization.'}
               </p>
               {!isEditMode && canManagePosting && (
                 null
@@ -1403,15 +1508,16 @@ function PostingPage() {
         {isVolunteerView && (
           <Card
             title="Application Status"
-            Icon={ShieldCheck}
+            description={applicationStatus.description}
+            color={applicationStatus.cardColor}
+            Icon={applicationStatus.Icon}
+            right={(
+              <span className={applicationStatus.badgeClassName}>
+                <applicationStatus.Icon size={12} />
+                {applicationStatus.label}
+              </span>
+            )}
           >
-
-            <span className={`badge mt-1 w-fit ${applicationStatus.badgeClassName}`}>
-              {applicationStatus.label}
-            </span>
-            <p className="text-sm opacity-70 mt-2">
-              {applicationStatus.description}
-            </p>
             {applicationDaysLabel && (
               <div className="mt-3">
                 <p className="text-xs font-medium uppercase tracking-wide opacity-60">Applied Days</p>
@@ -1458,16 +1564,20 @@ function PostingPage() {
                         </Button>
                       </span>
                     )
-                  : (
-                      <Button
-                        color="primary"
-                        onClick={openApplyModal}
-                        loading={applying}
-                        Icon={Send}
-                      >
-                        Apply
-                      </Button>
-                    )}
+                  : hasEnded
+                    ? (
+                        <span className="text-sm text-error font-medium">This posting has ended</span>
+                      )
+                    : (
+                        <Button
+                          color="primary"
+                          onClick={openApplyModal}
+                          loading={applying}
+                          Icon={Send}
+                        >
+                          Apply
+                        </Button>
+                      )}
             </div>
           </Card>
         )}
@@ -1501,11 +1611,15 @@ function PostingPage() {
         )}
 
         {canManagePosting && !isOpen && (
-          <Card
-            title="Enrollment Applications"
-            right={
-              <span className="badge badge-primary">{applications.length}</span>
-            }
+          <Collapse
+            defaultOpen
+            titleClassName="pr-14"
+            title={(
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-base font-semibold">Enrollment Applications</span>
+                <span className="badge badge-primary">{applications.length}</span>
+              </div>
+            )}
           >
             {applications.length === 0
               ? (
@@ -1548,15 +1662,19 @@ function PostingPage() {
                     ))}
                   </div>
                 )}
-          </Card>
+          </Collapse>
         )}
 
         {canManagePosting && (
-          <Card
-            title="Enrolled Volunteers"
-            right={
-              <span className="badge badge-primary">{enrollments.length}</span>
-            }
+          <Collapse
+            defaultOpen
+            titleClassName="pr-14"
+            title={(
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-base font-semibold">Enrolled Volunteers</span>
+                <span className="badge badge-primary">{enrollments.length}</span>
+              </div>
+            )}
           >
 
             {enrollments.length === 0
@@ -1578,7 +1696,7 @@ function PostingPage() {
                     ))}
                   </div>
                 )}
-          </Card>
+          </Collapse>
         )}
       </ColumnLayout>
     </PageContainer>

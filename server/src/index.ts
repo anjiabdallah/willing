@@ -2,6 +2,7 @@ import createApp from './app.ts';
 import config from './config.ts';
 import database from './db/index.ts';
 import { migrateToLatest } from './db/migrate.ts';
+import { startEndedPendingApplicationsCleanup } from './services/posting/endedPendingApplicationsCleanup.ts';
 
 async function startServer() {
   try {
@@ -15,6 +16,7 @@ async function startServer() {
   }
 
   const app = createApp(database);
+  startEndedPendingApplicationsCleanup(database);
 
   const server = app.listen(config.SERVER_PORT, () => {
     console.log('Listening on port ' + config.SERVER_PORT);

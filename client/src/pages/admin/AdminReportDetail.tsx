@@ -1,16 +1,17 @@
-import { ArrowLeft, Flag, RotateCcw } from 'lucide-react';
+import { Flag, Building2, User, RotateCcw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import ReportActionPanel from '../../components/reporting/ReportActionPanel';
-import ReportHeader from '../../components/reporting/ReportHeader';
-import ReportMessage from '../../components/reporting/ReportMessage';
+import ReportDetailOverview from '../../components/reporting/ReportDetailOverview';
+import ReportPersonCard from '../../components/reporting/ReportPersonCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
@@ -122,123 +123,18 @@ function AdminReportDetail() {
     );
   }
 
-  const isOrganizationReport = reportType === 'organization' && 'reported_organization' in report;
-  const isVolunteerReport = reportType === 'volunteer' && 'reported_volunteer' in report;
-
   return (
     <PageContainer>
-      <div className="mb-6">
-        <Button
-          type="button"
-          color="ghost"
-          style="outline"
-          Icon={ArrowLeft}
-          onClick={() => navigate('/admin/reports')}
-        >
-          Back to Reports
-        </Button>
-      </div>
-
       <PageHeader
         title={reportType === 'organization' ? 'Organization Report' : 'Volunteer Report'}
-        subtitle={`Reported on ${new Date(report.created_at).toLocaleString()}`}
+        subtitle="Review the report details, reporter information, and resolve the report."
         icon={Flag}
+        showBack
+        defaultBackTo="/admin/reports"
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Card title="Report Details" description="Information about this report.">
-            <div className="space-y-4">
-              <ReportHeader
-                createdAt={report.created_at}
-                reportTitle={report.title}
-                scopeLabel={reportType === 'organization' ? 'Organization' : 'Volunteer'}
-              />
-
-              <div>
-                <label className="label">
-                  <span className="label-text font-semibold">Message</span>
-                </label>
-                <ReportMessage message={report.message} />
-              </div>
-
-              {isOrganizationReport && (
-                <div>
-                  <label className="label">
-                    <span className="label-text font-semibold">Reporter (Volunteer)</span>
-                  </label>
-                  <div className="rounded-lg bg-base-100 border border-base-300 p-4">
-                    <p className="font-semibold">
-                      {report.reporter_volunteer.first_name}
-                      {' '}
-                      {report.reporter_volunteer.last_name}
-                    </p>
-                    <p className="text-sm text-base-content/70">{report.reporter_volunteer.email}</p>
-                  </div>
-                </div>
-              )}
-
-              {isVolunteerReport && (
-                <div>
-                  <label className="label">
-                    <span className="label-text font-semibold">Reporter (Organization)</span>
-                  </label>
-                  <div className="rounded-lg bg-base-100 border border-base-300 p-4">
-                    <p className="font-semibold">{report.reporter_organization.name}</p>
-                    <p className="text-sm text-base-content/70">{report.reporter_organization.email}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          <Card
-            title={isOrganizationReport ? 'Reported Organization' : 'Reported Volunteer'}
-            description="Details of the reported account."
-          >
-            <div className="space-y-4">
-              {isOrganizationReport && (
-                <>
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-semibold">Organization Name</span>
-                    </label>
-                    <p className="text-lg">{report.reported_organization.name}</p>
-                  </div>
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-semibold">Email</span>
-                    </label>
-                    <p className="text-sm">{report.reported_organization.email}</p>
-                  </div>
-                </>
-              )}
-
-              {isVolunteerReport && (
-                <>
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-semibold">Volunteer Name</span>
-                    </label>
-                    <p className="text-lg">
-                      {report.reported_volunteer.first_name}
-                      {' '}
-                      {report.reported_volunteer.last_name}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-semibold">Email</span>
-                    </label>
-                    <p className="text-sm">{report.reported_volunteer.email}</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
+      <ColumnLayout
+        sidebar={(
           <Card title="Actions" description="Disable account or delete report without disabling." color="primary">
             <ReportActionPanel
               actionError={actionError}
@@ -251,8 +147,43 @@ function AdminReportDetail() {
               confirmDisableMessage="Are you sure? This will disable the reported account and resolve this report."
             />
           </Card>
+        )}
+      >
+        <div className="space-y-6">
+          <ReportDetailOverview
+            reportId={report.id}
+            createdAt={report.created_at}
+            reportTitle={report.title || 'Scam'}
+            message={report.message}
+            reporterTitle={('reported_organization' in report) ? 'Reporter (Volunteer)' : 'Reporter (Organization)'}
+            reporterName={('reported_organization' in report)
+              ? `${report.reporter_volunteer.first_name} ${report.reporter_volunteer.last_name}`
+              : report.reporter_organization.name}
+            reporterEmail={('reported_organization' in report)
+              ? report.reporter_volunteer.email
+              : report.reporter_organization.email}
+            reporterIcon={Building2}
+          />
+
+          {'reported_organization' in report
+            ? (
+                <ReportPersonCard
+                  title="Reported Organization"
+                  name={report.reported_organization.name}
+                  email={report.reported_organization.email}
+                  Icon={Building2}
+                />
+              )
+            : (
+                <ReportPersonCard
+                  title="Reported Volunteer"
+                  name={`${report.reported_volunteer.first_name} ${report.reported_volunteer.last_name}`}
+                  email={report.reported_volunteer.email}
+                  Icon={User}
+                />
+              )}
         </div>
-      </div>
+      </ColumnLayout>
     </PageContainer>
   );
 }

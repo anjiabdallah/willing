@@ -10,7 +10,7 @@ import {
 
 const DATASET_PATH = path.resolve('src/scripts/data/recommendation/dataset.json');
 const CV_DIR = path.resolve('src/scripts/data/recommendation/cv');
-const TARGET_START_ID = 21;
+const TARGET_START_ID = 1;
 
 const volunteerSchema = zod.object({
   id: zod.number().int().positive(),

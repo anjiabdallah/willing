@@ -10,14 +10,15 @@ import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
 import VolunteerInfoCollapse from '../../components/VolunteerInfoCollapse';
+import { DOMAIN_COLORS } from '../../constants';
 import useNotifications from '../../notifications/useNotifications';
 import requestServer, { SERVER_BASE_URL } from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
-import type { OrganizationPostingAttendanceResponse } from '../../../../server/src/api/types';
+import type { PostingAttendanceResponse } from '../../../../server/src/api/types';
 import type { PostingEnrollment } from '../../../../server/src/types';
 
-function OrganizationPostingAttendance() {
+function PostingAttendance() {
   const { id } = useParams<{ id: string }>();
   const attendanceFiltersStorageKey = useMemo(
     () => `organization-posting-attendance-filters:${id ?? 'unknown'}`,
@@ -64,12 +65,12 @@ function OrganizationPostingAttendance() {
     loading,
     error,
     trigger: loadAttendance,
-  } = useAsync<OrganizationPostingAttendanceResponse, []>(async () => {
+  } = useAsync<PostingAttendanceResponse, []>(async () => {
     if (!id) {
       throw new Error('Posting ID is missing.');
     }
 
-    const response = await requestServer<OrganizationPostingAttendanceResponse>(`/organization/posting/${id}/attendance`, { includeJwt: true });
+    const response = await requestServer<PostingAttendanceResponse>(`/organization/posting/${id}/attendance`, { includeJwt: true });
     const postingDates = response.posting_dates ?? [];
 
     const dateAttendanceMap: Record<number, Record<string, boolean>> = {};
@@ -473,9 +474,12 @@ function OrganizationPostingAttendance() {
       />
 
       <Card
-        title="Registered Volunteers"
+        title="Enrolled Volunteers"
+        description="Track attendance by volunteer and posting day."
+        color="success"
+        Icon={Users}
         right={
-          <span className="badge badge-primary">{data.enrollments.length}</span>
+          <span className={`badge badge-${DOMAIN_COLORS.enrollment} inline-flex items-center gap-1`}>{data.enrollments.length}</span>
         }
       >
         <div className="mb-4 grid gap-2 md:grid-cols-[1fr_auto]">
@@ -601,4 +605,4 @@ function OrganizationPostingAttendance() {
   );
 }
 
-export default OrganizationPostingAttendance;
+export default PostingAttendance;

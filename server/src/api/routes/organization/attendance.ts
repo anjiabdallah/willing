@@ -4,6 +4,7 @@ import zod from 'zod';
 
 import { getPostingEnrollments } from './postingEnrollments.ts';
 import { type Database } from '../../../db/tables/index.ts';
+import { runEmbeddingInBackground } from '../../../services/embeddings/background.ts';
 import { recomputePostingVectorsForVolunteerEnrollments, recomputeVolunteerExperienceVector } from '../../../services/embeddings/updates.ts';
 
 const postingIdParamsSchema = zod.object({
@@ -91,7 +92,7 @@ function createAttendanceRouter(db: Kysely<Database>) {
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
     const posting = await db
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id', 'title', 'location_name', 'start_date', 'end_date', 'allows_partial_attendance'])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
@@ -116,7 +117,7 @@ function createAttendanceRouter(db: Kysely<Database>) {
     const body = attendanceBulkUpdateBodySchema.parse(req.body);
 
     const posting = await db
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id'])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
@@ -136,10 +137,12 @@ function createAttendanceRouter(db: Kysely<Database>) {
       .execute();
 
     const volunteerIds = Array.from(new Set(changed.map(row => row.volunteer_id)));
-    await Promise.all(volunteerIds.map(async (volunteerId) => {
-      await recomputeVolunteerExperienceVector(volunteerId, db);
-      await recomputePostingVectorsForVolunteerEnrollments(volunteerId, db);
-    }));
+    runEmbeddingInBackground(`attendance:${postingId}:bulk-attendance`, async () => {
+      await Promise.all(volunteerIds.map(async (volunteerId) => {
+        await recomputeVolunteerExperienceVector(volunteerId, db);
+        await recomputePostingVectorsForVolunteerEnrollments(volunteerId, db);
+      }));
+    });
 
     res.json({ updated_count: changed.length });
   });
@@ -153,7 +156,7 @@ function createAttendanceRouter(db: Kysely<Database>) {
     const body = attendanceUpdateBodySchema.parse(req.body);
 
     const posting = await db
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id'])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
@@ -214,8 +217,10 @@ function createAttendanceRouter(db: Kysely<Database>) {
         .where('id', '=', enrollment.id)
         .execute();
 
-      await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
-      await recomputePostingVectorsForVolunteerEnrollments(enrollment.volunteer_id, db);
+      runEmbeddingInBackground(`enrollment-date:${enrollmentDateId}:attendance-rollup`, async () => {
+        await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
+        await recomputePostingVectorsForVolunteerEnrollments(enrollment.volunteer_id, db);
+      });
     }
 
     res.json({});
@@ -226,7 +231,7 @@ function createAttendanceRouter(db: Kysely<Database>) {
     const { id: postingId } = postingIdParamsSchema.parse(req.params);
 
     const posting = await db
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id', 'title'])
       .where('id', '=', postingId)
       .where('organization_id', '=', orgId)
@@ -270,10 +275,10 @@ function createAttendanceRouter(db: Kysely<Database>) {
     const body = attendanceUpdateBodySchema.parse(req.body);
 
     const posting = await db
-      .selectFrom('organization_posting')
+      .selectFrom('posting')
       .select(['id'])
-      .where('organization_posting.id', '=', postingId)
-      .where('organization_posting.organization_id', '=', orgId)
+      .where('posting.id', '=', postingId)
+      .where('posting.organization_id', '=', orgId)
       .executeTakeFirst();
 
     if (!posting) {
@@ -303,8 +308,10 @@ function createAttendanceRouter(db: Kysely<Database>) {
       .where('id', '=', enrollmentId)
       .execute();
 
-    await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
-    await recomputePostingVectorsForVolunteerEnrollments(enrollment.volunteer_id, db);
+    runEmbeddingInBackground(`enrollment:${enrollmentId}:attendance`, async () => {
+      await recomputeVolunteerExperienceVector(enrollment.volunteer_id, db);
+      await recomputePostingVectorsForVolunteerEnrollments(enrollment.volunteer_id, db);
+    });
 
     res.json({});
   });

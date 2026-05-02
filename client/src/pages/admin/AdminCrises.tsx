@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Pencil, Pin, PinOff, Plus, RotateCcw, Save, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Pencil, Pin, PinOff, Plus, RotateCcw, Save, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import zod from 'zod';
@@ -12,6 +12,7 @@ import ColumnLayout from '../../components/layout/ColumnLayout';
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import CrisisCard from '../../components/postings/CrisisCard';
+import { DOMAIN_COLORS } from '../../constants';
 import { useModal } from '../../contexts/useModal.ts';
 import useNotifications from '../../notifications/useNotifications';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
@@ -342,7 +343,7 @@ function AdminCrises() {
       <PageHeader
         title="Crisis Management"
         subtitle="Create, edit, delete, and pin crises according to the current situation."
-        icon={AlertCircle}
+        icon={AlertTriangle}
       />
 
       <ColumnLayout
@@ -351,6 +352,7 @@ function AdminCrises() {
           <Card
             title="Create Crisis"
             description="Add a new crisis tag."
+            color={DOMAIN_COLORS.crisis}
           >
             <form className="mt-2 space-y-4" onSubmit={onCreateCrisis}>
               <FormField
@@ -358,7 +360,7 @@ function AdminCrises() {
                 name="name"
                 label="Crisis Name"
                 placeholder="Crisis name"
-                Icon={AlertCircle}
+                Icon={AlertTriangle}
               />
               <FormField
                 form={crisisForm}
@@ -485,7 +487,7 @@ function AdminCrises() {
             : crises.length === 0
               ? (
                   <EmptyState
-                    Icon={AlertCircle}
+                    Icon={AlertTriangle}
                     title="No crises added yet"
                     description="Create a crisis to help organizations tag urgent opportunities."
                   />
@@ -496,12 +498,8 @@ function AdminCrises() {
                       <CrisisCard
                         key={crisis.id}
                         crisis={crisis}
-                        link={undefined}
+                        link={null}
                         descriptionFallback={editingCrisisId === crisis.id ? '' : 'No description set'}
-                        right={
-                          crisis.pinned
-                          && <span className="badge badge-secondary">Pinned</span>
-                        }
                       >
 
                         {editingCrisisId === crisis.id

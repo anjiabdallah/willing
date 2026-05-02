@@ -15,9 +15,14 @@ export const crisisSchema = zod.object({
 export type Crisis = zod.infer<typeof crisisSchema>;
 export type CrisisTable = WithGeneratedIDAndCreatedAt<Crisis>;
 
-export const newCrisisSchema = crisisSchema.omit({
-  id: true,
-  pinned: true,
-  created_at: true,
-}).strict();
+export const newCrisisSchema = crisisSchema
+  .omit({
+    id: true,
+    pinned: true,
+    created_at: true,
+  })
+  .extend({
+    description: zod.string().trim().nullable().optional(),
+  })
+  .strict();
 export type NewCrisis = zod.infer<typeof newCrisisSchema>;

@@ -12,19 +12,20 @@ import PageHeader from '../../components/layout/PageHeader';
 import LocationPicker from '../../components/LocationPicker';
 import SkillsInput from '../../components/skills/SkillsInput';
 import { ToggleButton } from '../../components/ToggleButton';
-import { organizationPostingFormSchema, type OrganizationPostingFormData } from '../../schemas/posting';
+import { postingFormSchema, type PostingFormData } from '../../schemas/posting';
 import { executeAndShowError, FormField, FormRootError } from '../../utils/formUtils';
 import requestServer from '../../utils/requestServer';
+import { toUtcDateTime } from '../../utils/timeUtils.ts';
 import { useOrganization } from '../../utils/useUsers';
 
-import type { OrganizationCrisesResponse, OrganizationPostingCreateResponse } from '../../../../server/src/api/types';
+import type { OrganizationCrisesResponse, PostingCreateResponse } from '../../../../server/src/api/types';
 
-export default function OrganizationPostingCreate() {
+export default function PostingCreate() {
   const account = useOrganization();
   const navigate = useNavigate();
 
-  const form = useForm<OrganizationPostingFormData>({
-    resolver: zodResolver(organizationPostingFormSchema),
+  const form = useForm<PostingFormData>({
+    resolver: zodResolver(postingFormSchema),
     mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
@@ -81,10 +82,20 @@ export default function OrganizationPostingCreate() {
         location_name: data.location_name.trim(),
         latitude: position[0],
         longitude: position[1],
-        start_date: data.start_date,
-        start_time: data.start_time,
-        end_date: data.end_date,
-        end_time: data.end_time,
+        ...(() => {
+          const start = data.start_time
+            ? toUtcDateTime(data.start_time, data.start_date)
+            : { date: data.start_date, time: data.start_time };
+          const end = data.end_time
+            ? toUtcDateTime(data.end_time, data.end_date || data.start_date)
+            : { date: data.end_date, time: data.end_time };
+          return {
+            start_date: start.date,
+            start_time: start.time,
+            end_date: end.date,
+            end_time: end.time,
+          };
+        })(),
         max_volunteers: data.max_volunteers ? Number(data.max_volunteers) : null,
         minimum_age: data.minimum_age ? Number(data.minimum_age) : null,
         automatic_acceptance: data.automatic_acceptance,
@@ -95,7 +106,7 @@ export default function OrganizationPostingCreate() {
 
       console.log('Submitting posting payload:', payload);
 
-      const response = await requestServer<OrganizationPostingCreateResponse>('/organization/posting', {
+      const response = await requestServer<PostingCreateResponse>('/organization/posting', {
         method: 'POST',
         body: payload,
         includeJwt: true,
@@ -209,6 +220,7 @@ export default function OrganizationPostingCreate() {
                     <CalendarInfo
                       selectionMode="range"
                       rangeLabel="Date Range"
+                      disablePastDates
                       rangeValue={{ from: startDate, to: endDate }}
                       onRangeChange={({ from, to }) => {
                         form.setValue('start_date', from, {
@@ -246,8 +258,16 @@ export default function OrganizationPostingCreate() {
                           shouldTouch: true,
                           shouldValidate: true,
                         });
+                        if (endTime) {
+                          void form.trigger(['start_time', 'end_time']);
+                        } else {
+                          void form.trigger('start_time');
+                        }
                       }}
                     />
+                    {form.formState.errors.start_time?.message && (
+                      <p className="text-error text-sm mt-1">{form.formState.errors.start_time.message as string}</p>
+                    )}
                   </fieldset>
 
                   <fieldset className="fieldset w-full">
@@ -264,8 +284,16 @@ export default function OrganizationPostingCreate() {
                           shouldTouch: true,
                           shouldValidate: true,
                         });
+                        if (startTime) {
+                          void form.trigger(['start_time', 'end_time']);
+                        } else {
+                          void form.trigger('end_time');
+                        }
                       }}
                     />
+                    {form.formState.errors.end_time?.message && (
+                      <p className="text-error text-sm mt-1">{form.formState.errors.end_time.message as string}</p>
+                    )}
                   </fieldset>
                 </div>
 
@@ -325,18 +353,16 @@ export default function OrganizationPostingCreate() {
                 />
               </div>
 
-              <div className="lg:col-span-1 flex flex-col self-stretch">
-                <fieldset className="fieldset flex flex-col flex-1" style={{ minHeight: '500px' }}>
+              <div className="lg:col-span-1">
+                <fieldset className="fieldset">
                   <label className="label">
                     <span className="label-text font-medium">Pin Location on Map</span>
                   </label>
-                  <div className="flex-1">
-                    <LocationPicker
-                      position={position}
-                      setPosition={onMapPositionPick}
-                      className="h-full w-full"
-                    />
-                  </div>
+                  <LocationPicker
+                    position={position}
+                    setPosition={onMapPositionPick}
+                    className="w-full h-80 sm:h-96 lg:h-[500px]"
+                  />
                 </fieldset>
               </div>
             </div>

@@ -1,10 +1,15 @@
-import { Cake, Calendar, Clock, ExternalLink, LockOpen, MapPin, Users, AlertCircle, Ban } from 'lucide-react';
+import { AlertTriangle, Ban, Cake, Calendar, CalendarX2, CheckCircle2, ClipboardList, Clock, ExternalLink, LockOpen, MapPin, Users } from 'lucide-react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import Card from './Card';
 import OrganizationProfilePicture from './OrganizationProfilePicture';
 import PostingDateTime from './PostingDateTime.tsx';
+import { DOMAIN_COLORS } from '../constants';
+import { formatCardDate, formatTime12Hour, hasPostingEnded, isPostingFullyBooked, normalizeTimestamp } from './postings/postingUtils';
+import useNow from './postings/useNow.ts';
 import SkillsList from './skills/SkillsList';
+import { toIsoDate, toLocalDateTime } from '../utils/timeUtils.ts';
 
 import type { PostingWithContext } from '../../../server/src/types';
 
@@ -16,68 +21,6 @@ interface PostingCardProps {
   fillHeight?: boolean;
 }
 
-const getPostingDates = (startDate: string | Date, endDate: string | Date | null | undefined) => {
-  const normalizeDateOnly = (value: string | Date | null | undefined) => {
-    if (value == null) return undefined;
-    if (value instanceof Date) {
-      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-    }
-
-    const datePart = value.split('T')[0]?.trim();
-    return datePart || undefined;
-  };
-
-  const parseIsoDateParts = (value: string) => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (!match) return undefined;
-
-    return {
-      year: Number(match[1]),
-      month: Number(match[2]),
-      day: Number(match[3]),
-    };
-  };
-
-  const formatDateToIso = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-
-  const normalizedStartDate = normalizeDateOnly(startDate);
-  const normalizedEndDate = normalizeDateOnly(endDate ?? startDate);
-  const startParts = normalizedStartDate ? parseIsoDateParts(normalizedStartDate) : undefined;
-  const endParts = normalizedEndDate ? parseIsoDateParts(normalizedEndDate) : undefined;
-
-  if (!startParts || !endParts) {
-    return [];
-  }
-
-  const result: string[] = [];
-  const current = new Date(startParts.year, startParts.month - 1, startParts.day);
-  const end = new Date(endParts.year, endParts.month - 1, endParts.day);
-
-  while (current.getTime() <= end.getTime()) {
-    result.push(formatDateToIso(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  return result;
-};
-
-const isPostingFullyBooked = (posting: PostingWithContext) => {
-  if (posting.max_volunteers == null) {
-    return false;
-  }
-
-  if (!posting.allows_partial_attendance) {
-    return (posting.enrollment_count ?? 0) >= posting.max_volunteers;
-  }
-
-  const postingDates = getPostingDates(posting.start_date, posting.end_date);
-  if (postingDates.length === 0) {
-    return false;
-  }
-
-  return postingDates.every(date => (posting.date_capacity?.[date] ?? 0) >= posting.max_volunteers!);
-};
-
 function PostingCard({
   posting,
   showCrisis = true,
@@ -86,32 +29,6 @@ function PostingCard({
   fillHeight = false,
 }: PostingCardProps) {
   const postingDetailsPath = `/posting/${posting.id}`;
-  const normalizeTimestamp = (value: string | Date | undefined | null) => {
-    if (value == null) return null;
-    const date = value instanceof Date ? value : new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const formatTime12Hour = (timeValue: string | undefined) => {
-    if (!timeValue) return '';
-    const [hoursRaw, minutesRaw] = timeValue.split(':');
-    const hours = Number(hoursRaw);
-    const minutes = Number(minutesRaw);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeValue;
-    const normalizedHours = ((hours % 24) + 24) % 24;
-    const suffix = normalizedHours >= 12 ? 'PM' : 'AM';
-    const hour12 = normalizedHours % 12 === 0 ? 12 : normalizedHours % 12;
-    return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
-  };
-
-  const formatCardDate = (dateValue: Date | null) => {
-    if (!dateValue) return '';
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(dateValue);
-  };
 
   const startDateValue = posting.start_date;
   const endDateValue = posting.end_date;
@@ -121,12 +38,30 @@ function PostingCard({
 
   const startDt = normalizeTimestamp(startDateValue);
   const endDt = normalizeTimestamp(endDateValue);
+  const startLocalDate = posting.start_time
+    ? toLocalDateTime(posting.start_time.slice(0, 5), toIsoDate(posting.start_date) ?? '')
+    : null;
+  const endLocalDate = posting.end_time && posting.end_date
+    ? toLocalDateTime(posting.end_time.slice(0, 5), toIsoDate(posting.end_date) ?? '')
+    : null;
   const hasEndDate = Boolean(endDt);
 
-  const startDateStr = formatCardDate(startDt);
-  const endDateStr = formatCardDate(endDt);
-  const startTimeStr = formatTime12Hour(startTimeValue) || (startDt ? startDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
-  const endTimeStr = formatTime12Hour(endTimeValue) || (endDt ? endDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const now = useNow();
+  const hasEnded = useMemo(
+    () => Boolean(posting.has_ended || hasPostingEnded(posting, now)),
+    [now, posting],
+  );
+
+  const startDateStr = startLocalDate
+    ? formatCardDate(new Date(`${startLocalDate.date}T00:00:00Z`))
+    : formatCardDate(startDt);
+  const endDateStr = endLocalDate
+    ? formatCardDate(new Date(`${endLocalDate.date}T00:00:00Z`))
+    : formatCardDate(endDt);
+  const startTimeStr = formatTime12Hour(startTimeValue, toIsoDate(posting.start_date))
+    || (startDt ? startDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const endTimeStr = formatTime12Hour(endTimeValue, toIsoDate(posting.end_date ?? posting.start_date))
+    || (endDt ? endDt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const isSingleDayPosting = !hasEndDate || startDateStr === endDateStr;
   const shouldShowVolunteerCapacity = posting.max_volunteers != null && (!posting.allows_partial_attendance || isSingleDayPosting);
   const shouldShowVolunteerCountOnly = !shouldShowVolunteerCapacity;
@@ -143,15 +78,15 @@ function PostingCard({
 
   const crisisTagContent = (
     <>
-      <AlertCircle size={14} />
-      <span className="truncate max-w-40 text-sm font-semibold">
+      <AlertTriangle size={14} />
+      <span className="truncate max-w-40 text-sm font-semibold" title={posting.crisis_name ?? undefined}>
         {posting.crisis_name}
       </span>
     </>
   );
 
   return (
-    <Card padding={false} fillHeight={fillHeight} className={fillHeight ? 'h-full min-h-[24rem]' : ''}>
+    <Card padding={false} fillHeight={fillHeight} className={fillHeight ? 'h-full min-h-96' : ''}>
       {showCrisis && posting.crisis_name && posting.crisis_id && (
         crisisTagClickable
           ? (
@@ -184,7 +119,7 @@ function PostingCard({
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold leading-tight truncate">
                     <Link to={postingDetailsPath} className="link link-primary link-hover no-underline hover:underline inline-flex items-center gap-2">
-                      <span className="truncate">{posting.title}</span>
+                      <span className="truncate" title={posting.title}>{posting.title}</span>
                       <ExternalLink size={14} />
                     </Link>
                   </h3>
@@ -199,7 +134,7 @@ function PostingCard({
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold leading-tight truncate">
                     <Link to={postingDetailsPath} className="link link-primary link-hover no-underline hover:underline inline-flex items-center gap-2">
-                      <span className="truncate">{posting.title}</span>
+                      <span className="truncate" title={posting.title}>{posting.title}</span>
                       <ExternalLink size={14} />
                     </Link>
                   </h3>
@@ -209,47 +144,54 @@ function PostingCard({
 
         <div className="flex flex-col items-end gap-1">
           {
-            posting.is_closed
+            hasEnded
               ? (
-                  <span className="badge badge-error inline-flex items-center gap-2">
-                    <Ban size={14} />
-                    Closed
+                  <span className="badge badge-neutral inline-flex items-center gap-2">
+                    <CalendarX2 size={14} />
+                    Ended
                   </span>
                 )
-              : posting.application_status === 'pending'
+              : posting.is_closed
                 ? (
-                    <span className="badge badge-warning inline-flex items-center gap-2">
-                      <Clock size={14} />
-                      Pending
+                    <span className="badge badge-error inline-flex items-center gap-2">
+                      <Ban size={14} />
+                      Closed
                     </span>
                   )
-                : posting.application_status === 'registered'
+                : posting.application_status === 'pending'
                   ? (
-                      <span className="badge badge-success inline-flex items-center gap-2">
-                        <Users size={14} />
-                        Registered
+                      <span className="badge badge-warning inline-flex items-center gap-2">
+                        <Clock size={14} />
+                        Pending
                       </span>
                     )
-                  : isPostingFull
+                  : posting.application_status === 'registered'
                     ? (
-                        <span className="badge badge-error inline-flex items-center gap-2">
-                          <Users size={14} />
-                          Full
+                        <span className={`badge badge-${DOMAIN_COLORS.enrollment} inline-flex items-center gap-1`}>
+                          <CheckCircle2 size={14} />
+                          Enrolled
                         </span>
                       )
-                    : posting.automatic_acceptance
+                    : isPostingFull
                       ? (
-                          <span className="badge badge-primary inline-flex items-center gap-2">
-                            <LockOpen size={14} />
-                            Open
+                          <span className="badge badge-error inline-flex items-center gap-2">
+                            <Users size={14} />
+                            Full
                           </span>
                         )
-                      : (
-                          <span className="badge badge-secondary inline-flex items-center gap-2 px-3 min-w-[120px] h-7 items-center" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: '120px', maxWidth: '100%', display: 'inline-flex', alignItems: 'center' }}>
-                            <Clock size={16} style={{ marginBottom: '-2px' }} />
-                            Review based
-                          </span>
-                        )
+                      : posting.automatic_acceptance
+                        ? (
+                            <span className="badge badge-primary inline-flex items-center gap-2">
+                              <LockOpen size={14} />
+                              Open
+                            </span>
+                          )
+                        : (
+                            <span className="badge badge-secondary inline-flex items-center gap-2 px-3 min-w-30 h-7 whitespace-nowrap">
+                              <ClipboardList size={14} />
+                              Review Based
+                            </span>
+                          )
           }
         </div>
       </div>

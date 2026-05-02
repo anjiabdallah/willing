@@ -2,6 +2,8 @@ import { AlertCircle, Check, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Alert from '../Alert';
+import Button from '../Button';
+import Modal from '../Modal';
 
 type ReportActionPanelProps = {
   actionError: string | null;
@@ -61,71 +63,61 @@ function ReportActionPanel({
         </Alert>
       )}
 
-      <button
+      <Button
         type="button"
-        className="btn btn-success btn-block gap-2"
+        color="success"
+        layout="block"
+        Icon={Check}
         onClick={handleAcceptClick}
         disabled={isActionInProgress}
+        loading={isActionInProgress}
       >
-        {isActionInProgress
-          ? (
-              <>
-                <div className="loading loading-spinner loading-sm" />
-              </>
-            )
-          : (
-              <>
-                <Check size={18} />
-                {acceptLabel}
-              </>
-            )}
-      </button>
+        {acceptLabel}
+      </Button>
 
-      <button
+      <Button
         type="button"
-        className="btn btn-outline btn-block gap-2"
+        style="outline"
+        layout="block"
+        Icon={X}
         onClick={handleRejectClick}
         disabled={isActionInProgress}
       >
-        <X size={18} />
         {rejectLabel}
-      </button>
+      </Button>
 
-      <div className="alert alert-warning gap-2">
-        <AlertCircle size={18} />
-        <span className="text-xs">{warningMessage}</span>
-      </div>
+      <Alert color="warning" icon={AlertCircle}>
+        <p className="text-xs">{warningMessage}</p>
+      </Alert>
 
-      <div className={`modal ${isConfirmModalOpen ? 'modal-open' : ''}`}>
-        <div className="modal-box border border-base-300">
-          <h3 className="font-bold text-lg">{confirmTitle}</h3>
-          <p className="py-3 text-sm">{confirmDisableMessage}</p>
-          <div className="modal-action">
-            <button
+      <Modal
+        open={isConfirmModalOpen}
+        title={confirmTitle}
+        description={confirmDisableMessage}
+        onClose={() => setIsConfirmModalOpen(false)}
+        disableBackdropClose={isActionInProgress}
+        showCloseButton={!isActionInProgress}
+        actions={(
+          <>
+            <Button
               type="button"
-              className="btn btn-ghost"
+              color="ghost"
               onClick={() => setIsConfirmModalOpen(false)}
               disabled={isActionInProgress}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-error"
+              color="error"
               onClick={handleConfirmDisable}
               disabled={isActionInProgress}
             >
               {confirmButtonLabel}
-            </button>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="modal-backdrop"
-          aria-label="Close modal"
-          onClick={() => setIsConfirmModalOpen(false)}
-        />
-      </div>
+            </Button>
+          </>
+        )}
+      />
     </div>
   );
 }

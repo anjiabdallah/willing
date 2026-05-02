@@ -17,7 +17,7 @@ import {
 import * as certificateVerificationService from '../../services/certificates/verification.ts';
 import { PLATFORM_SIGNATURE_UPLOAD_DIR } from '../../services/uploads/paths.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../tests/fixtures/accounts.ts';
-import { createOrganizationPosting } from '../../tests/fixtures/organizationData.ts';
+import { createPosting } from '../../tests/fixtures/organizationData.ts';
 
 import type { Database } from '../../db/tables/index.ts';
 import type { ControlledTransaction } from 'kysely';
@@ -61,13 +61,13 @@ describe('GET /public/home-stats', () => {
     await createVolunteerAccount(transaction, { email: 'vol2@willing.social' });
     await createVolunteerAccount(transaction, { email: 'vol3@willing.social' });
 
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org2.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org4.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org3.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org2.organization.id });
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
+    await createPosting(transaction, { organizationId: org1.organization.id });
+    await createPosting(transaction, { organizationId: org2.organization.id });
+    await createPosting(transaction, { organizationId: org1.organization.id });
+    await createPosting(transaction, { organizationId: org4.organization.id });
+    await createPosting(transaction, { organizationId: org3.organization.id });
+    await createPosting(transaction, { organizationId: org2.organization.id });
+    await createPosting(transaction, { organizationId: org1.organization.id });
 
     const response = await server
       .get('/public/home-stats')
@@ -90,13 +90,13 @@ describe('GET /public/home-stats', () => {
     await createVolunteerAccount(transaction, { email: 'vol2@willing.social', created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
     await createVolunteerAccount(transaction, { email: 'vol3@willing.social' });
 
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org4.organization.id, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org3.organization.id, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) });
-    await createOrganizationPosting(transaction, { organizationId: org1.organization.id });
+    await createPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org1.organization.id, created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org4.organization.id, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org3.organization.id, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org2.organization.id, created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) });
+    await createPosting(transaction, { organizationId: org1.organization.id });
 
     const response = await server
       .get('/public/home-stats')
@@ -244,7 +244,7 @@ describe('POST /public/certificate/verify', () => {
       url: 'https://rescue-two.example.org',
     });
 
-    const postingOne = await createOrganizationPosting(transaction, {
+    const postingOne = await createPosting(transaction, {
       organizationId: organizationOne.id,
       title: 'Medical Tent Setup',
       overrides: {
@@ -254,7 +254,7 @@ describe('POST /public/certificate/verify', () => {
         end_time: '12:00:00',
       },
     });
-    const postingTwo = await createOrganizationPosting(transaction, {
+    const postingTwo = await createPosting(transaction, {
       organizationId: organizationTwo.id,
       title: 'Food Box Coordination',
       overrides: {

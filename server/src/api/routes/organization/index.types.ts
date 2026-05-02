@@ -1,5 +1,5 @@
 import { type ResetPasswordResponse } from '../../../auth/resetPassword.ts';
-import { type Crisis, type OrganizationAccountWithoutPassword, type OrganizationAccountWithoutPasswordAndVector, type OrganizationPostingWithoutVectors, type PostingSkill } from '../../../db/tables/index.ts';
+import { type Crisis, type OrganizationAccountWithoutPassword, type OrganizationAccountWithoutPasswordAndVector, type PostingWithoutVectors, type PostingSkill } from '../../../db/tables/index.ts';
 import { type SuccessResponse } from '../../../types.ts';
 
 import type { VolunteerProfileData } from '../../../services/volunteer/index.ts';
@@ -11,8 +11,8 @@ export type OrganizationGetSignatureFileResponse = never;
 export type OrganizationVolunteerCvDownloadResponse = never;
 
 export type OrganizationProfileResponse = {
-  organization: OrganizationAccountWithoutPasswordAndVector;
-  postings: (OrganizationPostingWithoutVectors & { skills: PostingSkill[] })[];
+  organization: OrganizationAccountWithoutPasswordAndVector & { hours_threshold: number | null };
+  postings: (PostingWithoutVectors & { skills: PostingSkill[]; enrollment_count: number })[];
 };
 
 export type OrganizationGetMeResponse = {

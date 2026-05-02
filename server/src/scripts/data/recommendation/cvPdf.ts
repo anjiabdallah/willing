@@ -1,6 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 
+const wrapLine = (line: string, maxChars: number = 100): string[] => {
+  if (line.length <= maxChars) return [line];
+  const words = line.split(' ');
+  const result: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if ((current + ' ' + word).trim().length > maxChars) {
+      result.push(current.trim());
+      current = word;
+    } else {
+      current = (current + ' ' + word).trim();
+    }
+  }
+  if (current) result.push(current.trim());
+  return result;
+};
+
 export type RecommendationCvVolunteer = {
   id: number;
   first_name: string;
@@ -9,6 +26,9 @@ export type RecommendationCvVolunteer = {
   skills: string[];
   description?: string | null | undefined;
   cv_summary_text?: string | null | undefined;
+  education?: string | null | undefined;
+  experience?: string[] | null | undefined;
+  projects?: string[] | null | undefined;
 };
 
 const slugify = (value: string) =>
@@ -33,25 +53,41 @@ const toCvLines = (volunteer: RecommendationCvVolunteer) => {
     .split('.')
     .map(line => line.trim())
     .filter(Boolean)
-    .slice(0, 3)
     .map(line => `${line}.`);
+
+  const profileLines = summaryLines.length > 0 ? summaryLines : descriptionLines;
 
   const lines: string[] = [
     `${volunteer.first_name} ${volunteer.last_name} - Curriculum Vitae`,
     `Email: ${volunteer.email}`,
     '',
     'Profile Summary',
-    ...(summaryLines.length > 0 ? summaryLines : ['Motivated community volunteer with practical collaboration skills.']),
+    ...(profileLines.length > 0
+      ? profileLines
+      : ['Motivated community volunteer with practical collaboration skills.']),
     '',
     'Core Skills',
     ...volunteer.skills.map(skill => `- ${skill}`),
   ];
 
-  if (descriptionLines.length > 0) {
-    lines.push('', 'Additional Notes', ...descriptionLines);
+  if (volunteer.education) {
+    lines.push('', 'Education', ...wrapLine(volunteer.education));
   }
 
-  lines.push('', 'Generated for Willing recommendation dataset.');
+  if (volunteer.experience && volunteer.experience.length > 0) {
+    lines.push('', 'Experience');
+    for (const e of volunteer.experience) {
+      lines.push(...wrapLine(`- ${e}`));
+    }
+  }
+
+  if (volunteer.projects && volunteer.projects.length > 0) {
+    lines.push('', 'Projects');
+    for (const p of volunteer.projects) {
+      lines.push(...wrapLine(`- ${p}`));
+    }
+  }
+
   return lines;
 };
 
@@ -65,8 +101,7 @@ const buildPdf = (lines: string[]) => {
     })
     .join('\n');
 
-  const contentStream = `BT\n/F1 11 Tf\n50 790 Td\n${textBody}\nET\n`;
-
+  const contentStream = `BT\n/F1 11 Tf\n50 770 Td\n${textBody}\nET\n`;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',

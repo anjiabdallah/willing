@@ -8,6 +8,7 @@ type HorizontalScrollSectionProps = {
   subtitle?: string;
   action?: ReactNode;
   hasItems: boolean;
+  loading?: boolean;
   emptyState?: ReactNode;
   children?: ReactNode;
 };
@@ -17,6 +18,7 @@ function HorizontalScrollSection({
   subtitle,
   action,
   hasItems,
+  loading,
   emptyState,
   children,
 
@@ -116,7 +118,9 @@ function HorizontalScrollSection({
               />
             </div>
           )
-        : emptyState}
+        : loading
+          ? <>{children}</>
+          : emptyState}
     </section>
   );
 }

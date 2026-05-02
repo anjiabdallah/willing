@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Award,
   Building,
+  Clock,
   Download,
   FileText,
   Users,
@@ -21,6 +22,7 @@ import {
 import PageContainer from '../../components/layout/PageContainer';
 import PageHeader from '../../components/layout/PageHeader';
 import Loading from '../../components/Loading';
+import StatCard from '../../components/StatCard';
 import requestServer from '../../utils/requestServer';
 import useAsync from '../../utils/useAsync';
 
@@ -120,6 +122,7 @@ function VolunteerCertificateRequest() {
     () => Number(data?.total_hours ?? 0),
     [data?.total_hours],
   );
+  const hasNoCompletedHours = totalHours <= 0;
 
   const selectedOrganizations = useMemo(
     () => organizationsWithEligibility
@@ -231,40 +234,25 @@ function VolunteerCertificateRequest() {
 
       {!loading && !error && (
         <>
-          <div className="grid gap-6 md:grid-cols-3 no-print">
-            <Card>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm opacity-70">Total Volunteering Hours</p>
-                  <p className="text-3xl font-bold mt-1">{formatHours(totalHours)}</p>
-                </div>
-                <div className="rounded-full bg-primary/10 p-2 text-primary">
-                  <Award size={18} />
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm opacity-70">Organizations Involved</p>
-                  <p className="text-3xl font-bold mt-1">{organizationsWithEligibility.length}</p>
-                </div>
-                <div className="rounded-full bg-secondary/10 p-2 text-secondary">
-                  <Building size={18} />
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm opacity-70">Eligible Organizations</p>
-                  <p className="text-3xl font-bold mt-1">{eligibleOrganizations.length}</p>
-                </div>
-                <div className="rounded-full bg-success/10 p-2 text-success">
-                  <Users size={18} />
-                </div>
-              </div>
-            </Card>
+          <div className="grid gap-2 md:grid-cols-3 no-print">
+            <StatCard
+              text="Total Volunteering Hours"
+              content={formatHours(totalHours)}
+              icon={Clock}
+              color="primary"
+            />
+            <StatCard
+              text="Organizations Involved"
+              content={organizationsWithEligibility.length}
+              icon={Building}
+              color="secondary"
+            />
+            <StatCard
+              text="Eligible Organizations"
+              content={eligibleOrganizations.length}
+              icon={Users}
+              color="success"
+            />
           </div>
 
           <Card
@@ -295,13 +283,13 @@ function VolunteerCertificateRequest() {
                 return (
                   <label
                     key={organization.id}
-                    className={`flex items-center justify-between gap-3 rounded-box border p-3 ${
+                    className={`flex items-start justify-between gap-3 rounded-box border p-3 ${
                       organization.eligible ? 'cursor-pointer border-base-300' : 'opacity-60 border-base-300'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="badge badge-ghost">{`#${index + 1}`}</span>
-                      <div>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="badge badge-ghost shrink-0">{`#${index + 1}`}</span>
+                      <div className="min-w-0">
                         <p className="font-semibold">{organization.name}</p>
                         {organizationDeleted && (
                           <p className="text-sm opacity-70">Organization account was deleted</p>
@@ -327,9 +315,9 @@ function VolunteerCertificateRequest() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                       {(organizationDeleted || organizationDisabled || !certificatesNotEnabled) && (
-                        <span className={eligibilityStatus.className}>{eligibilityStatus.label}</span>
+                        <span className={`${eligibilityStatus.className} text-center`}>{eligibilityStatus.label}</span>
                       )}
                       <input
                         type="checkbox"
@@ -344,8 +332,21 @@ function VolunteerCertificateRequest() {
               })}
             </div>
 
+            {hasNoCompletedHours && (
+              <div className="alert alert-warning -mt-5">
+                <AlertCircle size={16} />
+                <span>You need to complete an opportunity before generating a certificate.</span>
+              </div>
+            )}
+
             <div className="mt-4">
-              <Button className="btn btn-primary" onClick={() => { void createCertificate(); }} Icon={FileText} loading={issuingCertificate}>
+              <Button
+                className="btn btn-primary"
+                onClick={() => { void createCertificate(); }}
+                Icon={FileText}
+                loading={issuingCertificate}
+                disabled={hasNoCompletedHours}
+              >
                 Create Certificate
               </Button>
             </div>

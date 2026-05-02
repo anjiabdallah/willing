@@ -1,4 +1,4 @@
-import { ClipboardCheck, Inbox, RotateCcw, Search } from 'lucide-react';
+import { ClipboardCheck, Inbox, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 
 import Button from '../../components/Button';
@@ -167,7 +167,7 @@ function AdminRequests() {
   } else {
     mainContent = (
       <>
-        <Card title="Filters">
+        <Card Icon={SlidersHorizontal} iconClassName="text-current" title="Filters">
           <form className="space-y-4" onSubmit={applyFilters}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
               <div className="flex-2">

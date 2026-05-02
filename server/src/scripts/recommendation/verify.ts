@@ -43,7 +43,7 @@ const ensureOrganization = async () => {
 
 const ensurePosting = async (organizationId: number) => {
   const existing = await database
-    .selectFrom('organization_posting')
+    .selectFrom('posting')
     .select(['id'])
     .where('organization_id', '=', organizationId)
     .orderBy('id', 'asc')
@@ -52,7 +52,7 @@ const ensurePosting = async (organizationId: number) => {
   if (existing) return existing.id;
 
   const inserted = await database
-    .insertInto('organization_posting')
+    .insertInto('posting')
     .values({
       organization_id: organizationId,
       title: 'Embedding Verification Posting',
@@ -186,13 +186,13 @@ async function verifyEmbeddings() {
     SELECT
       vector_dims(posting_profile_vector) as posting_profile_vector_dims,
       vector_dims(posting_context_vector) as posting_context_vector_dims
-    FROM organization_posting
+    FROM posting
     WHERE id = ${postingId}
   `);
-  assertDim('organization_posting.posting_profile_vector', postingDims?.posting_profile_vector_dims);
-  assertDim('organization_posting.posting_context_vector', postingDims?.posting_context_vector_dims);
-  console.log('organization_posting.posting_profile_vector dims:', postingDims?.posting_profile_vector_dims);
-  console.log('organization_posting.posting_context_vector dims:', postingDims?.posting_context_vector_dims);
+  assertDim('posting.posting_profile_vector', postingDims?.posting_profile_vector_dims);
+  assertDim('posting.posting_context_vector', postingDims?.posting_context_vector_dims);
+  console.log('posting.posting_profile_vector dims:', postingDims?.posting_profile_vector_dims);
+  console.log('posting.posting_context_vector dims:', postingDims?.posting_context_vector_dims);
   console.log('posting context combine rule: weighted mix of opportunity, organization, and enrolled volunteer vectors when available');
 
   await recomputeVolunteerProfileVector(volunteerId, database);

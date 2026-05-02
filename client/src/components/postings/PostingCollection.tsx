@@ -1,12 +1,14 @@
+import { usePostingViewMode } from '../../hooks/usePostingViewMode';
+import LoadingList from '../LoadingList';
 import PostingCard from '../PostingCard';
 import PostingList from '../PostingList';
-import { usePostingViewMode } from './PostingViewModeState';
 
 import type { PostingWithContext } from '../../../../server/src/types';
 import type { ReactNode } from 'react';
 
 type PostingCollectionProps = {
   postings: PostingWithContext[];
+  loading?: boolean;
   showCrisis?: boolean;
   crisisTagClickable?: boolean;
   crisisBasePath?: string;
@@ -21,6 +23,7 @@ type PostingCollectionProps = {
 
 function PostingCollection({
   postings,
+  loading = false,
   showCrisis = true,
   crisisTagClickable = true,
   crisisBasePath = '/volunteer/crises',
@@ -35,6 +38,9 @@ function PostingCollection({
   const { viewMode } = usePostingViewMode();
 
   if (postings.length === 0) {
+    if (loading) {
+      return <LoadingList count={3} />;
+    }
     return <>{emptyState}</>;
   }
 

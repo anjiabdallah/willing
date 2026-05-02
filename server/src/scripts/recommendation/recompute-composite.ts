@@ -10,7 +10,7 @@ import {
 const getIds = async () => {
   const [organizationRows, postingRows, volunteerRows] = await Promise.all([
     database.selectFrom('organization_account').select('id').orderBy('id', 'asc').execute(),
-    database.selectFrom('organization_posting').select('id').orderBy('id', 'asc').execute(),
+    database.selectFrom('posting').select('id').orderBy('id', 'asc').execute(),
     database.selectFrom('volunteer_account').select('id').orderBy('id', 'asc').execute(),
   ]);
 
@@ -26,8 +26,8 @@ const getMissingCounts = async () => {
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_profile_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_history_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('organization_account').select(eb => eb.fn.countAll().as('count')).where('org_context_vector', 'is', null).executeTakeFirstOrThrow(),
-    database.selectFrom('organization_posting').select(eb => eb.fn.countAll().as('count')).where('posting_profile_vector', 'is', null).executeTakeFirstOrThrow(),
-    database.selectFrom('organization_posting').select(eb => eb.fn.countAll().as('count')).where('posting_context_vector', 'is', null).executeTakeFirstOrThrow(),
+    database.selectFrom('posting').select(eb => eb.fn.countAll().as('count')).where('posting_profile_vector', 'is', null).executeTakeFirstOrThrow(),
+    database.selectFrom('posting').select(eb => eb.fn.countAll().as('count')).where('posting_context_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_profile_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_history_vector', 'is', null).executeTakeFirstOrThrow(),
     database.selectFrom('volunteer_account').select(eb => eb.fn.countAll().as('count')).where('volunteer_context_vector', 'is', null).executeTakeFirstOrThrow(),
@@ -46,10 +46,6 @@ const getMissingCounts = async () => {
 };
 
 async function recomputeCompositeVectors() {
-  if (config.NODE_ENV === 'production') {
-    throw new Error('Refusing to recompute composite vectors in production.');
-  }
-
   const { organizationIds, postingIds, volunteerIds } = await getIds();
 
   console.log('Starting composite-only vector recomputation (no OpenAI embedding calls)...');

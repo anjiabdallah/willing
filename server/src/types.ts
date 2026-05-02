@@ -1,7 +1,7 @@
 import zod from 'zod';
 
 import {
-  type OrganizationPostingWithoutVectors,
+  type PostingWithoutVectors,
   type PostingSkill,
   type VolunteerSkill,
   type VolunteerAccountWithoutPassword,
@@ -28,7 +28,7 @@ export const loginInfoSchema = zod.object({
 
 export type LoginInfo = zod.infer<typeof loginInfoSchema>;
 
-export type PostingWithSkills = OrganizationPostingWithoutVectors & {
+export type PostingWithSkills = PostingWithoutVectors & {
   skills: PostingSkill[];
 };
 
@@ -40,6 +40,7 @@ export type PostingWithContext = PostingWithSkills & {
   crisis_name: string | null;
   enrollment_count: number;
   application_status: PostingApplicationStatus;
+  has_ended?: boolean;
   date_capacity?: Record<string, number>;
   confirmed_date_capacity?: Record<string, number>;
 };

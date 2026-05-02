@@ -16,6 +16,7 @@ import Footer from '../components/layout/Footer';
 import UserNavbar from '../components/layout/navbars/UserNavbar';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
+import { DOMAIN_COLORS } from '../constants';
 import { executeAndShowError, FormField, FormRootError } from '../utils/formUtils';
 import requestServer from '../utils/requestServer';
 
@@ -98,7 +99,7 @@ function CertificateVerification() {
           defaultBackTo="/"
         />
 
-        <Card>
+        <Card color={DOMAIN_COLORS.verification}>
           <form onSubmit={onVerify} className="space-y-4">
             <FormField
               form={form}

@@ -10,7 +10,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useContext, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
 import AuthContext from '../auth/AuthContext';
@@ -51,8 +51,8 @@ export default function VolunteerCreate() {
     },
   });
 
-  const passwordValue = form.watch('password');
-  const confirmPasswordValue = form.watch('confirmPassword');
+  const passwordValue = useWatch({ control: form.control, name: 'password' });
+  const confirmPasswordValue = useWatch({ control: form.control, name: 'confirmPassword' });
   useEffect(() => {
     if (!confirmPasswordValue) return;
     void form.trigger('confirmPassword');
